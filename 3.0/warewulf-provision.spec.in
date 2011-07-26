@@ -1,0 +1,72 @@
+%{!?_rel:%{expand:%%global _rel 0.r%(svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || echo 0000)}}
+%define debug_package %{nil}
+
+Name: warewulf-provision
+Summary: A suite of tools for clustering
+Version: @PACKAGE_VERSION@
+Release: %{_rel}
+License: BSD
+Group: System Environment/Clustering
+Source: %{name}-%{version}.tar.gz
+ExclusiveOS: linux
+BuildRequires: warewulf-common
+Requires: warewulf-common
+Conflicts: warewulf <= 2.9
+BuildRoot: %{?_tmppath}/%{name}-%{version}-%{release}-root
+
+%description
+Warewulf >= 3 is a set of utilities designed to better enable
+utilization and maintaince of clusters or groups of computers.
+
+This is the main package which includes the main daemon and
+supporting libs.
+
+%package gpl_sources
+Summary: This package contains the GPL sources used in Warewulf
+Group: Development/System
+Requires: %{name} = %{version}-%{release}
+
+%description gpl_sources
+Warewulf is distributed with some third-party software as a convenience to
+our users.  While Warewulf itself is licensed under a DOE license (a
+derivative of the BSD license), the third-party software may have different
+licensing terms, including the GNU General Public License (GPL).
+
+In order to be 100% compatible with the GPL this package makes available
+the included GPL software.
+
+
+%prep
+%setup -q
+
+%build
+%configure
+%{__make} %{?mflags}
+
+%install
+%{__make} install DESTDIR=$RPM_BUILD_ROOT %{?mflags_install}
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%files
+%defattr(-,root,root)
+%doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO LICENSE
+%config(noreplace) %{_sysconfdir}/warewulf/provision.conf
+%config(noreplace) %{_sysconfdir}/warewulf/bootstrap.conf
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/warewulf-httpd.conf
+%{_bindir}/*
+%{_libexecdir}/warewulf/*
+%{_localstatedir}/warewulf/*
+%{_datadir}/warewulf/*
+%{perl_vendorlib}/Warewulf/DSO/*
+%{perl_vendorlib}/Warewulf/Event/*
+%{perl_vendorlib}/Warewulf/Module/*
+%{perl_vendorlib}/Warewulf/Provision/
+
+%files gpl_sources
+%defattr(-,root,root)
+%{_prefix}/src/warewulf/3rd_party/GPL/
+
+%changelog

@@ -1,0 +1,31 @@
+LoadModule perl_module modules/mod_perl.so
+PerlSwitches -w
+PerlSwitches -T
+PerlSwitches -I/var/www/stage/cgi-bin
+
+# This is disabled as RHEL6 perl_mod seems to be missing this support
+#PerlPreConnectionHandler Apache2::Reload
+
+Alias /WW/static /usr/share/warewulf/www
+
+ScriptAlias /WW/file @fulllibexecdir@/warewulf/cgi-bin/file.pl
+ScriptAlias /WW/script @fulllibexecdir@/warewulf/cgi-bin/script.pl
+ScriptAlias /WW/nodeconfig @fulllibexecdir@/warewulf/cgi-bin/nodeconfig.pl
+ScriptAlias /WW/vnfs @fulllibexecdir@/warewulf/cgi-bin/vnfs.pl
+ScriptAlias /WW/logger @fulllibexecdir@/warewulf/cgi-bin/logger.pl
+
+<Directory @fulllibexecdir@/warewulf/cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+</Directory>
+
+<Directory @fulldatadir@/warewulf/www>
+    Options Indexes MultiViews
+    AllowOverride None
+    Order allow,deny
+    Allow from all
+</Directory>
+
+
