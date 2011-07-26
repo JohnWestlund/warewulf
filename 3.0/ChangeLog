@@ -1,0 +1,164 @@
+Thu Oct 28 09:52:32 2010                        Michael Jennings (mej)
+
+Misc. fixes/cleanups to query execution.
+----------------------------------------------------------------------
+Fri Oct 29 03:38:13 2010                        Michael Jennings (mej)
+
+Refactor Logger to offer convenience functions instead of requiring a flag.
+----------------------------------------------------------------------
+Fri Oct 29 19:41:08 2010                        Michael Jennings (mej)
+
+Mostly cosmetic adjustments.
+----------------------------------------------------------------------
+Sat Oct 30 01:30:46 2010                        Michael Jennings (mej)
+
+Add copyrights to perl modules.
+----------------------------------------------------------------------
+Sat Oct 30 17:29:40 2010                                           gmk
+
+Renamed the Node and NodeSet classes to be a more general Object and
+ObjectSet interface. Also added the ability to add to the Object and
+ObjectSet via a hash or array of hashes (respectively) as well as
+be able to find or iterate through the ObjectSet object.
+----------------------------------------------------------------------
+Sun Oct 31 22:45:08 2010                        Michael Jennings (mej)
+
+Tidying as I peruse, putting together an action plan.
+----------------------------------------------------------------------
+Wed Nov 10 13:40:53 2010                        Michael Jennings (mej)
+
+Initial refactoring of existing Object parent class.  More methods to
+come, and need to do search-and-replace to fix breakage.
+----------------------------------------------------------------------
+Wed Nov 10 20:39:04 2010                        Michael Jennings (mej)
+
+A couple more template methods.
+----------------------------------------------------------------------
+Thu Nov 11 00:11:52 2010                        Michael Jennings (mej)
+
+Object documentation improvements and reformatting.
+----------------------------------------------------------------------
+Thu Nov 11 00:27:41 2010                        Michael Jennings (mej)
+
+More touchups and documentation.
+----------------------------------------------------------------------
+Wed Dec  8 16:04:27 2010                        Michael Jennings (mej)
+
+Make serialize() and unserialize() proper methods.
+----------------------------------------------------------------------
+Wed Dec  8 18:02:54 2010                        Michael Jennings (mej)
+
+Minor cleanups.
+----------------------------------------------------------------------
+Tue Dec 14 20:37:29 2010                        Michael Jennings (mej)
+
+Support get/set for array-based (multi-value) members.
+----------------------------------------------------------------------
+Tue Dec 14 22:27:26 2010                        Michael Jennings (mej)
+
+Working on fixing ObjectSet initialization with object hashes.
+----------------------------------------------------------------------
+Tue Dec 14 22:51:50 2010                        Michael Jennings (mej)
+
+add() and del() forceably use arrays now.  set("foo", undef) or
+del("foo") will delete a member entirely.
+----------------------------------------------------------------------
+Wed Dec 15 00:42:11 2010                        Michael Jennings (mej)
+
+Make sure array elements are unique when doing add().
+
+Delete key if del() removes last array element.
+----------------------------------------------------------------------
+Wed Dec 15 00:47:09 2010                        Michael Jennings (mej)
+
+set() for an array now deletes and add()s.
+----------------------------------------------------------------------
+Thu Dec 16 11:10:26 2010                        Michael Jennings (mej)
+
+Use list address for configure.in.
+----------------------------------------------------------------------
+Thu Dec 16 12:59:25 2010                        Michael Jennings (mej)
+
+Convert ModuleLoader to on-demand, class-based operation.  This is one
+possibility of multiple ones we're considering...just want it in the
+SVN history for potential future reference.
+----------------------------------------------------------------------
+Wed Dec 29 02:13:32 2010                        Michael Jennings (mej)
+
+Use magic filehandle syntax <> if stdin isn't a tty.
+----------------------------------------------------------------------
+Wed Dec 29 19:39:49 2010                        Michael Jennings (mej)
+
+Rearrange.  Tested, works fine.
+----------------------------------------------------------------------
+Sat Jan  1 16:07:12 2011                        Michael Jennings (mej)
+
+Rearrange help display a bit to be more clear to the uninitiated.  :-)
+----------------------------------------------------------------------
+Sun Jan  2 05:36:34 2011                        Michael Jennings (mej)
+
+Work in progress:  Log target handling.
+----------------------------------------------------------------------
+Fri Mar  4 16:40:23 2011                        Michael Jennings (mej)
+
+Fix bug in Object->set() that wasn't allowing object member values to
+be references.
+----------------------------------------------------------------------
+Sat Mar  5 01:12:07 2011                        Michael Jennings (mej)
+
+Add subversion revision number to RPM release field.
+
+Numerous spec file fixes and cleanups.
+----------------------------------------------------------------------
+Tue Mar 15 15:24:40 2011                        Michael Jennings (mej)
+
+Handle warnings/fatal errors if Debug.pm is loaded by printing a stack trace.
+----------------------------------------------------------------------
+Wed Mar 16 13:55:17 2011                        Michael Jennings (mej)
+
+Refactor logging and debugging to be more flexible.
+
+Flesh out syslog and alternative logging target handling.
+
+Disable backtrace on warn/die invocation...too noisy for now.
+----------------------------------------------------------------------
+Wed Mar 16 16:24:36 2011                        Michael Jennings (mej)
+
+Improve autogen.sh.
+----------------------------------------------------------------------
+Fri Mar 25 17:45:06 2011                        Michael Jennings (mej)
+
+Object::get() in an array context now returns an empty array.
+----------------------------------------------------------------------
+Fri Jun  3 11:57:48 2011                        Michael Jennings (mej)
+
+We don't compile anything, so don't use libtool or autoheader.
+
+Clean up wwconfig.
+
+Add support for --datarootdir to silence warnings from configure.
+----------------------------------------------------------------------
+Fri Jun  3 12:48:14 2011                        Michael Jennings (mej)
+
+Oops.
+----------------------------------------------------------------------
+Fri Jun  3 13:06:00 2011                        Michael Jennings (mej)
+
+Oops^2.
+----------------------------------------------------------------------
+Mon Jun  6 13:23:14 2011                        Michael Jennings (mej)
+
+Compatibility for RHEL5 autoconf.
+----------------------------------------------------------------------
+Mon Jun  6 17:21:52 2011                        Michael Jennings (mej)
+
+Ignore files cleaned by "make maintainer-clean"
+----------------------------------------------------------------------
+Mon Jul 18 15:49:53 2011                        Michael Jennings (mej)
+
+Fix usage of svnversion since it no longer errors properly.
+----------------------------------------------------------------------
+Tue Jul 19 14:32:41 2011                        Michael Jennings (mej)
+
+Replace use of Digest::file with Digest::MD5.
+----------------------------------------------------------------------
