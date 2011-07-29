@@ -194,10 +194,9 @@ exec()
     }
 
     $objSet = $db->get_objects("node", $opt_lookup, &expand_bracket(@ARGV));
+    $object_count = $objSet->count();
 
-    if ($objSet) {
-        $object_count = $objSet->count();
-    } else {
+    if ($object_count eq 0) {
         &nprint("No nodes found\n");
         return();
     }
@@ -227,7 +226,7 @@ exec()
                     }
                     push(@changes, sprintf("     SET: %-20s = %s\n", "BOOTSTRAP", $opt_bootstrap));
                 } else {
-                    &eprint("No bootstrap named: $opt_vnfs\n");
+                    &eprint("No bootstrap named: $opt_bootstrap\n");
                 }
             }
         }
