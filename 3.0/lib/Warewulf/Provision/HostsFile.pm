@@ -10,16 +10,16 @@
 
 package Warewulf::Provision::HostsFile;
 
+use Socket;
+use Digest::MD5 qw(md5_hex);
+use Warewulf::ACVars;
 use Warewulf::Logger;
 use Warewulf::Provision::Dhcp;
 use Warewulf::DataStore;
 use Warewulf::Network;
 use Warewulf::SystemFactory;
 use Warewulf::Util;
-use Warewulf::Include;
 use Warewulf::DSOFactory;
-use Socket;
-use Digest::MD5 qw(md5_hex);
 
 
 =head1 NAME
@@ -86,7 +86,7 @@ generate()
     my $datastore = Warewulf::DataStore->new();
     my $netobj = Warewulf::Network->new();
     my $config = Warewulf::Config->new("provision.conf");
-    my $sysconfdir = &wwconfig("sysconfdir");
+    my $sysconfdir = &Warewulf::ACVars::get("sysconfdir");
 
     my $netdev = $config->get("network device");
     my $ipaddr = $netobj->ipaddr($netdev);
@@ -133,26 +133,37 @@ generate()
                     my $fqdn = $d->get("fqdn");
                     my @name_entries;
                     my $name_eth;
+                    my $multiple_dots;
 
-                    if ($fqdn) {
-                        $name_eth = $fqdn;
-                    } elsif (($node_network eq $network) and ! defined($default_name)) {
+                    if (($node_network eq $network) and ! defined($default_name)) {
                         $name_eth = $nodename;
                         $default_name = 1;
                     } else {
                         $name_eth = "$nodename-$netdev";
                     }
 
+                    if (defined($fqdn)) {
+                        push(@name_entries, sprintf("%-18s", "$fqdn"));
+                        $multiple_dots = 1;
+                    }
+
+                    push(@name_entries, sprintf("%-12s", $name_eth));
+
                     if (defined($cluster) and defined($domain)) {
                         push(@name_entries, sprintf("%-18s", "$name_eth.$cluster.$domain"));
+                        $multiple_dots = 1;
                     }
                     if (defined($cluster)) {
                         push(@name_entries, sprintf("%-18s", "$name_eth.$cluster"));
-                    } else {
-                        push(@name_entries, sprintf("%-18s", $name_eth));
+                        $multiple_dots = 1;
                     }
                     if (defined($domain)) {
                         push(@name_entries, sprintf("%-18s", "$name_eth.$domain"));
+                        $multiple_dots = 1;
+                    }
+
+                    if (! $multiple_dots) {
+                        push(@name_entries, sprintf("%-18s", "$name_eth.localdomain"));
                     }
 
                     if ($nodename and $ipv4_addr) {
@@ -170,6 +181,8 @@ generate()
 
     return($hosts);
 }
+
+print &generate() ."\n\n";
 
 
 =item update_datastore()
