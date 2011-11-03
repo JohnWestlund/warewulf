@@ -1,0 +1,250 @@
+#!/usr/bin/perl -Tw
+#
+# Copyright (c) 2001-2003 Gregory M. Kurtzer
+#
+# Copyright (c) 2003-2011, The Regents of the University of California,
+# through Lawrence Berkeley National Laboratory (subject to receipt of any
+# required approvals from the U.S. Dept. of Energy).  All rights reserved.
+#
+
+use Warewulf::Logger;
+use Warewulf::DataStore;
+use Warewulf::DSOFactory;
+use Warewulf::Util;
+use Warewulf::Config;
+use Getopt::Long;
+use Warewulf::Network;
+use Warewulf::EventHandler;
+
+
+
+&set_log_level("NOTICE");
+
+$ENV{"PATH"} = "/bin:/usr/bin:/sbin:/usr/sbin";
+
+my $netObj = Warewulf::Network->new();
+my $datastore = Warewulf::DataStore->new();
+my $events = Warewulf::EventHandler->new();
+my $opt_debug;
+my $opt_verbose;
+my $opt_ipaddr;
+my $opt_netmask;
+my $opt_netdev;
+my $opt_vnfs;
+my $opt_bootstrap;
+my $opt_groups;
+my $opt_help;
+my $ipaddr_bin;
+my $opt_scriptfile;
+my @nodenames;
+my %seen;
+my $vnfsid;
+my $bootstrapid;
+my $syslog_file;
+
+$events->eventloader();
+
+my $help = "USAGE: $0 [options] nodes....
+    SUMMARY:
+        Scan for new systems making DHCP requests.
+    
+    OPTIONS:
+        -h, --help          Show the help/utilization summary
+        -d, --debug         Display debugging information
+        -v, --verbose       Be more verbose in output
+            --file          Create a Warewulf script instead of auto-import
+            --netdev        Define the network device for the new nodes
+            --ipaddr        IP address for the new node(s)
+            --netmask       Netmask for the new node(s)
+            --vnfs          Set the VNFS for the node(s)
+            --bootstrap     Set the bootstrap for the node(s)
+            --groups        Set the groups for the node(s)
+
+    NODES:
+        You can scan for multiple nodes and this program will exit after the
+        given nodes have been found. The IP address specified will be
+        incremented for each node found, and nodes will be added in the order
+        given by the command line.
+
+    DEFAULTS:
+        As with all object types, you can create a template object which will
+        be used for all new objects. Set whatever attributes you wish as
+        defaults. You can override some of these defaults by specifying them
+        by hand here.
+
+    EXAMPLES:
+        # wwnodescan --ipaddr 10.0.1.10 --netmask 255.255.0.0 --vnfs=sl6.vnfs \
+            --bootstrap=`uname -r` n0000 n0001
+        # wwsh node new DEFAULT --groups=grp1,test
+        # wwsh provision node DEFAULT --vnfs=sl6.vnfs --bootstrap=`uname -r`
+        # wwnodescan --ipaddr 10.0.1.100 --netmask 255.255.0.0 n00[02-19]
+
+";
+
+Getopt::Long::Configure ("bundling");
+
+GetOptions(
+    'h|help'        => \$opt_help,
+    'd|debug'       => \$opt_debug,
+    'v|verbose'     => \$opt_verbose,
+    'ipaddr=s'      => \$opt_ipaddr,
+    'netmask=s'     => \$opt_netmask,
+    'netdev=s'      => \$opt_netdev,
+    'vnfs=s'        => \$opt_vnfs,
+    'bootstrap=s'   => \$opt_bootstrap,
+    'groups=s'      => \$opt_groups,
+    'file=s'        => \$opt_scriptfile,
+);
+
+if ($opt_help or ! @ARGV) {
+    print $help;
+    exit;
+}
+
+if (! &uid_test(0)) {
+    &eprint("Must be root to run $0\n");
+    exit 1;
+}
+
+if (! $opt_ipaddr) {
+    &eprint("What IP address should be used?\n");
+    exit 1;
+}
+
+if (! $opt_netmask) {
+    &eprint("What netmask should be used?\n");
+    exit 1;
+}
+
+if (! $opt_netdev) {
+    &iprint("Assuming the nodes are booting off of eth0");
+    $opt_netdev = "eth0"
+}
+
+if ($opt_vnfs) {
+    my $vnfsObj = $datastore->get_objects("vnfs", "name", $opt_vnfs)->get_object(0);
+
+    if ($vnfsObj) {
+        $vnfsid = $vnfsObj->get("_id");
+    } else {
+        &eprint("VNFS '$opt_vnfs' does not exist\n");
+        exit 1;
+    }
+}
+
+if ($opt_bootstrap) {
+    my $bootstrapObj = $datastore->get_objects("bootstrap", "name", $opt_bootstrap)->get_object(0);
+
+    if ($bootstrapObj) {
+        $bootstrapid = $bootstrapObj->get("_id");
+    } else {
+        &eprint("BOOTSTRAP '$opt_bootstrap' does not exist\n");
+        exit 1;
+    }
+}
+
+$ipaddr_bin = $netObj->ip_serialize($opt_ipaddr);
+
+
+if (@ARGV) {
+    @nodenames = &expand_bracket(@ARGV);
+} else {
+    &eprint("Need list of nodenames to import\n");
+    exit 1;
+}
+
+if ($opt_scriptfile) {
+    if ($opt_scriptfile =~ /^([a-zA-Z0-9_\.\-\/]+)$/) {
+        open(SCRIPTFILE, "> $1") or die "Could not write to $1: $!\n";
+        print SCRIPTFILE "#!/bin/env wwsh\n\n";
+    } else {
+        &eprint("File script has illegal characters\n");
+        exit 1;
+    }
+}
+
+if (-f "/var/log/messages") {
+    $syslog_file = "/var/log/messages";
+} elsif (-f "/var/log/syslog") {
+    $syslog_file = "/var/log/syslog";
+} else {
+    &eprint("Could not find syslog log file\n");
+    exit 1;
+}
+
+if (! open(FILE, $syslog_file)) {
+    &eprint("$!\n");
+    exit 1;
+}
+
+seek(FILE, 0, 2);
+
+&nprint("Scanning for node(s)...\n");
+
+while(1) {
+    while (my $line = <FILE>) {
+        chomp($line);
+        if ( $line =~ /DHCPDISCOVER from ([0-9a-zA-Z:]+) via (eth\d+):.+no free leases/) {
+            my $hwaddr = $1;
+            my $NodeObj = $datastore->get_objects("node", "_hwaddr", $hwaddr)->get_object(0);
+            if ($NodeObj) {
+                print "Node is known ($hwaddr)\n";
+            } else {
+                my $name = shift(@nodenames);
+                my $ip = $netObj->ip_unserialize($ipaddr_bin);
+                if ($opt_scriptfile) {
+                    my @opts;
+                    if ($netmask) {
+                        push(@opts, "--netmask=$netmask");
+                    }
+                    if ($opt_groups) {
+                        push(@opts, "--groups=$opt_groups");
+                    }
+                    if ($bootstrapid) {
+                        push(@opts, "-s bootstrapid=$bootstrapid");
+                    }
+                    if ($vnfsid) {
+                        push(@opts, "-s vnfsid=$vnfsid");
+                    }
+                    print SCRIPTFILE "node new $name --netdev=$opt_netdev --ipaddr=$ip --hwaddr=$hwaddr ". join(" ", @opts) ."\n";
+                    print "Added to script file: $name: $ip/$opt_netmask/$hwaddr\n";
+                } else {
+                    my $newNodeObj = Warewulf::DSOFactory->new("node");
+                    my $newEthObj = Warewulf::DSOFactory->new("netdev");
+
+                    $newNodeObj->set("name", $name);
+                    $newEthObj->set("name", $opt_netdev);
+                    $newEthObj->set("hwaddr", $hwaddr);
+                    $newEthObj->set("ipaddr", $ip);
+                    $newEthObj->set("netmask", $netmask);
+                    $newNodeObj->add("netdevs", $newEthObj);
+                    $newNodeObj->add("_hwaddr", $hwaddr);
+                    $newNodeObj->set("bootstrapid", $bootstrapid);
+                    $newNodeObj->set("vnfsid", $vnfsid);
+                    if ($opt_groups) {
+                        $newNodeObj->set("groups", split(",", $opt_groups));
+                    }
+
+                    $datastore->persist($newNodeObj);
+
+                    print "Added to data store: $name: $ip/$opt_netmask/$hwaddr\n";
+                }
+
+                if (scalar(@nodenames) == 0) {
+                    print "Done.\n";
+                    close(FILE);
+                    exit;
+                }
+
+                $ipaddr_bin++;
+            }
+        }
+    }
+    sleep 1;
+    seek(FILE, 0, 1);
+}
+
+
+close(FILE);
+close(SCRIPTFILE);
+
