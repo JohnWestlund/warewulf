@@ -1,0 +1,53 @@
+Fri Oct 29 03:40:31 2010                        Michael Jennings (mej)
+
+Update provision code after Logger refactoring.
+----------------------------------------------------------------------
+Sat Oct 30 01:31:24 2010                        Michael Jennings (mej)
+
+Add copyrights to perl scripts.
+----------------------------------------------------------------------
+Mon Mar 14 17:49:00 2011                        Michael Jennings (mej)
+
+Add SVN revision number to release field.  Clean up spec.
+----------------------------------------------------------------------
+Thu Apr 21 16:55:02 2011                        Michael Jennings (mej)
+
+Another attempt to improve --root regexp.
+----------------------------------------------------------------------
+Fri Jun  3 20:12:58 2011                        Michael Jennings (mej)
+
+Initial work on cleaning up the autotools stuff.  Still more can be
+done here though.
+----------------------------------------------------------------------
+Thu Jul 14 14:26:59 2011                        Michael Jennings (mej)
+
+Oops, one too many.
+----------------------------------------------------------------------
+Mon Jul 18 15:50:42 2011                        Michael Jennings (mej)
+
+Fix usage of svnversion since it no longer errors properly.
+----------------------------------------------------------------------
+Tue Jul 19 14:37:15 2011                        Michael Jennings (mej)
+
+Replace use of Digest::file with Digest::MD5.
+----------------------------------------------------------------------
+Fri Aug 12 17:37:13 2011                        Michael Jennings (mej)
+
+Adjust version due to incompatible changes.
+----------------------------------------------------------------------
+Mon Sep 26 16:38:59 2011                        Michael Jennings (mej)
+
+Port of my IPoIB provisioning patch to newer busybox.
+----------------------------------------------------------------------
+Tue Sep 27 12:48:39 2011                        Michael Jennings (mej)
+
+Clean up spec file, correct typos.
+----------------------------------------------------------------------
+Mon Oct 10 17:01:26 2011                        Michael Jennings (mej)
+
+I think this is closer to what was intended.
+----------------------------------------------------------------------
+Tue Oct 11 10:55:42 2011                        Michael Jennings (mej)
+
+Set svn:ignore for provision tree.
+----------------------------------------------------------------------
