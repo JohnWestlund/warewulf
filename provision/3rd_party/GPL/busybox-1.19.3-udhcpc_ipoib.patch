@@ -1,6 +1,6 @@
-diff -Nur busybox-1.18.1/networking/udhcp/dhcpc.c busybox-1.18.1-ipoib/networking/udhcp/dhcpc.c
---- busybox-1.18.1/networking/udhcp/dhcpc.c	2010-12-19 16:41:27.000000000 -0800
-+++ busybox-1.18.1-ipoib/networking/udhcp/dhcpc.c	2011-09-01 16:47:12.757422343 -0700
+diff -Nur busybox-1.19.3/networking/udhcp/dhcpc.c busybox-1.19.3-ipoib/networking/udhcp/dhcpc.c
+--- busybox-1.19.3/networking/udhcp/dhcpc.c	2010-12-19 16:41:27.000000000 -0800
++++ busybox-1.19.3-ipoib/networking/udhcp/dhcpc.c	2011-09-01 16:47:12.757422343 -0700
 @@ -446,6 +446,13 @@
  	packet.xid = xid;
  	if (requested)
@@ -84,9 +84,9 @@ diff -Nur busybox-1.18.1/networking/udhcp/dhcpc.c busybox-1.18.1-ipoib/networkin
  		) {
  //FIXME: need to also check that last 10 bytes are zero
  			log1("chaddr does not match, ignoring packet"); // log2?
-diff -Nur busybox-1.18.1/networking/udhcp/packet.c busybox-1.18.1-ipoib/networking/udhcp/packet.c
---- busybox-1.18.1/networking/udhcp/packet.c	2010-12-19 16:41:27.000000000 -0800
-+++ busybox-1.18.1-ipoib/networking/udhcp/packet.c	2011-09-02 11:26:15.826231818 -0700
+diff -Nur busybox-1.19.3/networking/udhcp/packet.c busybox-1.19.3-ipoib/networking/udhcp/packet.c
+--- busybox-1.19.3/networking/udhcp/packet.c	2010-12-19 16:41:27.000000000 -0800
++++ busybox-1.19.3-ipoib/networking/udhcp/packet.c	2011-09-02 11:26:15.826231818 -0700
 @@ -17,6 +17,7 @@
  #endif
  
@@ -187,3 +187,54 @@ diff -Nur busybox-1.18.1/networking/udhcp/packet.c busybox-1.18.1-ipoib/networki
  	msg = "sendto";
   ret_close:
  	close(fd);
+--- busybox-1.19.3/loginutils/getty.c
++++ busybox-1.19.3-getty/loginutils/getty.c
+@@ -271,7 +271,9 @@ static void termios_init(int speed)
+ #ifdef CMSPAR
+ 		| CMSPAR  /* mark or space parity */
+ #endif
++#ifdef CBAUD
+ 		| CBAUD   /* (output) baud rate */
++#endif
+ #ifdef CBAUDEX
+ 		| CBAUDEX /* (output) baud rate */
+ #endif
+--- busybox-1.19.3/modutils/modinfo.c
++++ busybox-1.19.3-modinfo/modutils/modinfo.c
+@@ -13,6 +13,7 @@
+ //config:config MODINFO
+ //config:	bool "modinfo"
+ //config:	default y
++//config:	select PLATFORM_LINUX
+ //config:	help
+ //config:	  Show information about a Linux Kernel module
+ 
+--- busybox-1.19.3/networking/wget.c
++++ busybox-1.19.3-wget/networking/wget.c
+@@ -552,6 +552,7 @@ static void download_one_url(const char 
+ 	FILE *dfp;                      /* socket to ftp server (data)      */
+ 	char *proxy = NULL;
+ 	char *fname_out_alloc;
++	char *redirected_path = NULL;
+ 	struct host_info server;
+ 	struct host_info target;
+ 
+@@ -794,8 +795,8 @@ However, in real world it was observed t
+ 					bb_error_msg_and_die("too many redirections");
+ 				fclose(sfp);
+ 				if (str[0] == '/') {
+-					free(target.allocated);
+-					target.path = target.allocated = xstrdup(str+1);
++					free(redirected_path);
++					target.path = redirected_path = xstrdup(str+1);
+ 					/* lsa stays the same: it's on the same server */
+ 				} else {
+ 					parse_url(str, &target);
+@@ -850,6 +851,7 @@ However, in real world it was observed t
+ 	free(server.allocated);
+ 	free(target.allocated);
+ 	free(fname_out_alloc);
++	free(redirected_path);
+ }
+ 
+ int wget_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
