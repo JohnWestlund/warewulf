@@ -1,0 +1,61 @@
+#!/bin/sh
+##
+## Copyright (c) 2001-2003 Gregory M. Kurtzer
+##
+## Copyright (c) 2003-2012, The Regents of the University of California,
+## through Lawrence Berkeley National Laboratory (subject to receipt of any
+## required approvals from the U.S. Dept. of Energy).  All rights reserved.
+##
+
+#INIT: ALL
+#INIT: DATASTORE
+#INIT: PROVISION
+#INIT: AUTH
+
+if [ -f "$WWFUNCTIONS" ]; then
+    . $WWFUNCTIONS
+else
+    echo "ERROR: could not load warewulf functions!"
+    exit 255
+fi
+
+wwreqroot
+
+
+RETVAL=1
+
+
+wwprint "Checking to see if /etc/passwd is in the WW Datastore"
+if ! wwtest wwsh file list passwd; then
+    wwprint "Adding /etc/passwd to the datastore:\n"
+    if wwrun wwsh file import /etc/passwd --name=passwd; then
+        if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
+            if ! grep -q "^files += passwd" /etc/warewulf/defaults/provision.conf; then
+                wwprint "Adding passwd to default new node configuration"
+                wwaction sed -i -e 's/^\([ ]*files[ ]*=.*\)/\1\nfiles += passwd/' /etc/warewulf/defaults/provision.conf
+            fi
+        fi
+        RETVAL=0
+    else
+        exit 255
+    fi
+fi
+
+wwprint "Checking to see if /etc/group is in the WW Datastore"
+if ! wwtest wwsh file list group; then
+    wwprint "Adding /etc/group to the datastore:\n"
+    if wwrun wwsh file import /etc/group --name=group; then
+        if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
+            if ! grep -q "^files += group" /etc/warewulf/defaults/provision.conf; then
+                wwprint "Adding group to default new node configuration"
+                wwaction sed -i -e 's/^\([ ]*files[ ]*=.*\)/\1\nfiles += group/' /etc/warewulf/defaults/provision.conf
+            fi
+        fi
+        RETVAL=0
+    else
+        exit 255
+    fi
+fi
+
+
+exit $RETVAL

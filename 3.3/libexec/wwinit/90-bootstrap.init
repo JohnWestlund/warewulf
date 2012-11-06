@@ -1,0 +1,41 @@
+#!/bin/sh
+##
+## Copyright (c) 2001-2003 Gregory M. Kurtzer
+##
+## Copyright (c) 2003-2012, The Regents of the University of California,
+## through Lawrence Berkeley National Laboratory (subject to receipt of any
+## required approvals from the U.S. Dept. of Energy).  All rights reserved.
+##
+
+#INIT: ALL
+#INIT: VNFS
+
+if [ -f "$WWFUNCTIONS" ]; then
+    . $WWFUNCTIONS
+else
+    echo "ERROR: could not load warewulf functions!"
+    exit 255
+fi
+
+wwreqroot
+
+
+RETVAL=1
+
+KVERSION=`uname -r`
+
+wwprint "Checking on a Warewulf bootstrap"
+if ! wwtest wwsh bootstrap list; then
+    wwprint "Creating bootstrap for $KVERSION:\n"
+    if wwrun wwbootstrap $KVERSION; then
+        if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
+            sed -i -e "s/^.*bootstrap[ ]*=.*/bootstrap = $KVERSION/" /etc/warewulf/defaults/provision.conf
+        fi
+        RETVAL=0
+    else
+        exit 255
+    fi
+fi
+
+
+exit $RETVAL
