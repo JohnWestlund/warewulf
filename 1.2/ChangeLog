@@ -1,0 +1,308 @@
+Mon Dec 13 18:11:16 2010                        Michael Jennings (mej)
+
+Initial check-in.
+----------------------------------------------------------------------
+Mon Dec 13 19:12:54 2010                        Michael Jennings (mej)
+
+Work in progress:  Initial skeleton for node health check.
+----------------------------------------------------------------------
+Tue Dec 14 11:15:23 2010                        Michael Jennings (mej)
+
+Completed driver script for health check.  Now to write checks and
+test it.
+----------------------------------------------------------------------
+Wed Dec 15 17:01:43 2010                        Michael Jennings (mej)
+
+Add packaging goop.
+----------------------------------------------------------------------
+Wed Dec 15 19:10:33 2010                        Michael Jennings (mej)
+
+Added some checks and a sample config.  In the process of debugging.
+----------------------------------------------------------------------
+Wed Dec 15 20:51:38 2010                        Michael Jennings (mej)
+
+Debugging errors in the FS check.
+----------------------------------------------------------------------
+Wed Dec 15 21:19:35 2010                        Michael Jennings (mej)
+
+Thanks to Greg, I fixed the handling of subshell (pipeline)
+vs. non-subshell while loops.  Everything appears to be working now.
+----------------------------------------------------------------------
+Thu Dec 16 20:51:57 2010                        Michael Jennings (mej)
+
+Allow for more readable config files by stripping surrounding
+whitespace from target and check values.
+
+Convert comment check to native bash to avoid spawning grep and a
+subshell.
+
+Fix bug with regexp targets in config.  Forgot to *actually* strip off
+the slashes...
+----------------------------------------------------------------------
+Thu Dec 16 21:24:58 2010                        Michael Jennings (mej)
+
+Fix output redirection and debugging.
+----------------------------------------------------------------------
+Thu Mar 31 15:50:46 2011                        Michael Jennings (mej)
+
+Fix spec to package all installed files and directories.
+
+Wrap I/O in "eval" to make sure $LOGFILE redirection symbols are used
+properly.
+
+Fix typo in $SILENT check.
+
+Fix config file parsing to be compatible with bash >= 3.2.
+----------------------------------------------------------------------
+Thu Mar 31 17:46:42 2011                        Michael Jennings (mej)
+
+Don't log timestamp; we're trying to avoid subprocesses.
+
+On error, syslog the reason.
+----------------------------------------------------------------------
+Thu Apr 21 18:46:17 2011                        Michael Jennings (mej)
+
+This is a work in progress.  I'm testing a bunch of stuff, so some or
+all of it may end up not working.  We'll see.
+
+ - Added routine to gather /etc/passwd data into arrays
+ - Added userid-to-UID mapping function
+ - Consolidated process checks to use a single spawning of "ps"
+ - Added routine to gather list from TORQUE of users who currently
+   have jobs running on the node
+ - Added check for unauthorized processes running on the node
+ - Added timeout in background to kill nhc if it hangs to avoid
+   hanging pbs_mom
+ - Eliminated several unnecessary forks
+----------------------------------------------------------------------
+Fri Apr 22 14:03:32 2011                        Michael Jennings (mej)
+
+Still needs some debugging, but I've successfully eliminated all but 1
+subprocess (the "ps" command).  Quite good given all the script does
+so far.
+
+Also added the beginnings of a test script for making sure the
+individual functions work as advertised.
+----------------------------------------------------------------------
+Mon Apr 25 13:00:10 2011                        Michael Jennings (mej)
+
+Final fixups for UID check.  Everything appears to be working well
+now.
+----------------------------------------------------------------------
+Wed Apr 27 12:19:11 2011                        Michael Jennings (mej)
+
+Added check to verify user processes descend from pbs_mom.
+
+Added flexible regexp/glob match check.
+
+Renamed utility functions to nhc_* so that only user-usable checks
+start with check_*.
+
+Added syslog function to save syslog messages until script
+termination.
+----------------------------------------------------------------------
+Mon May  2 18:51:27 2011                        Michael Jennings (mej)
+
+Added checks for CPU socket/core/thread counts and total/free
+RAM/swap/memory.
+----------------------------------------------------------------------
+Tue May  3 19:07:02 2011                        Michael Jennings (mej)
+
+Missed a file.
+----------------------------------------------------------------------
+Wed May  4 17:49:59 2011                        Michael Jennings (mej)
+
+Minor cleanups to check_ps_kswapd().
+----------------------------------------------------------------------
+Fri May  6 13:12:24 2011                               Yong Qin (yqin)
+
+Added check for Infiniband.
+----------------------------------------------------------------------
+Fri May  6 14:41:23 2011                               Yong Qin (yqin)
+
+A minor bug fix.
+----------------------------------------------------------------------
+Tue May 10 01:26:14 2011                        Michael Jennings (mej)
+
+Bump version.
+----------------------------------------------------------------------
+Tue May 10 13:01:16 2011                               Yong Qin (yqin)
+
+Added checks for Myrinet and Ethernet. Minor bug fix.
+----------------------------------------------------------------------
+Thu May 12 08:12:48 2011                        Michael Jennings (mej)
+
+Try alternate mechanism for IB port checks.
+----------------------------------------------------------------------
+Wed May 18 15:57:49 2011                        Michael Jennings (mej)
+
+Fix parsing bug.  Due to bash not properly "escaping" expanded
+variables inside ${VAR#...} constructs, config file lines must not
+contain more than one occurance of "||" any more.
+
+Direct output to /dev/null, then redirect if $LOGFILE is set.
+----------------------------------------------------------------------
+Tue May 24 15:33:25 2011                        Michael Jennings (mej)
+
+Support older single-core, non-HT CPUs in /proc/cpuinfo.
+----------------------------------------------------------------------
+Thu Sep  1 16:16:38 2011                        Michael Jennings (mej)
+
+Fixed status reporting and added NHC label to offline message.
+----------------------------------------------------------------------
+Mon Sep 19 17:13:11 2011                        Michael Jennings (mej)
+
+Bump version to 1.1.
+
+This release adds the ability to detect previously-set notes for nodes
+and not overwrite them.
+
+It will also clear notes and online nodes if all checks pass for a
+node that had previously had check errors.  It will only do this for
+nodes whose notes begin with "NHC" to avoid bringing nodes online
+which were manually offlined.  Nodes marked offline which have no note
+are not distinguished from down nodes and may be brought online if the
+error(s) clear.
+----------------------------------------------------------------------
+Thu Oct 13 16:04:20 2011                        Michael Jennings (mej)
+
+Output onlining/offlining of nodes to log (with timestamp).
+
+Log failure of health check to logfile as well as syslog.
+----------------------------------------------------------------------
+Wed Jan 25 15:40:58 2012                        Michael Jennings (mej)
+
+Convert to autoconf/automake for build.
+----------------------------------------------------------------------
+Tue Feb  7 11:11:12 2012                        Michael Jennings (mej)
+
+Various fixes and release of 1.1.4.
+----------------------------------------------------------------------
+Tue Mar 13 11:22:45 2012                        Michael Jennings (mej)
+
+Bump version.  More consistency/cleanups.
+----------------------------------------------------------------------
+Fri May  4 11:31:47 2012                        Michael Jennings (mej)
+
+Remove debugging stuff for UIDs > 100.  I don't really use it anyway,
+and some people may want to run as other users.
+
+Convert node online/offline scripts to use variables and $PATH to
+identify where the "pbsnodes" command is and what arguments it should
+take.
+
+Add an "eval" to the execution of the check so that shell variables
+can be used or altered in config files.
+----------------------------------------------------------------------
+Wed May  9 12:12:54 2012                        Michael Jennings (mej)
+
+Always use [[ ]] instead of [ ] (primarily for consistency).
+
+Add customization of resource manager daemon match expression and
+greater control over pbsnodes commands in online/offline helpers.
+----------------------------------------------------------------------
+Wed May  9 12:22:20 2012                        Michael Jennings (mej)
+
+Fix a couple conditional expressions from the last commit.
+----------------------------------------------------------------------
+Tue May 15 09:05:23 2012                        Michael Jennings (mej)
+
+Make sure nodes with no job files still work.
+----------------------------------------------------------------------
+Wed May 16 13:50:20 2012                        Michael Jennings (mej)
+
+Fix bug pointed out by Ole Holm Nielsen <ole.h.nielsen@fysik.dtu.dk>
+which caused the new "eval" of config file lines to barf on the
+regular expression with parentheses in the sample config.  Going
+forward, users will need to take care to escape shell metacharacters
+appropriately in config files.
+----------------------------------------------------------------------
+Fri Jun 22 15:26:40 2012                        Michael Jennings (mej)
+
+Add stubs for unit test and benchmarking scripts.
+
+Convert main NHC driver script to use functions so that it can be
+loaded without needing to be executed and to facilitate testing of
+some of its functionality.
+----------------------------------------------------------------------
+Fri Jun 29 17:52:30 2012                        Michael Jennings (mej)
+
+I smell unit tests!
+----------------------------------------------------------------------
+Mon Jul  2 16:33:54 2012                        Michael Jennings (mej)
+
+Move unit test framework to separate file.  Now called "SHUT."
+
+Override output functions to suppress normal NHC I/O and exception
+handling.
+
+Major refactoring of test framework to allow named tests and progress
+output.
+
+Added lots more unit tests for main nhc script.
+----------------------------------------------------------------------
+Mon Jul  2 17:17:38 2012                        Michael Jennings (mej)
+
+Initial test files for each check script.
+----------------------------------------------------------------------
+Thu Aug 16 18:12:36 2012                        Michael Jennings (mej)
+
+More work on unit tests:
+ - Report number of tests skipped, if any.
+ - Add tests for "common.nhc" module.
+ - Add tests for "ww_fs.nhc" module.
+ - Fix typos in external match checks.
+----------------------------------------------------------------------
+Fri Aug 24 15:29:17 2012                        Michael Jennings (mej)
+
+Finished hardware unit tests.
+----------------------------------------------------------------------
+Mon Aug 27 14:52:27 2012                        Michael Jennings (mej)
+
+Unit tests are finally done!  Should be 100% coverage on end-user
+checks too, though I don't know of any "gcov" equivalents for
+bash....  ;-)
+
+TODO:  More checks!
+----------------------------------------------------------------------
+Mon Aug 27 16:39:47 2012                        Michael Jennings (mej)
+
+Build fixes, alternative skip syntax, and unit test changes to allow
+"make test" in the spec file.  Tested on RHEL4, 5, and 6 and in chroot
+jails and VNFS images.
+----------------------------------------------------------------------
+Tue Sep  4 13:01:10 2012                        Michael Jennings (mej)
+
+Initial support for the nVidia HealthMon tool for checking the status
+of nVidia CUDA GPU devices.  More information can be found with the
+Tesla Deployment Kit version 3 (currently in RC status).
+----------------------------------------------------------------------
+Tue Sep  4 17:50:00 2012                        Michael Jennings (mej)
+
+Add check for blacklisted processes.
+----------------------------------------------------------------------
+Wed Sep  5 16:39:59 2012                        Michael Jennings (mej)
+
+New checks for filesystem size/used/free limits based on "df" output.
+Refactored check_fs_mount() to only read /proc/mounts once and
+populate central array set (just like all the other modules).
+Refactored unit tests accordingly.
+----------------------------------------------------------------------
+Thu Sep  6 09:57:41 2012                        Michael Jennings (mej)
+
+Added support for detached mode.  Runs all checks in the background,
+saves state to filesystem and checks it on the next run.
+----------------------------------------------------------------------
+Fri Sep  7 14:14:41 2012                        Michael Jennings (mej)
+
+Added unit tests for new disk space checks.  Tweaked detached mode to
+detach sooner.  Fixed some faulty logic.
+----------------------------------------------------------------------
+Fri Sep  7 14:52:49 2012                        Michael Jennings (mej)
+
+A couple minor bugfixes/cleanups.  This is now officially 1.2 beta.
+----------------------------------------------------------------------
+Wed Oct  3 16:09:05 2012                        Michael Jennings (mej)
+
+Finalized 1.2 release.
+----------------------------------------------------------------------
