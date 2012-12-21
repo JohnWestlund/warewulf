@@ -274,59 +274,6 @@ get_objects($$$@)
 }
 
 
-=item get_data($db_id);
-
-=cut
-
-sub
-get_data($)
-{
-    my $self = shift;
-    my $db_id = shift;
-    my $href;
-
-    if (! $self->{"DBH"}) {
-        $self->init();
-    }
-    if (!exists($self->{"STH_GETDATA"})) {
-        my $sql_query;
-
-        $sql_query = "SELECT datastore.data AS data FROM datastore WHERE %s"
-            . "datastore.id = " . $self->{"DBH"}->quote($db_id);
-        $self->{"STH_GETDATA"} = $self->{"DBH"}->prepare($sql_query);
-        dprint("$sql_query\n\n");
-    }
-    $self->{"STH_GETDATA"}->execute();
-    $href = $self->{"STH_GETDATA"}->fetchrow_hashref();
-
-    return ((exists($href->{"data"})) ? ($href->{"data"}) : (undef));
-}
-
-
-=item set_data($db_id, $data);
-
-=cut
-
-sub
-set_data($)
-{
-    my ($self, $db_id, $data) = @_;
-
-    if (! $self->{"DBH"}) {
-        $self->init();
-    }
-    if ($db_id) {
-        if (!exists($self->{"STH_SETDATA"})) {
-            $self->{"STH_SETDATA"} = $self->{"DBH"}->prepare("UPDATE datastore SET data = ? WHERE id = ?");
-        }
-        if (!$self->{"STH_SETDATA"}->execute($data, $db_id)) {
-            die $self->{"STH_SETDATA"}->errstr();
-        }
-    }
-    return;
-}
-
-
 =item get_lookups($type, $field, $val1, $val2, $val3);
 
 =cut
@@ -419,6 +366,8 @@ persist($$)
                 kill("ABRT", $$);
             }
 
+            $self->{"DBH"}->begin_work();
+
             if (! $id) {
                 &dprint("Persisting object as new\n");
                 my $event_retval = $event->handle("$type.new", $o);
@@ -479,6 +428,8 @@ persist($$)
                 dprint("Not adding lookup entries\n");
             }
 
+            $self->{"DBH"}->commit();
+
         }
     }
 
@@ -520,6 +471,9 @@ del_object($$)
 
         if ($id) {
             dprint("Deleting object from the data store: ID=$id\n");
+
+            $self->{"DBH"}->begin_work();
+
             if (!exists($self->{"STH_RMLOOK"})) {
                 $self->{"STH_RMLOOK"} = $self->{"DBH"}->prepare("DELETE FROM lookup WHERE object_id = ?");
             }
@@ -533,6 +487,8 @@ del_object($$)
             $self->{"STH_RMBS"}->execute($id);
             $self->{"STH_RMDS"}->execute($id);
 
+            $self->{"DBH"}->commit();
+
             # Consolidate all objects by type to run events on at once
             push(@{$events{"$type"}}, $o);
         }
@@ -545,107 +501,6 @@ del_object($$)
 
     return scalar(@objlist);
 }
-
-=item add_lookup($entity, $type, $field, $value)
-
-=cut
-
-sub
-add_lookup($$$$)
-{
-    my ($self, $object, $field, $value) = @_;
-
-    if (! $self->{"DBH"}) {
-        $self->init();
-    }
-    dprint("Hello from add_lookup()\n");
-    if ($object and $type and $field and $value) {
-        if (!exists($self->{"STH_INSLOOK"})) {
-            $self->{"STH_INSLOOK"} = $self->{"DBH"}->prepare("INSERT IGNORE lookup (field, value, object_id) VALUES (?,?,?)");
-        }
-        if (ref($object) eq "Warewulf::ObjectSet") {
-            foreach my $o ($object->get_list()) {
-                if (my $id = $o->get("_id")) {
-                    dprint("Adding a lookup entry for: $field and $value and $id\n");
-                    $self->{"STH_INSLOOK"}->execute(uc($field), $value, $id);
-                } else {
-                    &wprint("No ID found for object!\n");
-                }
-            }
-        } elsif (ref($object) =~ /^Warewulf::/) {
-            if (my $id = $object->get("_id")) {
-                dprint("Adding a lookup entry for: $field and $value and $id\n");
-                $self->{"STH_INSLOOK"}->execute(uc($field), $value, $id);
-            } else {
-                &wprint("No ID found for object!\n");
-            }
-        }
-    }
-}
-
-=item del_lookup($entity [$type, $field, $value])
-
-=cut
-
-sub
-del_lookup($$$$)
-{
-    my ($self, $object, $type, $field, $value) = @_;
-    my $query;
-    my @bindvals;
-
-    if (! $self->{"DBH"}) {
-        $self->init();
-    }
-    if (ref($object) eq "Warewulf::ObjectSet") {
-        foreach my $o ($object->get_list()) {
-            my $id = $o->get("_id");
-
-            if ($id) {
-                $query = "DELETE FROM lookup WHERE object_id = ?";
-                @bindvals = ($id);
-                if ($type) {
-                    $query .= " AND type = ?";
-                    push @bindvals, $type;
-                }
-                if ($field) {
-                    $query .= " AND field = ?";
-                    push @bindvals, $field;
-                }
-                if ($value) {
-                    $query .= " AND value = ?";
-                    push @bindvals, $value;
-                }
-                $sth->execute(@bindvals);
-            } else {
-                &wprint("No ID found for object!\n");
-            }
-        }
-    } elsif (ref($object) =~ /^Warewulf::/) {
-        my $id = $object->get("_id");
-
-        if ($id) {
-            $query = "DELETE FROM lookup WHERE object_id = ?";
-            @bindvals = ($id);
-            if ($type) {
-                $query .= " AND type = ?";
-                push @bindvals, $type;
-            }
-            if ($field) {
-                $query .= " AND field = ?";
-                push @bindvals, $field;
-            }
-            if ($value) {
-                $query .= " AND value = ?";
-                push @bindvals, $value;
-            }
-            $sth->execute(@bindvals);
-        } else {
-            &wprint("No ID found for object!\n");
-        }
-    }
-}
-
 
 =item binstore($object_id);
 
