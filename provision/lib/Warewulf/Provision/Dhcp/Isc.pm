@@ -241,8 +241,13 @@ persist()
     foreach my $n ($datastore->get_objects("node")->get_list()) {
         my $hostname = $n->nodename() || "undef";
         my $nodename = $n->name() || "undef";
+        my $db_id = $n->id();
+        if (! $db_id) {
+            &eprint("No DB ID associated with this node object object: $hostname/$nodename:$n\n");
+            next;
+        }
         $nodename =~ s/\./_/g;
-        &dprint("Evaluating node: $nodename\n");
+        &dprint("Evaluating node: $nodename (object ID: $db_id)\n");
         my @bootservers = $n->get("bootserver");
         if (! @bootservers or scalar(grep { $_ eq $ipaddr} @bootservers)) {
             my ($master_ipv4_bin) = $n->get("master");
@@ -306,6 +311,7 @@ persist()
                 if ($nodename and $node_ipaddr and $hwaddr) {
                     &dprint("Adding a host entry for: $nodename-$devname\n");
 
+                    $dhcpd_contents .= "   # Node entry for Warewulf data store ID: $db_id\n";
                     $dhcpd_contents .= "   host $nodename-$devname {\n";
                     $dhcpd_contents .= "      option host-name $hostname;\n";
                     if ($node_gateway) {

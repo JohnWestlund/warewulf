@@ -153,11 +153,17 @@ update()
         my $hostname = $nodeobj->name() || "localhost.localdomain";
         my $nodename = $nodeobj->nodename() || "undef";
         my $bootstrapid = $nodeobj->get("bootstrapid");
+        my $db_id = $n->id();
         my @kargs = $nodeobj->get("kargs");
         my @masters = $nodeobj->get("master");
         my $bootstrapname;
 
-        &dprint("Evaluating node $nodename\n");
+        if (! $db_id) {
+            &eprint("No DB ID associated with this node object object: $hostname/$nodename:$n\n");
+            next;
+        }
+
+        &dprint("Evaluating node: $nodename (object ID: $db_id)\n");
 
         if ($bootstrapid) {
             my $bootstrapObj = $db->get_objects("bootstrap", "_id", $bootstrapid)->get_object(0);
@@ -225,6 +231,7 @@ update()
                     next;
                 }
                 print PXELINUX "# Configuration for Warewulf node: $hostname\n";
+                print PXELINUX "# Warewulf data store ID: $db_id\n";
                 if ($nodeobj->get("bootlocal")) {
                     print PXELINUX "DEFAULT bootlocal\n";
                 } else {
