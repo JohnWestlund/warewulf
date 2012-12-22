@@ -225,7 +225,12 @@ get_objects($$$@)
         push(@query_opts, "datastore.type = ". $self->{"DBH"}->quote($type));
     }
     if ($field) {
-        push(@query_opts, "(lookup.field = ". $self->{"DBH"}->quote(uc($field)) ."OR lookup.field = ". $self->{"DBH"}->quote(uc("_". $field)) .")");
+        if (uc($field) eq "ID" or uc($field) eq "_ID") {
+            push(@query_opts, "datastore.id IN (". join(",", map { $self->{"DBH"}->quote($_) } @strings). ")");
+            @strings = ();
+        } else {
+            push(@query_opts, "(lookup.field = ". $self->{"DBH"}->quote(uc($field)) ."OR lookup.field = ". $self->{"DBH"}->quote(uc("_". $field)) .")");
+        }
     }
     if (@strings) {
         push(@query_opts, "lookup.value IN (". join(",", map { $self->{"DBH"}->quote($_) } @strings). ")");
