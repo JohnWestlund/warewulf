@@ -120,6 +120,8 @@ generate()
     $hosts .= "# See provision.conf for configuration paramaters\n\n";
 
     foreach my $n ($datastore->get_objects("node")->get_list()) {
+        my $nodeid = $n->id();
+        my $name = $n->name();
         my $nodename = $n->nodename();
         my $devcount = scalar $n->netdevs_list();
         my $default_name;
@@ -133,6 +135,7 @@ generate()
         }
 
         &dprint("Evaluating node: $nodename\n");
+        $hosts .= "\n# Node Entry for node: $name (ID=$nodeid)\n";
 
         foreach my $devname ($n->netdevs_list()) {
             my $node_ipaddr = $n->ipaddr($devname);
