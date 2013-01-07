@@ -1,0 +1,94 @@
+#!/bin/sh
+#
+# Copyright (c) 2001-2003 Gregory M. Kurtzer
+#
+# Copyright (c) 2003-2011, The Regents of the University of California,
+# through Lawrence Berkeley National Laboratory (subject to receipt of any
+# required approvals from the U.S. Dept. of Energy).  All rights reserved.
+#
+
+
+# Install a bootloader if $WWBOOTLOADER is set and the root device is known
+if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
+    if ! echo $WWBOOTLOADER | grep -q "^/dev/"; then
+        WWBOOTLOADER="/dev/$WWBOOTLOADER"
+    fi
+    if [ -b "$WWBOOTLOADER" ]; then
+        KERNEL=`cd $NEWROOT; find boot/vmlinuz-* 2>/dev/null | tail -n 1`
+        if [ -n "$KERNEL" ]; then
+            KERNELVERSION=`echo "$KERNEL" | sed -e 's@.*boot/vmlinuz-@@'`
+            if [ -x "$NEWROOT/sbin/dracut" ]; then
+                chroot $NEWROOT /sbin/dracut --force '' $KERNELVERSION
+                INITRD=`cd $NEWROOT; find boot/initr*-${KERNELVERSION}.img* 2>/dev/null | tail -n 1`
+            elif [ -x "$NEWROOT/sbin/mkinitrd" ]; then
+                INITRD=`cd $NEWROOT; find boot/initr*-${KERNELVERSION}.img* 2>/dev/null | tail -n 1`
+                if [ -n "$INITRD" ]; then
+                    INITRD="boot/initramfs-$KERNELVERSION.img"
+                fi
+                mount -t sysfs none $NEWROOT/sys  
+                chroot $NEWROOT /sbin/mkinitrd -f $INITRD $KERNELVERSION
+                umount $NEWROOT/sys
+            fi
+
+            if [ -x "$NEWROOT/sbin/grub-install" ]; then
+                ROOTDEV=`cat /tmp/rootdev`
+
+                if [ -n "$INITRD" -a -n "$KERNEL" ]; then
+                    if [ -f "$NEWROOT/etc/redhat-release" ]; then
+                        OSVERSION=`sed -e 's@ (.*@@' $NEWROOT/etc/redhat-release`
+                    elif [ -f "$NEWROOT/etc/release" ]; then
+                        OSVERSION=`cat $NEWROOT/etc/redhat-release | head -n 1`
+                    else
+                        OSVERSION="Warewulf"
+                    fi
+                    if [ -f /tmp/mptab ]; then
+                        if grep -q "^/boot " /tmp/mptab; then
+                            INITRD=${INITRD##boot/}
+                            KERNEL=${KERNEL##boot/}
+                        fi
+                    fi
+
+                    echo "# This file was written by Warewulf bootstrap (capability setup-filesystems)" > $NEWROOT/boot/grub/device.map
+                    echo "(hd0) $WWBOOTLOADER" >> $NEWROOT/boot/grub/device.map
+
+                    echo "# This file was written by Warewulf bootstrap (capability setup-filesystems)" > $NEWROOT/boot/grub/grub.conf
+                    echo "default 0" >>$NEWROOT/boot/grub/grub.conf
+                    echo "timeout 10" >>$NEWROOT/boot/grub/grub.conf
+                    echo "root (hd0,0)" >>$NEWROOT/boot/grub/grub.conf
+                    echo "" >>$NEWROOT/boot/grub/grub.conf
+                    echo "title $OSVERSION - $KERNELVERSION" >>$NEWROOT/boot/grub/grub.conf
+                    echo "    kernel /$KERNEL ro root=$ROOTDEV rhgb quiet" >>$NEWROOT/boot/grub/grub.conf
+                    echo "    initrd /$INITRD" >>$NEWROOT/boot/grub/grub.conf
+
+                    if [ -f "/tmp/mtab" ]; then
+                        cp /tmp/mtab $NEWROOT/etc/mtab
+                    fi
+
+                    mkdir $NEWROOT/dev/mapper
+                    mknod $NEWROOT/dev/mapper/control c 10 58
+
+                    if chroot $NEWROOT /sbin/grub-install $WWBOOTLOADER >/dev/null; then
+                        exit 0
+                    else
+                        echo "Running grub-install failed!"
+                        exit 255
+                    fi
+                else
+                    echo "Could not find INITRD and/or KERNEL version!"
+                    exit 2
+                fi
+            else
+                echo "GRUB is not installed!"
+                exit 2
+            fi
+        else
+            echo "Could not identify kernel version in VNFS!"
+            exit 2
+        fi
+    else
+        echo "BOOTLOADER=$BOOTLOADER is invalid!"
+        exit 2
+    fi
+else
+    exit 1
+fi
