@@ -11,7 +11,7 @@ URL: http://warewulf.lbl.gov/
 Source: %{name}-%{version}.tar.gz
 ExclusiveOS: linux
 BuildRequires: json-c-devel, sqlite-devel >= 3.3.6
-Requires: json-c, sqlite >= 3.6, perl-JSON, perl-JSON-XS
+Requires: json-c, sqlite >= 3.3.6, perl-JSON, perl-JSON-XS
 BuildRoot: %{?_tmppath}%{!?_tmppath:/var/tmp}/%{name}-%{version}-%{release}-root
 
 %description
