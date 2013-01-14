@@ -222,18 +222,27 @@ if (-d $opt_chroot) {
             mkpath($tmpdir);
             &iprint("Creating temporary chroot at: $tmpdir\n");
             system("cd $opt_chroot; cp -ax . $tmpdir");
-            &nprint("Excluding files from VNFS\n");
+            if ($opt_hybrid) {
+                &nprint("Excluding and hybridizing files from VNFS\n");
+            } else {
+                &nprint("Excluding files from VNFS\n");
+            }
             foreach my $line (@exclude_files) {
                 if ($line =~ /^\/(.*)$/) {
-                    foreach my $file (glob("$line")) {
+                    foreach my $file (glob("$tmpdir/$line")) {
                         if ($file =~ /^([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             $file = $1;
-                            if (-e $file) {
-                                &dprint("Excluding from VNFS: $tmpdir$file\n");
-                                system("rm -rf $tmpdir$file");
+                            if (-e "$tmpdir/$file") {
                                 if ($opt_hybrid) {
-                                    &iprint("Hybridizing location in VNFS: $file\n");
+                                    &dprint("Hybridizing location in VNFS: $file\n");
+                                    system("rm -rf $tmpdir/$file");
                                     system("ln -s $opt_hybrid/$file $tmpdir/$file");
+                                } elsif (-d "$tmpdir/$file") {
+                                    &dprint("Excluding from VNFS: $file/*\n");
+                                    system("rm -rf $tmpdir/$file/*");
+                                } else {
+                                    &dprint("Excluding from VNFS: $file\n");
+                                    system("rm -rf $tmpdir/$file");
                                 }
                             } else {
                                 &iprint("Skipping non-existent file to exclude/hybridize: $file\n");
