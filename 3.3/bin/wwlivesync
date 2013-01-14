@@ -34,6 +34,7 @@ my $opt_help;
 my $opt_debug;
 my $opt_verbose;
 my $opt_quiet;
+my $opt_show;
 
 
 Getopt::Long::Configure ("bundling");
@@ -44,6 +45,7 @@ GetOptions(
     'debug'         => \$opt_debug,
     'verbose'       => \$opt_verbose,
     'quiet'         => \$opt_quiet,
+    'show'          => \$opt_show,
 );
 
 
@@ -79,6 +81,7 @@ if ($opt_help) {
     print "     compatibility.\n\n";
     print "\nOPTIONS:\n\n";
     print "   -l, --lookup        Identify nodes by specified property (default: \"name\")\n";
+    print "       --show          Just print what it would do instead of actually do it\n";
     print "       --verbose       Increase verbosity level\n";
     print "       --quiet         Decrease verbosity level\n";
     print "       --debug         Print debugging messages\n";
@@ -109,8 +112,9 @@ $pcmd->ktime($timeout);
 $pcmd->fanout($fanout);
 
 foreach my $exclude (@skiplist) {
-    $exclude =~ s/^\///;
+    $exclude =~ s/^\.?\/+//;
     $skiplist_excludes_opts .= " --exclude='$exclude'";
+    $skiplist_excludes_opts .= " --exclude='./$exclude'";
 }
 
 
@@ -134,6 +138,8 @@ foreach my $o ($objSet->get_list()) {
         if ($file) {
             my $path = $file->path();
             if ($path) {
+                $path =~ s/^\.?\/+//;
+                $excludes_opts .= " --exclude='$path'";
                 $excludes_opts .= " --exclude='./$path'";
             }
         }
@@ -147,22 +153,32 @@ foreach my $o ($objSet->get_list()) {
     $vnfs_config = Warewulf::Config->new("vnfs.conf", "vnfs/$name.conf");
     @excludes = $vnfs_config->get("excludes");
     $chroot = $vnfs->chroot() || $vnfs_config->get("chroot");
+    $vnfs_rsync = $vnfs_config->get("rsync") || "/usr/bin/rsync";
 
     if (! $chroot) {
         &wprint("Unknown VNFS chroot location for VNFS: $vnfs_name\n");
         next;
     }
 
-    foreach my $exclude (@excludes) {
-        $exclude =~ s/^\///;
-        $excludes_opts .= " --exclude='$exclude'";
+    if (! -x "$chroot/$vnfs_rsync") {
+        &wprint("Skipping $name, rsync command ($vnfs_rsync) not found in VNFS.\n");
+        next;
     }
 
-    $cmd = "echo 'cd $chroot; rsync -aqHP $excludes_opts $skiplist_excludes_opts . $name:/ 2>&1 && echo done'";
-    #$cmd = "cd $chroot; rsync -aqHP $excludes_opts $skiplist_excludes_opts . $name:/ 2>&1 && echo done";
+    foreach my $exclude (@excludes) {
+        $exclude =~ s/^\.?\/+//;
+        $excludes_opts .= " --exclude='$exclude'";
+        $excludes_opts .= " --exclude='./$exclude'";
+    }
 
-    &iprint("Queuing command: $cmd\n");
-    $pcmd->queue($cmd, "$name: ");
+    $cmd = "cd $chroot; rsync -aqHP $excludes_opts $skiplist_excludes_opts . $name:/ 2>&1 && echo done";
+
+    if ($opt_show) {
+        print "$cmd\n";
+    } else {
+        &iprint("Queuing command: $cmd\n");
+        $pcmd->queue($cmd, "$name: ");
+    }
 
 }
 
