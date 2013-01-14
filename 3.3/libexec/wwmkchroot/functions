@@ -1,0 +1,181 @@
+#!/bin/bash
+
+eval `wwconfig -as`
+
+export FUNCTIONS="sanity_check
+                  init
+                  prechroot
+                  buildchroot
+                  postchroot
+                  configure_fstab
+                  configure_network
+                  configure_ntp
+                  configure_pam
+                  configure_authentication
+                  configure_sshkeys
+                  configure_rootacct
+                  configure_runlevel
+                  configure_services
+                  configure_timezone
+                  finalize"
+
+
+
+if [ -z "$CHROOTDIR" ]; then
+    echo "ERROR: PATH not defined!"
+    echo
+    usage
+    exit 1
+fi
+
+sanity_check() {
+    return 0
+}
+
+init() {
+    if [ ! -d "$CHROOTDIR" ]; then
+        mkdir -p "$CHROOTDIR"
+        return $?
+    fi
+    return 0
+}
+
+prechroot() {
+    return 0
+}
+
+buildchroot() {
+    echo "The template you are using, doesn't have buildchroot() defined!"
+    return 1
+}
+
+postchroot() {
+    return 0
+}
+
+configure_pam() {
+    if [ -f "$CHROOTDIR/etc/pam.d/system-auth" ]; then
+        sed -i -e '/^account.*pam_unix\.so\s*$/s/\s*$/\ broken_shadow/' $CHROOTDIR/etc/pam.d/system-auth
+    fi
+
+    if [ -f "$CHROOTDIR/etc/pam.d/password-auth" ]; then
+        sed -i -e '/^account.*pam_unix\.so\s*$/s/\s*$/\ broken_shadow/' $CHROOTDIR/etc/pam.d/password-auth
+    fi
+    return 0
+}
+
+configure_authentication() {
+    /usr/sbin/chroot $CHROOTDIR /usr/sbin/pwconv
+    return 0
+}
+
+configure_rootacct() {
+    sed -i -e 's/^root:[^:]*:/root:*:/' $CHROOTDIR/etc/passwd
+    cp $CHROOTDIR/etc/skel/.[a-zA-Z]* $CHROOTDIR/root/ > /dev/null 2>&1
+    return 0
+}
+
+configure_fstab() {
+    WWIPADDR=`perl -e '
+        use Warewulf::Network;
+        use Warewulf::Config;
+
+        my $config = Warewulf::Config->new("provision.conf");
+        my $netobj = Warewulf::Network->new();
+        my $netdev = $config->get("network device");
+        my $ipaddr = $netobj->ipaddr("$netdev");
+
+        print "$ipaddr\n";
+    '`
+
+    echo "#GENERATED_ENTRIES#" > $CHROOTDIR/etc/fstab
+    echo "tmpfs /dev/shm tmpfs defaults 0 0" >> $CHROOTDIR/etc/fstab
+    echo "devpts /dev/pts devpts gid=5,mode=620 0 0" >> $CHROOTDIR/etc/fstab
+    echo "sysfs /sys sysfs defaults 0 0" >> $CHROOTDIR/etc/fstab
+    echo "proc /proc proc defaults 0 0" >> $CHROOTDIR/etc/fstab
+
+    grep "^#WWEXPORT:" /etc/exports  | while read i; do
+        SHARE=`echo $i | cut -d : -f 2`
+        echo "$WWIPADDR:$SHARE $SHARE nfs defaults 0 0" >> $CHROOTDIR/etc/fstab
+        mkdir -p $CHROOTDIR/$SHARE
+    done
+    return 0
+}
+
+configure_sshkeys() {
+    if [ -f "$WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_key" ]; then
+        cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_key* $CHROOTDIR/etc/ssh/
+    else
+        /usr/bin/ssh-keygen -q -t rsa1 -f $CHROOTDIR/etc/ssh/ssh_host_key -C '' -N ''
+    fi
+    if [ -f "$WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_rsa_key" ]; then
+        cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_rsa_key* $CHROOTDIR/etc/ssh/
+    else
+        /usr/bin/ssh-keygen -q -t rsa -f $CHROOTDIR/etc/ssh/ssh_host_rsa_key -C '' -N ''
+    fi
+    if [ -f "$WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_dsa_key" ]; then
+        cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_dsa_key* $CHROOTDIR/etc/ssh/
+    else
+        /usr/bin/ssh-keygen -q -t dsa -f $CHROOTDIR/etc/ssh/ssh_host_dsa_key -C '' -N ''
+    fi
+
+    mkdir -m 0700 -p $CHROOTDIR/root/.ssh
+    > $CHROOTDIR/root/.ssh/authorized_keys
+    for i in `ls /root/.ssh/*.pub 2>/dev/null`; do
+        cat $i >> $CHROOTDIR/root/.ssh/authorized_keys
+    done
+    return 0
+}
+
+configure_network() {
+    echo "NETWORKING=yes" > $CHROOTDIR/etc/sysconfig/network
+    return 0
+}
+
+configure_runlevel() {
+    if [ -f "$CHROOTDIR/etc/inittab" ]; then
+        sed -i -e 's@id:.:initdefault:@id:3:initdefault:@' $CHROOTDIR/etc/inittab
+    fi
+}
+
+configure_timezone() {
+    if [ -f "/etc/localtime" ]; then
+        cp -a /etc/localtime $CHROOTDIR/etc/localtime
+    fi
+    if [ -f "/etc/adjtime" ]; then
+        cp -a /etc/adjtime $CHROOTDIR/etc/adjtime
+    fi
+}
+
+configure_ntp() {
+    NETDEV=`grep "^network device =" $WAREWULF_SYSCONFDIR/warewulf/provision.conf | cut -d = -f 2`
+    if [ -f "/etc/sysconfig/network-scripts/ifcfg-$NETDEV" ]; then
+        . /etc/sysconfig/network-scripts/ifcfg-$NETDEV
+        if [ -n "$IPADDR" -a "x$BOOTPROTO" == "xstatic" ]; then
+            echo "# Written by Warewulf:wwmkchroot" >> $CHROOTDIR/etc/ntp.conf
+            echo "driftfile /var/lib/ntp/drift" >> $CHROOTDIR/etc/ntp.conf
+
+            echo "restrict default kod nomodify notrap nopeer noquery" >> $CHROOTDIR/etc/ntp.conf
+            echo "restrict -6 default kod nomodify notrap nopeer noquery" >> $CHROOTDIR/etc/ntp.conf
+
+            echo "restrict 127.0.0.1" >> $CHROOTDIR/etc/ntp.conf
+            echo "restrict -6 ::1" >> $CHROOTDIR/etc/ntp.conf
+
+            echo "server $IPADDR prefer" >> $CHROOTDIR/etc/ntp.conf
+            echo "restrict $IPADDR mask 255.255.255.255 nomodify notrap noquery" >> $CHROOTDIR/etc/ntp.conf
+
+        fi
+    fi
+
+}
+
+configure_services() {
+    return 0
+}
+
+finalize() {
+    return 0
+}
+
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
