@@ -13,6 +13,9 @@ ExclusiveOS: linux
 BuildRequires: json-c-devel, sqlite-devel >= 3.3.6
 Requires: json-c, sqlite >= 3.3.6, perl-JSON, perl-JSON-XS
 BuildRoot: %{?_tmppath}%{!?_tmppath:/var/tmp}/%{name}-%{version}-%{release}-root
+Conflicts: warewulf-monitor-legacy
+Conflicts: warewulf-monitor-legacy-common
+Conflicts: warewulf-monitor-legacy-tools
 
 %description
 Warewulf >= 3 is a set of utilities designed to better enable
@@ -20,6 +23,15 @@ utilization and maintenance of clusters or groups of computers.
 
 This is the monitoring module.
 
+
+%package cli
+Summary: Warewulf monitoring command line front end
+Group: System Environment/Monitoring
+Requires: %{name} = %{version}-%{release}
+Requires: warewulf-common >= 3.2
+
+%description cli
+Command line interface to the Warewulf monitoring subsystem.
 
 %prep
 %setup
@@ -41,9 +53,17 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-, root, root)
 %doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO
+%{_bindir}/aggregator
+%{_bindir}/collector
+
+
+%files cli
+%defattr(-, root, root)
+%doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO
 %config(noreplace) %{_sysconfdir}/warewulf/monitor.conf
 %{perl_vendorlib}/*
-%{_bindir}/*
+%{_bindir}/wwtop
+%{_bindir}/wwstats
 
 
 %changelog
