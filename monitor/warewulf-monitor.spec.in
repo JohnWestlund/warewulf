@@ -11,7 +11,6 @@ URL: http://warewulf.lbl.gov/
 Source: %{name}-%{version}.tar.gz
 ExclusiveOS: linux
 BuildRequires: json-c-devel, sqlite-devel >= 3.3.6
-Requires: json-c, sqlite >= 3.3.6, perl-JSON, perl-JSON-XS
 BuildRoot: %{?_tmppath}%{!?_tmppath:/var/tmp}/%{name}-%{version}-%{release}-root
 Conflicts: warewulf-monitor-legacy
 Conflicts: warewulf-monitor-legacy-common
@@ -27,6 +26,7 @@ This is the monitoring module.
 %package cli
 Summary: Warewulf monitoring command line front end
 Group: System Environment/Monitoring
+Requires: perl-JSON, perl-JSON-XS
 Requires: %{name} = %{version}-%{release}
 Requires: warewulf-common >= 3.2
 
