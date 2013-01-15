@@ -29,6 +29,7 @@ my $opt_lookup = "name";
 my @skiplist = $livesync_config->get("skip list");
 my $fanout = $livesync_config->get("max sync") || 8;
 my $timeout = $livesync_config->get("timeout") || 3600;
+my $logdir = $livesync_config->get("logdir") || "/var/log/wwlivesync";
 my $skiplist_excludes_opts = "";
 my $opt_help;
 my $opt_debug;
@@ -46,6 +47,7 @@ GetOptions(
     'verbose'       => \$opt_verbose,
     'quiet'         => \$opt_quiet,
     'show'          => \$opt_show,
+    'logdir=s'      => \$logdir,
 );
 
 
@@ -82,6 +84,7 @@ if ($opt_help) {
     print "\nOPTIONS:\n\n";
     print "   -l, --lookup        Identify nodes by specified property (default: \"name\")\n";
     print "       --show          Just print what it would do instead of actually do it\n";
+    print "       --logdir        Directory of per-node logs ($logdir)\n";
     print "       --verbose       Increase verbosity level\n";
     print "       --quiet         Decrease verbosity level\n";
     print "       --debug         Print debugging messages\n";
@@ -105,6 +108,10 @@ $objSet = $db->get_objects("node", $opt_lookup, &expand_bracket(@ARGV));
 if (! $objSet || ($objSet->count() == 0)) {
     &nprint("No nodes found\n");
     exit 1;
+}
+
+if (! -d $logdir) {
+    mkpath($logdir);
 }
 
 $pcmd->wtime(0);
@@ -161,7 +168,7 @@ foreach my $o ($objSet->get_list()) {
     }
 
     if (! -x "$chroot/$vnfs_rsync") {
-        &wprint("Skipping $name, rsync command ($vnfs_rsync) not found in VNFS.\n");
+        &wprint("Skipping $name, rsync ($vnfs_rsync) not found in source VNFS.\n");
         next;
     }
 
@@ -171,7 +178,7 @@ foreach my $o ($objSet->get_list()) {
         $excludes_opts .= " --exclude='./$exclude'";
     }
 
-    $cmd = "cd $chroot; rsync -aqHP $excludes_opts $skiplist_excludes_opts . $name:/ 2>&1 && echo done";
+    $cmd = "cd $chroot; rsync -avH $excludes_opts $skiplist_excludes_opts . $name:/ > $logdir/$name.log 2>&1 && echo done || echo fail";
 
     if ($opt_show) {
         print "$cmd\n";
