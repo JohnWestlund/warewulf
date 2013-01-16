@@ -381,27 +381,27 @@ while (1) {
    }
    if ( $metric_sort_util eq "cpuutil" ) {
        term_bold();
-       print "    CPU";
+       print "    CPU(%)";
        term_normal();
        term_reverse();
    } else {
-       print "    CPU";
+       print "    CPU(%)";
    }
    if ( $metric_sort_util eq "memutil" ) {
        term_bold();
-       print "  MEM";
+       print "  MEM(%)";
        term_normal();
        term_reverse();
    } else {
-       print "  MEM";
+       print "  MEM(%)";
    }
    if ( $metric_sort_util eq "swaputil" ) {
        term_bold();
-       print " SWAP";
+       print " SWAP(%)";
        term_normal();
        term_reverse();
    } else {
-       print " SWAP";
+       print " SWAP(%)";
    }
    if ( $metric_sort_util eq "uptime" ) {
        term_bold();
@@ -534,11 +534,11 @@ while (1) {
       $nodes_shown++;
       $net_h = $node->get("NETTRANSMIT") + $node->get("NETRECIEVE");
       $net_h =~ s/(\d)(\d\d\d)$/$1,$2/g;
-      $out = sprintf("%-11.11s %4s %4s %4s %6.6s %5.5s %7.7s %4.4s %6.6s %9.9s %10.10s",
+      $out = sprintf("%-11.11s %6s %7s %7s %7.6s %6.2s %6.7s %5.4s %5.6s %8.9s %11.10s",
            $node->get("NODENAME"), 
            $node->get("CPUUTIL"), 
-           "$mempercent%", 
-           "$swappercent%", 
+           "$mempercent", 
+           "$swappercent", 
            $node->get("UPTIME"), 
            $node->get("CPUCLOCK"), 
            $node->get("MACHINE"), 
