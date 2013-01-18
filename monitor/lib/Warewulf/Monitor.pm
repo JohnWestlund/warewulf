@@ -122,6 +122,10 @@ my $query = sub
     #send raw query as json packet
     foreach my $sock (@socks) {
         send_query($sock,$query);
+        $peerLive=getpeername($sock);
+        if(!$peerLive){
+            return -1;
+        }
         my $data=recv_all($sock);
 
         #decode json packet and restore it in the object set data structure

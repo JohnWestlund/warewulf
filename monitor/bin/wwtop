@@ -757,6 +757,7 @@ while (1) {
       }
    }
    $nodeSet = $monitor->query_data();
+   if($nodeSet==-1){ term_clear(); kill_term();exit;}
 }
 
 
