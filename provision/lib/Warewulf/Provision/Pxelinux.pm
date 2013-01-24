@@ -153,7 +153,7 @@ update()
         my $hostname = $nodeobj->name() || "localhost.localdomain";
         my $nodename = $nodeobj->nodename() || "undef";
         my $bootstrapid = $nodeobj->get("bootstrapid");
-        my $db_id = $n->id();
+        my $db_id = $nodeobj->id();
         my @kargs = $nodeobj->get("kargs");
         my @masters = $nodeobj->get("master");
         my $bootstrapname;
