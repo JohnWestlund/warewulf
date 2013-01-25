@@ -77,6 +77,9 @@
 ofed_conf='ofed.conf';
 ofed_cmd='';
 ofed_source='';
+ofed_ver='';
+ofed_ver_maj='';
+ofed_ver_min='';
 tmpdir='';
 
 # Uninstall InfiniBand support from the given chroot path, or the
@@ -213,6 +216,10 @@ config_pkg() {
     reply_success;
     tmpdir=$(mktemp -d /tmp/OFED_ICR-XXXXXXXXXX);
     OFED_basename=$(basename $pkg_file | rev | cut -f2- -d '.' | rev);
+    # Break apart what version of OFED we're building
+    ofed_ver=${OFED_basename##OFED-};
+    ofed_ver_maj=${ofed_ver%%.*};
+    ofed_ver_min=${ofed_ver##*.};
 
     wwprint " + OFED Version: $OFED_basename\n";
     # Uncompress OFED
@@ -435,9 +442,15 @@ config_bootstrap() {
         -e 's/^\(drivers.*rds.*\)/#\1/' \
         $bootstrap_conf_file;
 
-    # Add Build OFED Modules
+    # Add Built OFED Modules
     if ! grep -q '## OFED Modules' $bootstrap_conf_file; then
-        OFED_mod='## OFED Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
+        if [[ $ofed_ver_maj -lt 3 ]]; then
+            OFED_mod='## OFED Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
+        else
+            # At least OFED-3.5-rc5 has compat and net
+            OFED_mod='## OFED Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
+            OFED_mod="${OFED_mod}drivers += updates/compat/*, updates/net/*\n";
+        fi
         echo -e ${OFED_mod} >> $bootstrap_conf_file;
     fi
     return 0;
