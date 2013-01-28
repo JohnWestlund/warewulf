@@ -33,7 +33,7 @@ my $node;
 
 if (! -d $tmpdir) {
     mkpath($tmpdir);
-    chmod("0750", $tmpdir);
+    chmod(0750, $tmpdir);
 }
 
 if ($hwaddr =~ /^([a-zA-Z0-9:]+)$/) {
