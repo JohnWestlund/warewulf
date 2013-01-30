@@ -263,13 +263,14 @@ update()
     my ($self) = @_;
     my $config = Warewulf::Config->new("provision.conf");
     my $hosts_contents = $self->generate();
+    my $update_hostfile = $config->get("update hostfile") || "no";
 
     if (! $config->get("generate dynamic_hosts") or $config->get("generate dynamic_hosts") eq "yes") {
         if ($hosts_contents) {
             $self->update_datastore($hosts_contents);
         }
     }
-    if ($config->get("update hostfile") eq "yes") {
+    if ($update_hostfile eq "yes") {
         my $hostfile = $config->get("hostfile") ? $config->get("hostfile") : "/etc/hosts";
         if ($hosts_contents) {
             $self->update_hostfile($hostfile, $hosts_contents);
