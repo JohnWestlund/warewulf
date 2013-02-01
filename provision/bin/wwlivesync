@@ -43,9 +43,9 @@ Getopt::Long::Configure ("bundling");
 GetOptions(
     'l|lookup=s'    => \$opt_lookup,
     'h|help'        => \$opt_help,
-    'debug'         => \$opt_debug,
-    'verbose'       => \$opt_verbose,
-    'quiet'         => \$opt_quiet,
+    'd|debug'       => \$opt_debug,
+    'v|verbose'     => \$opt_verbose,
+    'q|quiet'       => \$opt_quiet,
     'show'          => \$opt_show,
     'logdir=s'      => \$logdir,
 );

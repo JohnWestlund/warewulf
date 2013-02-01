@@ -44,9 +44,9 @@ if (! @ARGV) {
 
 GetOptions(
     'h|help'        => \$opt_help,
-    'debug'         => \$opt_debug,
-    'verbose'       => \$opt_verbose,
-    'quiet'         => \$opt_quiet,
+    'd|debug'       => \$opt_debug,
+    'v|verbose'     => \$opt_verbose,
+    'q|quiet'       => \$opt_quiet,
     'c|chroot=s'    => \$opt_chroot,
     'r|root=s'      => \$opt_chroot,
     'o|output=s'    => \$opt_output,
