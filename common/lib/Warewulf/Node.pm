@@ -443,7 +443,7 @@ hwaddr()
 {
     my ($self, $devname, $new_hwaddr) = @_;
 
-    return $self->update_netdev_member($devname, "hwaddr", "_hwaddr", lc($new_hwaddr),
+    return $self->update_netdev_member($devname, "hwaddr", "_hwaddr", ($new_hwaddr ? lc($new_hwaddr): undef),
                                        qr/^((?:[0-9a-f]{2}:){5,7}[0-9a-f]{2})$/);
 }
 
