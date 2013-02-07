@@ -67,6 +67,8 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-, root, root)
 %config(noreplace) /etc/sysconfig/wwfirstboot.conf
 /etc/rc.d/init.d/wwfirstboot
+%defattr(0755, root, root)
+%{_libexecdir}/warewulf/wwfirstboot/*
 
 %post node
 chkconfig --add wwfirstboot

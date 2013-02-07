@@ -81,7 +81,37 @@ configuration file for it is located at:
   This should be edited before importing your VNFS as the default behavior is 
 to skip over partitioning/formating any disks.
 
-CONFIGURATION VARIABLES:
+  The scripts called by wwfirstboot are stored in the VNFS image at:
+
+  /usr/libexec/warewulf/wwfirstboot/
+
+  with a .wwfb extension. Any file that you do *not* which to be executed 
+during bootup, can be disabled by removing the execute bit from the permissions.
+
+  # chmod 644 /path/to/wwfirstboot/00-format.wwfb
+ 
+  Scripts are executed from /usr/libexec/warewulf/wwfirstboot by named order. So,
+for example you have the following scripts:
+
+  00-adisk.wwfb 00-format.wwfb 21-libdirs.wwfb
+
+  The order they will be executed, assuming they all run durinig the same run, is:
+
+    00-adisk
+    00-format
+    21-libdirs
+
+  Scripts can be ran in either a status of PRIMARY or SECONDARY. The only difference
+is when they are ran.
+
+  PRIMARY   -- Run before any networking comes up
+  SECONDARY -- Ran from rc.local, so after every other service should be up
+
+  The status of a script is difined with an entry like:
+
+    #STATUS: primary
+ 
+CONFIGURATION VARIABLES (wwfirstboot.conf):
 
   SKIP = [true|false]
     - If undefined or true, wwfirstboot will exit upon reading the 

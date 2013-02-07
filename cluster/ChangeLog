@@ -36,3 +36,8 @@ Mon Nov 19 14:57:36 2012                        Michael Jennings (mej)
 
 Only add entries for the file we create.
 ----------------------------------------------------------------------
+Fri Dec 14 16:50:18-0600 2012                       Jason Stover (jms)
+
+Rework wwfirstboot to allow for multiple steps to be done during the
+system initialization.
+----------------------------------------------------------------------
