@@ -91,7 +91,7 @@ generate()
     my $config = Warewulf::Config->new("provision.conf");
 
     my $netdev = $config->get("network device");
-    my $defdomain = $config->get("use localdomain");
+    my $defdomain = $config->get("use localdomain") || "yes";
     my $master_ipaddr = $netobj->ipaddr($netdev);
     my $master_netmask = $netobj->netmask($netdev);
     my $master_network = $netobj->network($netdev);
