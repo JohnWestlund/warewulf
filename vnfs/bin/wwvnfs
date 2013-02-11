@@ -233,16 +233,21 @@ if (-d $opt_chroot) {
                         if ($file =~ /^([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             $file = $1;
                             if (-e "$file") {
+                                ($junk, $realfile) = split(/$tmpdir/,$file);
+                                $realfile =~ s/^\///;
                                 if ($opt_hybrid) {
-                                    &dprint("Hybridizing location in VNFS: $file\n");
-                                    system("rm -rf $tmpdir/$file");
-                                    system("ln -s $opt_hybrid/$file $tmpdir/$file");
-                                } elsif (-d "$tmpdir/$file") {
-                                    &dprint("Excluding from VNFS: $file/*\n");
-                                    system("rm -rf $tmpdir/$file/*");
+                                    &dprint("Hybridizing location in VNFS: $realfile\n");
+                                    # Messy here ... but adding a '/' betwen $opt_hybrid and
+                                    # $realfile gives links like:
+                                    #   /mnt/hybrid///mount/point
+                                    system("rm -rf $file");
+                                    system("ln -s $opt_hybrid$realfile $file");
+                                } elsif (-d "$file") {
+                                    &dprint("Excluding from VNFS: $realfile/*\n");
+                                    system("rm -rf $file/*");
                                 } else {
-                                    &dprint("Excluding from VNFS: $file\n");
-                                    system("rm -rf $tmpdir/$file");
+                                    &dprint("Excluding from VNFS: $realfile\n");
+                                    system("rm -rf $file");
                                 }
                             } else {
                                 &iprint("Skipping non-existent file to exclude/hybridize: $file\n");
@@ -382,5 +387,5 @@ if ($create_config) {
     }
 }
 
-
+# vim:filetype=perl:syntax=perl:expandtab:ts=4:sw=4:
 
