@@ -232,7 +232,7 @@ if (-d $opt_chroot) {
                     foreach my $file (glob("$tmpdir/$line")) {
                         if ($file =~ /^([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             $file = $1;
-                            if (-e "$tmpdir/$file") {
+                            if (-e "$file") {
                                 if ($opt_hybrid) {
                                     &dprint("Hybridizing location in VNFS: $file\n");
                                     system("rm -rf $tmpdir/$file");
