@@ -91,6 +91,7 @@ generate()
     my $config = Warewulf::Config->new("provision.conf");
 
     my $netdev = $config->get("network device");
+    my $defdomain = $config->get("use localdomain");
     my $master_ipaddr = $netobj->ipaddr($netdev);
     my $master_netmask = $netobj->netmask($netdev);
     my $master_network = $netobj->network($netdev);
@@ -130,7 +131,7 @@ generate()
             next;
         }
 
-        if (! $n->domain() and ! $n->cluster()) {
+        if (! $n->domain() and ! $n->cluster() and $defdomain eq "yes") {
             $n->domain("localdomain");
         }
 
