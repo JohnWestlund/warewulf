@@ -8,7 +8,7 @@ dist_confDATA_INSTALL = ${INSTALL} -m 640
 
 confdir = $(sysconfdir)/warewulf/
 
-dist_conf_DATA = database.conf functions
+dist_conf_DATA = database.conf database-root.conf functions
 
 MAINTAINERCLEANFILES = Makefile.in
 

@@ -105,10 +105,16 @@ init()
         &dprint("DB Singleton exists, not going to initialize\n");
     } else {
         my $config = Warewulf::Config->new("database.conf");
+        my $config_root = Warewulf::Config->new("database-root.conf");
         my $db_server = $config->get("database server");
         my $db_name = $config->get("database name");
         my $db_user = $config->get("database user");
         my $db_pass = $config->get("database password");
+
+        if ($config_root->get("database user")) {
+            $db_user = $config_root->get("database user");
+            $db_pass = $config_root->get("database password");
+        }
 
         if ($db_name and $db_server and $db_user) {
             &dprint("DATABASE NAME:      $db_name\n");
@@ -140,33 +146,36 @@ init()
                 return undef;
             }
 
-            $self->{"DBH"}->do("CREATE TABLE IF NOT EXISTS datastore (
-                    id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
-                    type VARCHAR(64),
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    serialized BLOB,
-                    data BLOB,
-                    INDEX (id),
-                    PRIMARY KEY (id)
-                ) ENGINE=INNODB");
-            $self->{"DBH"}->do("CREATE TABLE IF NOT EXISTS binstore (
-                    id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
-                    object_id INT UNSIGNED,
-                    chunk LONGBLOB,
-                    FOREIGN KEY (object_id) REFERENCES datastore (id),
-                    INDEX (id),
-                    PRIMARY KEY (id)
-                ) ENGINE=INNODB");
-            $self->{"DBH"}->do("CREATE TABLE IF NOT EXISTS lookup (
-                    id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
-                    object_id INT UNSIGNED,
-                    field VARCHAR(64) BINARY,
-                    value VARCHAR(64) BINARY,
-                    FOREIGN KEY (object_id) REFERENCES datastore (id),
-                    INDEX (id),
-                    UNIQUE KEY (object_id, field, value),
-                    PRIMARY KEY (id)
-                ) ENGINE=INNODB");
+            if ($config_root->get("database user")) {
+                $self->{"DBH"}->do("CREATE TABLE IF NOT EXISTS datastore (
+                        id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+                        type VARCHAR(64),
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        serialized BLOB,
+                        data BLOB,
+                        INDEX (id),
+                        PRIMARY KEY (id)
+                    ) ENGINE=INNODB");
+                $self->{"DBH"}->do("CREATE TABLE IF NOT EXISTS binstore (
+                        id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+                        object_id INT UNSIGNED,
+                        chunk LONGBLOB,
+                        FOREIGN KEY (object_id) REFERENCES datastore (id),
+                        INDEX (id),
+                        PRIMARY KEY (id)
+                    ) ENGINE=INNODB");
+                $self->{"DBH"}->do("CREATE TABLE IF NOT EXISTS lookup (
+                        id INT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
+                        object_id INT UNSIGNED,
+                        field VARCHAR(64) BINARY,
+                        value VARCHAR(64) BINARY,
+                        FOREIGN KEY (object_id) REFERENCES datastore (id),
+                        INDEX (id),
+                        UNIQUE KEY (object_id, field, value),
+                        PRIMARY KEY (id)
+                    ) ENGINE=INNODB");
+                $self->{"DBH"}->do("GRANT SELECT ON $db_name.* TO ". $self->{"DBH"}->quote($config->get("database user")) ."\@'localhost' IDENTIFIED BY ". $self->{"DBH"}->quote($config->get("database password")) .";");
+            }
 
         } else {
             &wprint("Could not connect to the database (undefined credentials)!\n");

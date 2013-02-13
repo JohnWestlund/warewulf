@@ -11,6 +11,7 @@ ExclusiveOS: linux
 Conflicts: warewulf <= 2.9
 BuildArch: noarch
 BuildRoot: %{?_tmppath}/%{name}-%{version}-%{release}-root
+Requires: mysql-server mysql-perl
 
 %description
 Warewulf >= 3 is a set of utilities designed to better enable
@@ -49,7 +50,8 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755, root, warewulf) %dir %{_sysconfdir}/warewulf/
 %attr(0755, root, warewulf) %dir %{_sysconfdir}/warewulf/defaults/
 %attr(0444, root, warewulf) %{_sysconfdir}/warewulf/functions
-%attr(0640, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/database.conf
+%attr(0644, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/database.conf
+%attr(0640, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/database-root.conf
 %attr(0644, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/defaults/node.conf
 %{_bindir}/*
 %{_datadir}/warewulf/
