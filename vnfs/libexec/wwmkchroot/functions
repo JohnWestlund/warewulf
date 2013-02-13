@@ -29,6 +29,12 @@ if [ -z "$CHROOTDIR" ]; then
 fi
 
 sanity_check() {
+    if [ ! -x $WAREWULF_PREFIX/bin/cluser-env ]; then
+        echo "warewulf-cluster package is recommended on nodes you are building VNFS images on.";
+        sleep 2;
+    else
+        $WAREWULF_PREFIX/bin/cluster-env;
+    fi
     return 0
 }
 
