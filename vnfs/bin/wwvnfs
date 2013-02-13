@@ -27,12 +27,15 @@ my $opt_debug;
 my $opt_verbose;
 my $opt_quiet;
 my $opt_name;
-my @opt_excludes;
+my @opt_exclude;
 my $opt_excludefile;
+my @opt_hybridize;
+my $opt_hybridizefile;
 my $opt_includefile;
 my $opt_hybrid;
 my $opt_yes;
 my @exclude_files;
+my @hybridize_files;
 my $wwsh_bin;
 my $create_config;
 
@@ -50,8 +53,10 @@ GetOptions(
     'c|chroot=s'    => \$opt_chroot,
     'r|root=s'      => \$opt_chroot,
     'o|output=s'    => \$opt_output,
-    'e|excludes=s'  => \@opt_excludes,
+    'e|exclude=s'   => \@opt_exclude,
     'excludefile=s' => \$opt_excludefile,
+    'hybridize=s'   => \@opt_hybridize,
+    'hybridizefile=s' => \$opt_hybridizefile,
     'includefile=s' => \$opt_includefile,
     'hybridpath=s'  => \$opt_hybrid,
     'y|yes'         => \$opt_yes
@@ -75,9 +80,13 @@ if ($opt_help) {
     print "   -h, --help        Usage and help summary\n";
     print "   -o, --output      Output the binary VNFS to a file instead of importing it\n";
     print "                     directly into Warewulf\n";
-    print "   -e, --excludes    Exclude a file or directory from the VNFS image\n";
+    print "   -e, --exclude     Exclude a file or directory from the VNFS image\n";
     print "       --excludefile Path to a file that contains a list of files and directories to\n";
     print "                     exclude from the VNFS image\n";
+    print "       --hybridize   Hybridize a list of files or directories from the VNFS image\n";
+    print "                     (requires --hybridpath to be set, or files are just excluded)\n";
+    print "       --hybridizefile Path to a file that contains a list of files and directories to\n";
+    print "                     be hybridized from the VNFS image\n";
     print "       --hybridpath  Path to use within the VNFS where the links will be pointed to in\n";
     print "                     the final image (this needs to be added to the VNFS fstab!)\n";
     print "   -y, --yes         Skips yes/no prompt if you're importing into an existing VNFS\n";
@@ -98,7 +107,8 @@ if ($opt_help) {
 
 $opt_name = shift(@ARGV);
 
-@opt_excludes = split(",", join(",", @opt_excludes));
+@opt_exclude = split(",", join(",", @opt_exclude));
+@opt_hybridize = split(",", join(",", @opt_hybridize));
 
 
 if (! $opt_name and $opt_chroot) {
@@ -128,13 +138,43 @@ if (! $opt_output) {
 if (! $opt_excludefile) {
     $opt_excludefile = $config->get("excludefile");
 }
+if (! $opt_hybridizefile) {
+    $opt_hybridizefile = $config->get("hybridizefile");
+}
 if (! $opt_hybrid) {
     $opt_hybrid = $config->get("hybridpath");
 }
 if (! $opt_includefile) {
     $opt_includefile = $config->get("includefile");
 }
-push(@exclude_files, $config->get("excludes"));
+
+push(@exclude_files, $config->get("exclude"));
+if ($opt_excludefile and $opt_excludefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
+    open(EXCLUDES, $1);
+    while(my $line = <EXCLUDES>) {
+        chomp($line);
+        push(@exclude_files, $line);
+    }
+} elsif ($opt_excludefile) {
+    &eprint("Exclude file contains illegal characters!\n");
+    exit 1;
+}
+
+push(@hybridize_files, $config->get("hybridize"));
+if ($opt_hybridizefile and $opt_hybridizefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
+    open(EXCLUDES, $1);
+    while(my $line = <EXCLUDES>) {
+        chomp($line);
+        push(@hybridize_files, $line);
+    }
+} elsif ($opt_hybridizefile) {
+    &eprint("Exclude file contains illegal characters!\n");
+    exit 1;
+}
+
+# Reverse compatibility for older config formats that used "excludes" instead
+# of the newer format "hybridize".
+push(@hybridize_files, $config->get("excludes"));
 
 
 
@@ -169,11 +209,14 @@ if ($opt_hybrid) {
     }
 }
 
-if ($opt_hybrid and $opt_hybrid =~ /^([a-zA-Z0-9\-_\/:\.]+)$/) {
+if ($opt_hybrid and $opt_hybrid =~ /^([a-zA-Z0-9\-_\/:\.]+?)\/*$/) {
     $opt_hybrid = $1;
 } elsif ($opt_hybrid) {
     &eprint("Illegal characters in --hybridpath option: $opt_hybrid\n");
     exit 1;
+} else {
+    push(@exclude_files, @hybridize_files);
+    @hybridize_files = ();
 }
 
 if ($opt_output and $opt_output =~ /^([a-zA-Z0-9\-_\/:\.]+)$/) {
@@ -205,18 +248,7 @@ if (-d $opt_chroot) {
 
         &nprint("Creating VNFS image for $opt_name\n");
 
-        if ($opt_excludefile and $opt_excludefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
-            open(EXCLUDES, $1);
-            while(my $line = <EXCLUDES>) {
-                chomp($line);
-                push(@exclude_files, $line);
-            }
-        } elsif ($opt_excludefile) {
-            &eprint("Exclude file contains illegal characters!\n");
-            exit 1;
-        }
-
-        if (@exclude_files) {
+        if (@exclude_files or @hybridize_files) {
             &nprint("Building template VNFS image\n");
             my $tmpdir = "/var/tmp/wwvnfs.". &rand_string(16);
             mkpath($tmpdir);
@@ -227,35 +259,40 @@ if (-d $opt_chroot) {
             } else {
                 &nprint("Excluding files from VNFS\n");
             }
+
             foreach my $line (@exclude_files) {
                 if ($line =~ /^\/(.*)$/) {
                     foreach my $file (glob("$tmpdir/$line")) {
-                        if ($file =~ /^([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
-                            $file = $1;
-                            if (-e "$file") {
-                                ($junk, $realfile) = split(/$tmpdir/,$file);
-                                $realfile =~ s/^\///;
-                                if ($opt_hybrid) {
-                                    &dprint("Hybridizing location in VNFS: $realfile\n");
-                                    # Messy here ... but adding a '/' betwen $opt_hybrid and
-                                    # $realfile gives links like:
-                                    #   /mnt/hybrid///mount/point
-                                    system("rm -rf $file");
-                                    system("ln -s $opt_hybrid$realfile $file");
-                                } elsif (-d "$file") {
-                                    &dprint("Excluding from VNFS: $realfile/*\n");
-                                    system("rm -rf $file/*");
-                                } else {
-                                    &dprint("Excluding from VNFS: $realfile\n");
-                                    system("rm -rf $file");
-                                }
+                        if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
+                            my $realfile = $1;
+                            if (-e "$tmpdir/$realfile") {
+                                &dprint("Excluding from VNFS: /$realfile\n");
+                                system("rm -rf $tmpdir/$realfile");
                             } else {
-                                &iprint("Skipping non-existent file to exclude/hybridize: $file\n");
+                                &iprint("Could not exclude, file not found in VNFS: /$realfile\n");
                             }
                         }
                     }
                 }
             }
+
+            foreach my $line (@hybridize_files) {
+                if ($line =~ /^\/(.*)$/) {
+                    foreach my $file (glob("$tmpdir/$line")) {
+                        if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
+                            my $realfile = $1;
+                            if (-e "$tmpdir/$realfile") {
+                                &dprint("Hybridizing location in VNFS: /$realfile\n");
+                                system("rm -rf $tmpdir/$realfile");
+                                system("ln -s $opt_hybrid/$realfile $tmpdir/$realfile");
+                            } else {
+                                &iprint("Could not hybridize, file not found in VNFS: /$realfile\n");
+                            }
+                        }
+                    }
+                }
+            }
+
             &nprint("Building and compressing the final image\n");
             system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | gzip -9 > $output");
             &nprint("Cleaning temporary files\n");
@@ -362,21 +399,34 @@ if ($create_config) {
         if ($opt_excludefile) {
             print $config_fh "excludefile = $opt_excludefile\n\n";
         } else {
-            print $config_fh "# excludefile = /etc/warewulf/shared-excludes\n\n";
+            print $config_fh "# excludefile = /etc/warewulf/shared-exclude\n\n";
         }
 
-        print $config_fh "# The list of all excluded files and paths from the VNFS\n";
-        foreach my $exclude (@opt_excludes) {
-            if ($ecount == 0) {
-                print $config_fh "excludes = $exclude\n";
-            } else {
-                print $config_fh "excludes += $exclude\n";
+        print $config_fh "# The list of files to be excluded from the VNFS\n";
+        if (@opt_exclude) {
+            foreach my $exclude (@opt_exclude) {
+                print $config_fh "exclude += $exclude\n";
             }
-            $ecount++;
+        } else {
+            print $config_fh "# exclude = /exclude/path1\n";
+            print $config_fh "# exclude += /exclude/path2\n";
         }
-        if ($ecount == 0) {
-            print $config_fh "# excludes = /exclude/path1\n";
-            print $config_fh "# excludes += /exclude/path2\n";
+
+        print $config_fh "# Location of a single file that lists all files to be hybridized from the VNFS\n";
+        if ($opt_excludefile) {
+            print $config_fh "hybridizefile = $opt_excludefile\n\n";
+        } else {
+            print $config_fh "# hybridizefile = /etc/warewulf/shared-hybridize\n\n";
+        }
+
+        print $config_fh "# The list of files to be hybridized from the VNFS\n";
+        if (@opt_hybridize) {
+            foreach my $hybridize (@opt_hybridize) {
+                print $config_fh "hybridize = $hybridize\n";
+            }
+        } else {
+            print $config_fh "# exclude = /exclude/path1\n";
+            print $config_fh "# exclude += /exclude/path2\n";
         }
 
         if (close $config_fh) {
