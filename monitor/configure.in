@@ -7,6 +7,7 @@ AC_CONFIG_MACRO_DIR([.])
 if test -z "$prefix" -o "$prefix" = "NONE" ; then
   prefix=${ac_default_prefix}
 fi
+AC_SUBST(PREFIX, $prefix)
 
 AC_PROG_INSTALL
 AM_INIT_AUTOMAKE
@@ -72,6 +73,13 @@ AS_IF([test -n $localstatedir], [
     AC_SUBST(LOCALSTATEDIR, $dir)
 ])
 
+dnl# Debug Build?
+AC_ARG_ENABLE(debug,
+    AS_HELP_STRING([--enable-debug],[Enable debug code. NOTE: Causes both collector/aggregator to run in forground.]),
+    [
+    AC_DEFINE(WWDEBUG, 1, [Build Debug Code])
+    ],[])
+
 dnl# Try to get SVN revision
 SVNVERSION=`svnversion -c | sed 's/^.*://g' 2>/dev/null || echo 0000`
 if test "$SVNVERSION" = "0000" ; then
@@ -86,6 +94,7 @@ AC_CONFIG_FILES([
    src/globals.h
    bin/Makefile
    etc/Makefile
+   etc/collector
    lib/Makefile
    lib/Warewulf/Makefile
 ])

@@ -24,6 +24,7 @@
 void insertLookups(int, json_object*, sqlite3*);
 void updateLookups(int, json_object*, sqlite3*);
 void fillLookups(int, json_object*, sqlite3*);
+void update_insertLookups(int, json_object*, sqlite3*, int);
 void insert_json(char*, time_t, json_object*, sqlite3*);
 void update_json(char*, time_t, json_object*, sqlite3*, int);
 void insert_update_json(int, char*, time_t, json_object*, sqlite3*);
@@ -57,3 +58,7 @@ int createTable(sqlite3*, char*);
 
 #endif /* _UTIL_H */
 
+
+/*
+ * vim:filetype=c:syntax=c:expandtab:ts=2:sw=2
+ */

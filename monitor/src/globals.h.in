@@ -12,25 +12,7 @@
 
 #ifndef _GLOBALS_H
 #define _GLOBALS_H  1
-/*
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <time.h>
-#include <ctype.h>
-#include <json/json.h>
-#include <sys/utsname.h>
-*/
+
 #include <time.h>
 #include <sqlite3.h>
 
@@ -51,33 +33,28 @@
 #define APPLICATION 2
 
 typedef struct private_info_of_any_socket {
+  // Variables used by all sockets
+  int     ctype;  // connection type
+  int     r_payloadlen; // Remaining payload length that needs to be read
 
-        // Variables used by all sockets
-        int     ctype;  // connection type
-        int     r_payloadlen; // Remaining payload length that needs to be read
+  char    *accural_buf;
+  char    *sqlite_cmd;
 
-	char    *accural_buf;
-        char    *sqlite_cmd;
+  char remote_sock_ipaddr[MAX_IPADDR_LEN];
 
-        char remote_sock_ipaddr[MAX_IPADDR_LEN];
-
-	// Now all the variables for ctype - 1 (the collector socket)
-	// Now all the variables for ctype - 2 (the app socket)
+  // Now all the variables for ctype - 1 (the collector socket)
+  // Now all the variables for ctype - 2 (the app socket)
 
 } sockdata;
 
 typedef struct application_hdr {
-
-	int 	len; //To record the actual size of the payload
-        time_t 	timestamp;
-	char    nodename[MAX_NODENAME_LEN];
-
+  int 	len; //To record the actual size of the payload
+  time_t 	timestamp;
+  char    nodename[MAX_NODENAME_LEN];
 }  __attribute__((packed)) apphdr;
 
 typedef struct application_data {
-
-	char    payload[MAXDATASIZE];
-
+  char    payload[MAXDATASIZE];
 } appdata; 	
 
 typedef struct cpu_data {
@@ -93,3 +70,6 @@ fd_set rfds, wfds;
 
 #endif /* _GLOBALS_H */
 
+/*
+ * vim:filetype=c:syntax=c:expandtab:ts=2:sw=2
+ */

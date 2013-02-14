@@ -27,3 +27,6 @@ char* get_uname(json_object*);
 
 #endif /* _GETSTATS_H */
 
+/*
+ * vim:filetype=c:syntax=c:expandtab:ts=2:sw=2
+ */

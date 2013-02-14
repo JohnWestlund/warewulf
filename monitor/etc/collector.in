@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# Start Warewulf Monitor Collector
+#
+# description: Start the Warewulf Monitor Collector
+#
+#
+### BEGIN INIT INFO
+# Provides: collector
+# Required-Start:
+# Required-Stop: iptables
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop the collector
+# Description: Start, stop the Warewulf Monitor Collector
+### END INIT INFO
+
+. /etc/init.d/functions
+
+if [ ! -f /warewulf/config ]; then
+	echo "WWMonitor: ERROR. /warewulf/config not found.";
+	exit 1;
+fi
+
+. /warewulf/config
+
+COLLECTOR=@PREFIX@/bin/collector;
+HOST=${WWMASTER};  # Default host to connect to
+PORT=9000;  # Default port to connect to
+PIDFILE=@LOCALSTATEDIR@/run/collector.pid
+SUBSYS=@LOCALSTATEDIR@/lock/subsys/collector
+LOGFILE=/var/log/warewulf_collector.log
+
+status()
+{
+	pidof "$COLLECTOR" 2&>/dev/null;
+	STOPPED=$?
+
+	if [ $STOPPED -ne 0 ]; then
+		echo "WWMonitor: Collector Stopped";
+		if [ -f $PIDFILE ]; then
+			echo "WWMonitor: Stale PID file found. Removing.";
+			/bin/rm -f ${PIDFILE};
+		fi
+	else
+		echo "WWMonitor: Collector Running (`cat ${PIDFILE} | tr -d '\n'`)";
+	fi
+	return $STOPPED;
+}
+
+stop()
+{
+	echo -n $"Stopping Warewulf Collector";
+	killproc "$COLLECTOR";
+	/bin/rm -f $SUBSYS;
+	[ -f $PIDFILE ] && /bin/rm -f $PIDFILE;
+	return 0
+}
+
+start()
+{
+	if [ -f $PIDFILE -o -f $SUBSYS ]; then
+		stop; echo;
+	fi
+	echo -n $"Starting Warewulf Collector";
+	daemon --pidfile=$PIDFILE $COLLECTOR $HOST $PORT;
+	pidof $COLLECTOR > $PIDFILE;
+	touch $SUBSYS;
+	return 0
+}
+
+restart() {
+	stop
+	sleep 1;
+	start
+}
+
+ret=0
+while [ "$#" -gt "0" ]; do
+	case $1 in
+	--host=?*)
+		HOST=${1#--host=}
+		;;
+	--port=?*)
+		PORT=${1#--port=}
+		;;
+	status)
+		status
+		;;
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		restart
+		;;
+	*)
+		echo $"Usage: $0 [--host=1.2.3.4] [--port=###] {status|start|stop|restart}"
+		exit 4
+	esac
+	ret=$?
+	shift
+done
+exit $ret
+

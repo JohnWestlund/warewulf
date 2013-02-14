@@ -98,11 +98,15 @@ update_insertLookups(int blobid, json_object *jobj, sqlite3 *db, int overwrite)
     }
 
     if( rowid > 0 && overwrite == 1 ) { // Existing entry in the table and permission to overwrite
-	  slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1, "update %s set value=%s where key='%s' and blobid='%s'", SQLITE_DB_TB2NAME, vals, key, blobID);
+	    slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1,
+                      "update %s set value=%s where key='%s' and blobid='%s'",
+                      SQLITE_DB_TB2NAME, vals, key, blobID);
     } else if (rowid < 0 ) { // This is a new key, value to be inserted
-	  slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1, "insert into %s(blobid, key, value) values('%s','%s',%s)", SQLITE_DB_TB2NAME, blobID, key, vals);
-          // TODO : Make a note of this key value pairs so that we can merge into JSON
-          // Call a routine to get the jsonblob for this blobid from TB1 and json add this key, value pair
+	    slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1,
+                      "insert into %s(blobid, key, value) values('%s','%s',%s)",
+                      SQLITE_DB_TB2NAME, blobID, key, vals);
+      // TODO : Make a note of this key value pairs so that we can merge into JSON
+      // Call a routine to get the jsonblob for this blobid from TB1 and json add this key, value pair
     }
 
     //printf("UIL SQL CMD - %s\n",sqlite_cmd);
@@ -139,7 +143,9 @@ insertLookups(int blobid, json_object *jobj, sqlite3 *db)
 	sprintf(vals, "'%s'",json_object_get_string(value));
 	break;
     }
-    slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1, "insert into %s(blobid, key, value) values('%s','%s',%s)", SQLITE_DB_TB2NAME, blobID, key, vals);
+    slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1, 
+                    "insert into %s(blobid, key, value) values('%s','%s',%s)", 
+                    SQLITE_DB_TB2NAME, blobID, key, vals);
     //printf("IL SQL CMD - %s\n",sqlite_cmd);
     char *emsg = 0;
     int rc = sqlite3_exec(db, sqlite_cmd, nothing_todo, 0, &emsg);
@@ -160,7 +166,9 @@ insert_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db)
   int slen, rc;
   char *emsg = 0;
 
-  slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "insert into %s(jsonblob, timestamp, nodename) values('%s',%d,'%s')", SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), timestamp, nodename); 
+  slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, 
+                  "insert into %s(jsonblob, timestamp, nodename) values('%s',%d,'%s')", 
+                  SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), timestamp, nodename); 
   //printf("IJ CMD - %s\n",sqlcmd);
   if( (rc = sqlite3_exec(db, sqlcmd, nothing_todo, 0, &emsg) != SQLITE_OK )) {
     fprintf(stderr, "SQL error: %s\n", emsg);
@@ -317,7 +325,9 @@ NodeBID_fromDB(char *nodename, sqlite3 *db)
   int blobid = -1;
   char *sqlcmd = malloc(MAX_SQL_SIZE+1);
 
-  slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "select rowid from %s where nodename='%s'", SQLITE_DB_TB1NAME, nodename);
+  slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, 
+                  "select rowid from %s where nodename='%s'", 
+                  SQLITE_DB_TB1NAME, nodename);
   //printf("BID CMD - %s\n",sqlcmd);
   if( (rc = sqlite3_exec(db, sqlcmd, getint_callback, &blobid , &emsg) != SQLITE_OK )) {
     fprintf(stderr, "SQL error : %s\n", emsg);
@@ -335,8 +345,10 @@ NodeTS_fromDB(char *nodename, sqlite3 *db)
   int timestamp = -1;
   char *sqlcmd = malloc(MAX_SQL_SIZE+1);
 
-  slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "select timestamp from %s where nodename='%s'", SQLITE_DB_TB1NAME, nodename);
-  //printf("TS CMD - %s\n",sqlcmd);
+  slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, 
+                  "select timestamp from %s where nodename='%s'", 
+                  SQLITE_DB_TB1NAME, nodename);
+//  printf("TS CMD - %s\n",sqlcmd);
   if( (rc = sqlite3_exec(db, sqlcmd, getint_callback, &timestamp , &emsg) != SQLITE_OK )) {
     fprintf(stderr, "SQL error : %s\n", emsg);
     sqlite3_free(emsg);
@@ -355,24 +367,25 @@ recvall(int sock)
   apphdr *app_h = (apphdr *) rbuf;
   appdata *app_d = (appdata *) (rbuf + sizeof(apphdr));
 
-  //block to receive the whole header
+  /* block to receive the whole header */
   if ((count=recv(sock, rbuf, sizeof(apphdr), MSG_WAITALL)) == -1) {
     perror("recv");
     exit(1);
   }
-  //printf("app_h->len: %d\n", app_h->len);
-  //printf("Received - %s\n",app_d->payload);
+//  printf("app_h->len: %d\n", app_h->len);
+//  printf("Received - %s\n",app_d->payload);
 
   char *buffer;
-  // plus 1 to store the NULL char
+  /* plus 1 to store the NULL char */
   buffer = (char *) malloc (app_h->len+1);
   buffer[0] = '\0';
 
   r_payloadlen = app_h->len;
 
   int numtoread = MAXPKTSIZE-1;
-  while(r_payloadlen > 0){
+  while(r_payloadlen > 0) {
     if(r_payloadlen < MAXPKTSIZE-1) numtoread = r_payloadlen;
+
     if((count = recv(sock, rbuf, numtoread,0)) == -1){
       perror("recv");
       exit(1);
@@ -385,7 +398,7 @@ recvall(int sock)
   return buffer;
 }
 
-// To Handle any partial sends
+/* Handle any partial sends */
 int 
 sendall(int s, char *buf, int total) 
 {
@@ -394,12 +407,12 @@ sendall(int s, char *buf, int total)
   int n = 0;
 
   while( sendbytes < total) {
-        if( (n = send(s, buf+sendbytes, bytesleft, MSG_NOSIGNAL)) == -1) {
-          perror("send");
-          break;
-        }
-        sendbytes = sendbytes + n;
-        bytesleft = bytesleft - n;
+    if( (n = send(s, buf+sendbytes, bytesleft, MSG_NOSIGNAL)) == -1) {
+      perror("send");
+      break;
+    }
+    sendbytes = sendbytes + n;
+    bytesleft = bytesleft - n;
   }
   return n==-1? errno: 0;
 }
@@ -427,39 +440,40 @@ send_json(int sock, json_object *jobj)
   bytes_left = json_len;
 
   int rval = 0;
-  while(bytes_read < json_len)
-    {
-      buffer_len = 0;
+  while(bytes_read < json_len) {
+    buffer_len = 0;
 
-      if(bytes_read == 0) {
+    if(bytes_read == 0) {
+      apphdr *app_h = (apphdr *) buffer;
+      appdata *app_d = (appdata *) (buffer + sizeof(apphdr));
 
-        apphdr *app_h = (apphdr *) buffer;
-        appdata *app_d = (appdata *) (buffer + sizeof(apphdr));
+      app_h->len = json_len;
+      app_h->timestamp = timer;
+      strcpy(app_h->nodename,unameinfo.nodename);
 
-        app_h->len = json_len;
-	app_h->timestamp = timer;
-        strcpy(app_h->nodename,unameinfo.nodename);
+      bytestocopy = (MAXDATASIZE < bytes_left ? MAXDATASIZE : bytes_left);
+      strncpy(app_d->payload,json_str,bytestocopy);
 
-        bytestocopy = (MAXDATASIZE < bytes_left ? MAXDATASIZE : bytes_left);
-        strncpy(app_d->payload,json_str,bytestocopy);
-
-        buffer_len = sizeof(apphdr); // to accomodate the header size
-      } else {
-        bytestocopy = (MAXPKTSIZE < bytes_left ? MAXPKTSIZE : bytes_left);
-        strncpy(buffer,json_str+bytes_read,bytestocopy);
-      }
-
-      buffer_len += bytestocopy;
-
-      printf("Sending data ..\n");
-      if ( (rval = sendall(sock, buffer, buffer_len)) != 0 ) {
-	//printf("Remote pipe has been severed \n");
-	break;
-      }
-
-      bytes_read += bytestocopy;
-      bytes_left -= bytestocopy;
+      buffer_len = sizeof(apphdr); // to accomodate the header size
+    } else {
+      bytestocopy = (MAXPKTSIZE < bytes_left ? MAXPKTSIZE : bytes_left);
+      strncpy(buffer,json_str+bytes_read,bytestocopy);
     }
+
+    buffer_len += bytestocopy;
+
+#ifdef WWDEBUG
+    printf("Sending data ..\n");
+#endif
+    if ( (rval = sendall(sock, buffer, buffer_len)) != 0 ) {
+	    //printf("Remote pipe has been severed \n");
+      break;
+    }
+
+    bytes_read += bytestocopy;
+    bytes_left -= bytestocopy;
+  }
+
   free(json_str);
   free(buffer);
   return rval;
@@ -479,7 +493,8 @@ array_list_print(array_list *ls)
 /* void json_parse_complete(json_object *jobj); */
 
 void
-json_parse_complete(json_object *jobj){
+json_parse_complete(json_object *jobj)
+{
   enum json_type type;
   json_object_object_foreach(jobj, key, val) {
     type = json_object_get_type(val);
@@ -500,38 +515,40 @@ json_parse_complete(json_object *jobj){
 } 
 
 void
-json_parse(json_object *jobj){
-  json_object_object_foreach(jobj, key, value){
+json_parse(json_object *jobj) {
+  json_object_object_foreach(jobj, key, value) {
     printf("%s: %s\n", key, json_object_get_string(value));
   }
 }
 
 /*
-Removes the new line character from the end of the 
-string if it exists.
-*/
-char *chop(char *s){
-    if(s[strlen(s)-1] == '\n') s[strlen(s)-1] = '\0';
-    return s;
+ * Removes the new line character from the end of the 
+ * string if it exists.
+ */
+char *chop(char *s)
+{
+  if(s[strlen(s)-1] == '\n') s[strlen(s)-1] = '\0';
+  return s;
 }
 
-
 /*
-More efficient version of file_parser. Instead of accessing a file 
-number of keys times, opens a file only once and collects
-data as it parses. Upon successful location of the key and value,
-function places kv-pair in json_object whose pointer is the return
-value.
-*/
-json_object *fast_data_parser(char *file_name, array_list *keys, int num_keys){
+ * More efficient version of file_parser. Instead of accessing a file 
+ * number of keys times, opens a file only once and collects
+ * data as it parses. Upon successful location of the key and value,
+ * function places kv-pair in json_object whose pointer is the return
+ * value.
+ */
+json_object *
+fast_data_parser(char *file_name, array_list *keys, int num_keys) 
+{
   FILE *fp;
   json_object *jobj = json_object_new_object();
   int i, keys_found = 0;
-  if(fp = fopen(file_name, "r")){
+  if(fp = fopen(file_name, "r")) {
     char *line = malloc(sizeof(char)*100);
     char *data = malloc(sizeof(char)*100);
     while(fgets(line, 100,fp)){
-      for(i = 0; i < num_keys; i++){
+      for(i = 0; i < num_keys; i++) {
 	if(data = strstr(line, array_list_get_idx(keys, i))){
 	  while(*data != ':') data++;
 	  while(isspace(*data) || ispunct(*data)) data ++;
@@ -563,17 +580,17 @@ get_jiffs(cpu_data *cd)
     char *line = malloc(sizeof(char)*100);
     char *data = malloc(sizeof(char)*100);
     while(fgets(line, 100, fp)){
-      if(data = strstr(line, "cpu")){
-	char * result = NULL;
-	result = strtok(data, " ");
-	while(result != NULL){
-	  chop(result);
-	  if(strcmp("cpu", result)){
-	    if(i++ < 3) work_jiffs += atoi(result); // calculating work_jiffs
-	    total_jiffs += atoi(result); // calculating total_jiffs
-	  }
-	  result = strtok(NULL, " ");
-	}
+      if(data = strstr(line, "cpu")) {
+        char * result = NULL;
+        result = strtok(data, " ");
+        while(result != NULL) {
+          chop(result);
+          if(strcmp("cpu", result)) {
+            if(i++ < 3) work_jiffs += atoi(result); // calculating work_jiffs
+              total_jiffs += atoi(result); // calculating total_jiffs
+            }
+          result = strtok(NULL, " ");
+        }
       }
       i = 0; // reset i to get each cpu's work_jiffs added
     }
@@ -585,7 +602,9 @@ get_jiffs(cpu_data *cd)
 
     return 0;
   } else {
-    printf("I/O ERROR: could not access file\n");
+#ifdef WWDEBUG
+    printf("I/O ERROR: Could not access file (get_jiffs)\n");
+#endif
     return -1;
   }
 }
@@ -612,41 +631,45 @@ get_cpu_util_old()
 */
 
 int
-key_exists_in_json(json_object *jobj, char *kname) {
+key_exists_in_json(json_object *jobj, char *kname) 
+{
   json_object_object_foreach(jobj, key, value) {
-     if(strcmp(key,kname) == 0) {
-       return(1);
-     }
+    if(strcmp(key,kname) == 0) {
+      return(1);
+    }
   }
   return(0);
 }
 
 int
-get_int_from_json(json_object *jobj, char *kname) {
+get_int_from_json(json_object *jobj, char *kname) 
+{
   json_object_object_foreach(jobj,key,value) {
-     if(strcmp(key,kname) == 0) {
-	return(json_object_get_int(value));
-     } else {
-	return -1;
-     }
+    if(strcmp(key,kname) == 0) {
+      return(json_object_get_int(value));
+    } else {
+      return -1;
+    }
   }
 }
 
 void
-get_string_from_json(json_object *jobj, char *kname, char *str) {
+get_string_from_json(json_object *jobj, char *kname, char *str) 
+{
   json_object_object_foreach(jobj, key, value) {
-     if(strcmp(key,kname) == 0) {
-       strcpy(str, json_object_get_string(value));
-     }
+    if(strcmp(key,kname) == 0) {
+      strcpy(str, json_object_get_string(value));
+    }
   }
 }
 
 int
-registerConntype(int sock, int type) {
+registerConntype(int sock, int type) 
+{
   json_object *jobj;
   jobj = json_object_new_object();
   json_object_object_add(jobj, "CONN_TYPE", json_object_new_int(type));
- 
+
   send_json(sock, jobj);
   json_object_put(jobj);
 
@@ -654,21 +677,20 @@ registerConntype(int sock, int type) {
 }
 
 int
-setup_ConnectSocket(char *hostname, int port) {
- 
+setup_ConnectSocket(char *hostname, int port) 
+{
   int sock;
   struct sockaddr_in server_addr;
   struct hostent *host;
 
-  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-  {
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("socket");
     return(-1);
   }
 
   if ((host=gethostbyname(hostname)) == NULL) {  // get the host info
-      perror("gethostbyname");
-      return(-1);
+    perror("gethostbyname");
+    return(-1);
   }
 
   server_addr.sin_family = AF_INET;
@@ -677,8 +699,8 @@ setup_ConnectSocket(char *hostname, int port) {
   bzero(&(server_addr.sin_zero),8);
 
   if (connect(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
-      perror("connect");
-      return(-1);
+    perror("connect");
+    return(-1);
   }
 
   return(sock);
@@ -695,23 +717,27 @@ createTable(sqlite3 *db, char *tName)
   char *sqlcmd = malloc(MAX_SQL_SIZE);
   strcpy(sqlcmd, "create table if not exists ");
   strcat(sqlcmd, tName);
- 
+
   if( strcmp(tName,SQLITE_DB_TB1NAME) == 0 ) {
-	strcat(sqlcmd, " (nodename, timestamp, jsonblob, primary key(nodename))");
+    strcat(sqlcmd, " (nodename, timestamp, jsonblob, primary key(nodename))");
   } else if(strcmp(tName,SQLITE_DB_TB2NAME) == 0) {
-	strcat(sqlcmd, " (blobid, key, value, primary key(blobid, key))");
+    strcat(sqlcmd, " (blobid, key, value, primary key(blobid, key))");
   } else {
-        printf("createTable : Error - Unsupported table name \n");
-        free(sqlcmd);
-        return(1);
+    printf("createTable : Error - Unsupported table name \n");
+    free(sqlcmd);
+    return(1);
   }
-  //printf("SQL cmd : %s\n",sqlcmd);
+//  printf("SQL cmd : %s\n",sqlcmd);
 
   if( (rc = sqlite3_exec(db, sqlcmd, nothing_todo, 0, &eMsg) != SQLITE_OK )) {
-        fprintf(stderr, "SQL error: %s\n", eMsg);
-        sqlite3_free(eMsg);
+    fprintf(stderr, "SQL error: %s\n", eMsg);
+    sqlite3_free(eMsg);
   }
   free(sqlcmd);
 
   return(0);
 }
+
+/*
+ * vim:filetype=c:syntax=c:expandtab:ts=2:sw=2
+ */

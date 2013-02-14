@@ -1,0 +1,101 @@
+#!/bin/bash
+#
+# Start Warewulf Monitor Aggregator
+#
+# description: Start the Warewulf Monitor Aggregator
+#
+#
+### BEGIN INIT INFO
+# Provides: aggregator
+# Required-Start:
+# Required-Stop: iptables
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop the aggregator
+# Description: Start, stop the Warewulf Monitor Aggregator
+### END INIT INFO
+
+. /etc/init.d/functions
+
+eval $(wwconfig -as);
+
+CONFIG_DIR=${WAREWULF_SYSCONFDIR}/warewulf;
+
+AGGREGATOR=${WAREWULF_PREFIX}/bin/aggregator;
+PORT=9000;  # Default port to listen on
+PIDFILE=${WAREWULF_STATEDIR}/run/aggregator.pid
+SUBSYS=${WAREWULF_STATEDIR}/lock/subsys/aggregator
+LOGFILE=/var/log/warewulf_aggregator.log
+
+status()
+{
+	pidof "$AGGREGATOR" 2&>/dev/null;
+	STOPPED=$?
+
+	if [ $STOPPED -ne 0 ]; then
+		echo "WWMonitor: Aggregator Stopped";
+		if [ -f $PIDFILE ]; then
+			echo "WWMonitor: Stale PID file found. Removing.";
+			/bin/rm -f ${PIDFILE};
+		fi
+	else
+		echo "WWMonitor: Aggregator Running (`cat ${PIDFILE} | tr -d '\n'`)";
+	fi
+	return $STOPPED;
+}
+
+stop()
+{
+	echo -n $"Stopping Warewulf Aggregator";
+	killproc "$AGGREGATOR";
+	/bin/rm -f $SUBSYS;
+	[ -f $PIDFILE ] && /bin/rm -f $PIDFILE;
+	return 0
+}
+
+start()
+{
+	if [ -f $PIDFILE -o -f $SUBSYS ]; then
+		stop; echo;
+	fi
+	echo -n $"Starting Warewulf Aggregator";
+	daemon --pidfile=$PIDFILE $AGGREGATOR $PORT; 
+	pidof $AGGREGATOR > $PIDFILE;
+	touch $SUBSYS;
+	return 0
+}
+
+restart() {
+	stop
+	sleep 1;
+	start
+}
+
+ret=0
+while [ "$#" -gt "0" ]; do
+	case $1 in
+	--port=?*)
+		PORT=${1#--port=}
+		;;
+	status)
+		status
+		;;
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		restart
+		;;
+	*)
+		echo $"Usage: $0 [--port=###] {status|start|stop|restart}"
+		exit 4
+	esac
+	ret=$?
+	shift
+done
+echo;
+exit $ret
+

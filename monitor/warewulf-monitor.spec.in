@@ -22,7 +22,6 @@ utilization and maintenance of clusters or groups of computers.
 
 This is the monitoring module.
 
-
 %package cli
 Summary: Warewulf monitoring command line front end
 Group: System Environment/Monitoring
@@ -32,6 +31,19 @@ Requires: warewulf-common >= 3.2
 
 %description cli
 Command line interface to the Warewulf monitoring subsystem.
+
+%package node
+Summary: Monitoring Suite for Warewulf. Node Collection.
+Group: System Environment/Clustering
+Requires: json-c
+ 
+%description node
+Warewulf >= 3 is a set of utilities designed to better enable
+utilization and maintenance of clusters or groups of computers.
+
+This is the monitor-node module, that is installed onto the
+compute nodes.
+
 
 %prep
 %setup
@@ -53,8 +65,8 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-, root, root)
 %doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO
+%attr(0755, root, root) %config /etc/init.d/aggregator
 %{_bindir}/aggregator
-%{_bindir}/collector
 
 
 %files cli
@@ -64,6 +76,12 @@ rm -rf $RPM_BUILD_ROOT
 %{perl_vendorlib}/*
 %{_bindir}/wwtop
 %{_bindir}/wwstats
+
+%files node
+%defattr(-, root, root)
+%doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO
+%attr(0755, root, root) %config /etc/init.d/collector
+%{_bindir}/collector
 
 
 %changelog

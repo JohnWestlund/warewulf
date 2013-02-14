@@ -85,17 +85,25 @@ update_dbase(time_t TimeStamp, char *NodeName, json_object *jobj)
     overwrite = 1;
     update_insertLookups(blobid, jobj, db, overwrite);
     merge_json(NodeName, TimeStamp, jobj, db, overwrite);
+#ifdef WWDEBUG
     printf("Just finished processing PKT with newer time stamp\n");
+#endif
 
   } else if (DBTimeStamp >= TimeStamp ) { // PKT with same time stamp or with older time stamp
 
     blobid = NodeBID_fromDB(NodeName, db);
     overwrite = 0;
+#ifdef WWDEBUG
     printf("About to update & insert\n");
+#endif
     update_insertLookups(blobid, jobj, db, overwrite);
+#ifdef WWDEBUG
     printf("Just finished half processing PKT with older or same time stamp\n");
+#endif
     merge_json(NodeName, TimeStamp, jobj, db, overwrite);
+#ifdef WWDEBUG
     printf("Just finished processing PKT with older or same time stamp\n");
+#endif
 
   }
 }
@@ -111,22 +119,28 @@ readndumpData(int fd)
 
   addr_len = sizeof(struct sockaddr);
   if ((numbytes=recvfrom(fd, buf, MAXPKTSIZE-1 , 0,
-              (struct sockaddr *)&their_addr, &addr_len)) == -1) {
+                         (struct sockaddr *)&their_addr, &addr_len)) == -1) {
       perror("recvfrom");
   }
+#ifdef WWDEBUG
   printf("got packet from %s\n",inet_ntoa(their_addr.sin_addr));
   printf("packet is %d bytes long\n",numbytes);
   buf[numbytes] = '\0';
   printf("packet contains \"%s\"\n",buf);
+#else
+  buf[numbytes] = '\0';
+#endif
 
   sqlite3_exec(db, "select rowid,NodeName,key,value from wwstats", json_from_db, json_db, NULL);
 
   // send json_object over socket to wwstats
   if ((numbytes=sendto(fd, json_object_to_json_string(json_db), strlen(json_object_to_json_string(json_db)), 0,
-		       (struct sockaddr *)&their_addr, sizeof(struct sockaddr))) == -1) {
+                       (struct sockaddr *)&their_addr, sizeof(struct sockaddr))) == -1) {
     perror("sendto");
-  }  
+  } 
+#ifdef WWDEBUG
   printf("sent %d bytes to %s\n", numbytes, inet_ntoa(their_addr.sin_addr));
+#endif
 
   return;
 }
@@ -137,32 +151,34 @@ writeHandler(int fd)
   // Should we assume that even the TCP send's cannot be made when we want ?
   // In other words is it possible that TCP send's would wait or get stuck ? 
   // If so we cannot use send_json instead improve the logic here -- kmuriki
-  
+
+#ifdef WWDEBUG  
   fprintf(stderr,"About to write on FD - %d, type - %d\n",fd,sock_data[fd].ctype);
- 
+#endif
+
   char payload[1024];
   
   json_object *jobj;
   jobj = json_object_new_object();
 
   if(sock_data[fd].ctype == UNKNOWN) {
-      strcpy(payload,"Send Type");
-      json_object_object_add(jobj,"COMMAND",json_object_new_string(payload));
+    strcpy(payload,"Send Type");
+    json_object_object_add(jobj,"COMMAND",json_object_new_string(payload));
   } else if(sock_data[fd].ctype == COLLECTOR) {
-      strcpy(payload,"Send Data");
-      json_object_object_add(jobj,"COMMAND",json_object_new_string(payload));
+    strcpy(payload,"Send Data");
+    json_object_object_add(jobj,"COMMAND",json_object_new_string(payload));
   } else if(sock_data[fd].ctype == APPLICATION) {
-      if(sock_data[fd].sqlite_cmd != NULL){
-          //printf("SQL cmd - %s\n", sock_data[fd].sqlite_cmd);
-          json_object_object_add(jobj,"JSON_CT",json_object_new_int(0));
-          sqlite3_exec(db, sock_data[fd].sqlite_cmd, json_from_db, jobj, NULL);
-          //printf("JSON - %s\n",json_object_to_json_string(jobj));
-  	  free(sock_data[fd].sqlite_cmd);
-      } else {
-          strcpy(payload,"Send SQL query");
-          json_object_object_add(jobj,"COMMAND",json_object_new_string(payload));
-      }
-  } 
+    if(sock_data[fd].sqlite_cmd != NULL){
+      //printf("SQL cmd - %s\n", sock_data[fd].sqlite_cmd);
+      json_object_object_add(jobj,"JSON_CT",json_object_new_int(0));
+      sqlite3_exec(db, sock_data[fd].sqlite_cmd, json_from_db, jobj, NULL);
+      //printf("JSON - %s\n",json_object_to_json_string(jobj));
+      free(sock_data[fd].sqlite_cmd);
+    } else {
+      strcpy(payload,"Send SQL query");
+      json_object_object_add(jobj,"COMMAND",json_object_new_string(payload));
+    }
+  }
 
   send_json(fd,jobj);
   json_object_put(jobj);
@@ -177,7 +193,9 @@ writeHandler(int fd)
 int
 readHandler(int fd)
 {
+#ifdef WWDEBUG
   fprintf(stderr,"About to read on FD - %d, type - %d\n",fd,sock_data[fd].ctype);
+#endif
 
   char rbuf[MAXPKTSIZE];
   rbuf[0] = '\0';
@@ -188,16 +206,16 @@ readHandler(int fd)
   // transmission for this socket and decide the # of bytes to read.
   int numtoread;
   if( sock_data[fd].r_payloadlen > 0 && sock_data[fd].r_payloadlen < MAXPKTSIZE-1 ) {
-      numtoread = sock_data[fd].r_payloadlen;
+    numtoread = sock_data[fd].r_payloadlen;
   } else {
-      numtoread = MAXPKTSIZE-1;
+    numtoread = MAXPKTSIZE-1;
   }
 
   if ((readbytes=recv(fd, rbuf, numtoread, 0)) == -1) {
-      perror("recv");
-      FD_CLR(fd, &rfds);
-      close(fd);
-      return(0);
+    perror("recv");
+    FD_CLR(fd, &rfds);
+    close(fd);
+    return(0);
   }
   rbuf[readbytes]='\0';
   //fprintf(stderr, "Rx a string of size %d - %s\n",readbytes,rbuf);
@@ -206,39 +224,43 @@ readHandler(int fd)
   // Is this required ?
   if (strlen(rbuf) == 0)
   {
-      fprintf(stderr,"\nSeams like the remote client connected\n");
-      fprintf(stderr,"to this socket has closed its connection\n");
-      fprintf(stderr,"So I'm closing the socket\n");
-      FD_CLR(fd, &rfds);
-      close(fd);
-      return(0);
+#ifdef WWDEBUG
+    fprintf(stderr,"\nSeams like the remote client connected\n");
+    fprintf(stderr,"to this socket has closed its connection\n");
+    fprintf(stderr,"So I'm closing the socket\n");
+#endif
+    FD_CLR(fd, &rfds);
+    close(fd);
+    return(0);
   }
  
   // If the read buffer is from pending transmission append to accuralbuf
   // Or else treat it as a new packet.
   if (sock_data[fd].r_payloadlen > 0) {
-     strcat(sock_data[fd].accural_buf,rbuf);
-     sock_data[fd].r_payloadlen = sock_data[fd].r_payloadlen - readbytes;
+    strcat(sock_data[fd].accural_buf,rbuf);
+    sock_data[fd].r_payloadlen = sock_data[fd].r_payloadlen - readbytes;
   } else {
-     apphdr *app_h = (apphdr *) rbuf;
-     appdata *app_d = (appdata *) (rbuf + sizeof(apphdr));
+    apphdr *app_h = (apphdr *) rbuf;
+    appdata *app_d = (appdata *) (rbuf + sizeof(apphdr));
 
-     //printf("Len of the payload - %d, %s\n", app_h->len,app_d->payload);
+    //printf("Len of the payload - %d, %s\n", app_h->len,app_d->payload);
  
-     // plus 1 to store the NULL char
-     sock_data[fd].accural_buf = (char *) malloc(app_h->len+1);
-     strcpy(sock_data[fd].accural_buf,app_d->payload);
-     sock_data[fd].r_payloadlen = app_h->len - strlen(sock_data[fd].accural_buf);
-     //printf("strlen(sock_data[%d].accural_buf) = %d\n", fd, strlen(sock_data[fd].accural_buf));
+    // plus 1 to store the NULL char
+    sock_data[fd].accural_buf = (char *) malloc(app_h->len+1);
+    strcpy(sock_data[fd].accural_buf,app_d->payload);
+    sock_data[fd].r_payloadlen = app_h->len - strlen(sock_data[fd].accural_buf);
+    //printf("strlen(sock_data[%d].accural_buf) = %d\n", fd, strlen(sock_data[fd].accural_buf));
   }
 
   if (sock_data[fd].r_payloadlen > 0) {
-     //Still has more reading to do
+    //Still has more reading to do
     //printf("r_payloadlen = %d\n", sock_data[fd].r_payloadlen);
     return(0);
   }
 
+#ifdef WWDEBUG
   printf("Done reading totally, now processing the received data packet\n");
+#endif
 
 /*
   if(sock_data[fd].ctype == UNKNOWN) {
@@ -257,7 +279,9 @@ readHandler(int fd)
   int is_reg_pkt = 0;
   ctype = get_int_from_json(json_tokener_parse(sock_data[fd].accural_buf),"CONN_TYPE");
   if(ctype == -1) {
+#ifdef WWDEBUG
     printf("Either not able to determine type or not a registration packet\n");
+#endif
   } else {
     sock_data[fd].ctype = ctype;
     is_reg_pkt = 1;
@@ -265,35 +289,33 @@ readHandler(int fd)
   }
 
   if (is_reg_pkt != 1) {
-  if(sock_data[fd].ctype == COLLECTOR) {
+    if(sock_data[fd].ctype == COLLECTOR) {
+       //printf("%s\n",sock_data[fd].accural_buf);
+       apphdr *app_h = (apphdr *) rbuf;
+       jobj = json_tokener_parse(sock_data[fd].accural_buf);
+       update_dbase(app_h->timestamp,app_h->nodename,jobj);
+       json_object_put(jobj);
+     } else if(sock_data[fd].ctype == APPLICATION) {
+       jobj = json_tokener_parse(sock_data[fd].accural_buf);
+       sock_data[fd].sqlite_cmd = malloc(MAX_SQL_SIZE); 
+       strcpy(sock_data[fd].sqlite_cmd,"select nodename,jsonblob from ");
+       strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
+       strcat(sock_data[fd].sqlite_cmd," left join ");
+       strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB2NAME);
+       strcat(sock_data[fd].sqlite_cmd," on ");
+       strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
+       strcat(sock_data[fd].sqlite_cmd,".rowid = ");
+       strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB2NAME);
+       strcat(sock_data[fd].sqlite_cmd,".blobid where ");
+       int len = strlen(sock_data[fd].sqlite_cmd);
+       strcat(sock_data[fd].sqlite_cmd, json_object_get_string(json_object_object_get(jobj, "sqlite_cmd")));
 
-      //printf("%s\n",sock_data[fd].accural_buf);
-      apphdr *app_h = (apphdr *) rbuf;
-      jobj = json_tokener_parse(sock_data[fd].accural_buf);
-      update_dbase(app_h->timestamp,app_h->nodename,jobj);
-      json_object_put(jobj);
-
-   } else if(sock_data[fd].ctype == APPLICATION) {
-
-      jobj = json_tokener_parse(sock_data[fd].accural_buf);
-      sock_data[fd].sqlite_cmd = malloc(MAX_SQL_SIZE); 
-      strcpy(sock_data[fd].sqlite_cmd,"select nodename,jsonblob from ");
-      strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
-      strcat(sock_data[fd].sqlite_cmd," left join ");
-      strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB2NAME);
-      strcat(sock_data[fd].sqlite_cmd," on ");
-      strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
-      strcat(sock_data[fd].sqlite_cmd,".rowid = ");
-      strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB2NAME);
-      strcat(sock_data[fd].sqlite_cmd,".blobid where ");
-      int len = strlen(sock_data[fd].sqlite_cmd);
-      strcat(sock_data[fd].sqlite_cmd, json_object_get_string(json_object_object_get(jobj, "sqlite_cmd")));
-      if (len == strlen(sock_data[fd].sqlite_cmd)) {
-	//App sent an empty SQL command so we need to return all JSONs we have
-	strcpy(sock_data[fd].sqlite_cmd,"select nodename,jsonblob from ");
-	strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
-      }
-   } 
+       if (len == strlen(sock_data[fd].sqlite_cmd)) {
+         //App sent an empty SQL command so we need to return all JSONs we have
+         strcpy(sock_data[fd].sqlite_cmd,"select nodename,jsonblob from ");
+         strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
+       }
+     }
    }
 
   if(sock_data[fd].accural_buf != NULL){
@@ -370,7 +392,9 @@ acceptConn(int fd)
   }
   strcpy(sock_data[c].remote_sock_ipaddr,inet_ntoa(sin.sin_addr));
 
+#ifdef WWDEBUG
   fprintf(stderr,"Accepted a new connection on fd - %d from %s\n",c,sock_data[c].remote_sock_ipaddr);
+#endif
 
   // Initialize all the variables
   // Connection type unknown at this time
@@ -381,7 +405,7 @@ acceptConn(int fd)
 
   // Register interest in a read on this socket to know more about the connection.
   FD_SET(c, &rfds);
-  
+
   return(c);
 }
 
@@ -398,20 +422,37 @@ main(int argc, char *argv[])
     exit(1);
   }
 
+/* Include this only if we are *not* compiling a debug version */
+#ifndef WWDEBUG
+  /* Fork and background (basically) */
+  pid_t pid = fork();
+  if (pid != 0) {
+    if (pid < 0) {
+      perror("AGGREGATOR: Failed to fork");
+      exit(1);
+    }
+    exit(0);
+  }
+#endif
+
   bzero(sock_data,sizeof(sock_data));
 
   // Get the database ready
   // Attempt to open database & check for failure
+#ifdef WWDEBUG
   printf("Attempting to open database: %s\n", SQLITE_DB_FNAME);
+#endif
   if( rc = sqlite3_open(SQLITE_DB_FNAME, &db)  ){
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
     sqlite3_close(db);
     exit(1);
   } else {
-  // Now check & create tables if required 
+    // Now check & create tables if required 
     createTable(db,SQLITE_DB_TB1NAME);
     createTable(db,SQLITE_DB_TB2NAME);
+#ifdef WWDEBUG
     printf("Database ready for reading and writing...\n");
+#endif
   }
 
   // Prepare to accept clients
@@ -420,10 +461,14 @@ main(int argc, char *argv[])
 
   // Open TCP (SOCK_STREAM) & UDP (SOCK_DGRAM) sockets, bind to the port 
   // given and listen on TCP sock for connections
-  if((setupSockets(atoi(argv[1]),&stcp,&sudp)) < 0)
+  if((setupSockets(atoi(argv[1]),&stcp,&sudp)) < 0) {
+    perror("WWAGGREGATOR: Error setting up Sockets\n");
     exit(1);
+  }
 
+#ifdef WWDEBUG
   printf("Our listen sock # is - %d & UDP sock # is - %d \n",stcp,sudp);
+#endif
   //printf("FD_SETSIZE - %d\n",FD_SETSIZE);
 
   //Add the created TCP & UDP sockets to the read set of file descriptors
@@ -459,16 +504,26 @@ main(int argc, char *argv[])
         } else if(i == sudp) {
           readndumpData(sudp);
         } else {
+#ifdef WWDEBUG
 	  fprintf(stderr,"File descriptor %d is ready for reading .. call'g readHLR\n",i);
+#endif
           readHandler(i);
 	}
+
 	n--;
       }
+
       if(FD_ISSET(i, &_wfds)) {
-	  fprintf(stderr,"File descriptor %d is ready for writing .. call'g writeHLR\n",i);
-	  writeHandler(i);
-	n--;
+#ifdef WWDEBUG
+        fprintf(stderr,"File descriptor %d is ready for writing .. call'g writeHLR\n",i);
+#endif
+        writeHandler(i);
+        n--;
       } 
     }
   }
 }
+
+/*
+ * vim:filetype=c:syntax=c:expandtab:ts=2:sw=2
+ */
