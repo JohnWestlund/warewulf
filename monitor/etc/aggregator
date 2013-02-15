@@ -22,7 +22,7 @@ eval $(wwconfig -as);
 CONFIG_DIR=${WAREWULF_SYSCONFDIR}/warewulf;
 
 AGGREGATOR=${WAREWULF_PREFIX}/bin/aggregator;
-PORT=9000;  # Default port to listen on
+PORT=9873;  # Default port to listen on
 PIDFILE=${WAREWULF_STATEDIR}/run/aggregator.pid
 SUBSYS=${WAREWULF_STATEDIR}/lock/subsys/aggregator
 LOGFILE=/var/log/warewulf_aggregator.log

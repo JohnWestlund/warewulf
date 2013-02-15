@@ -26,7 +26,7 @@ fi
 
 COLLECTOR=@PREFIX@/bin/collector;
 HOST=${WWMASTER};  # Default host to connect to
-PORT=9000;  # Default port to connect to
+PORT=9873;  # Default port to connect to
 PIDFILE=@LOCALSTATEDIR@/run/collector.pid
 SUBSYS=@LOCALSTATEDIR@/lock/subsys/collector
 LOGFILE=/var/log/warewulf_collector.log
