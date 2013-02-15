@@ -74,6 +74,7 @@ GetOptions(
     'v|verbose'     => \$opt_verbose,
     'q|quiet'       => \$opt_quiet,
     'noask'         => \$opt_noask,
+    'y|yes'         => \$opt_noask,
 );
 
 
