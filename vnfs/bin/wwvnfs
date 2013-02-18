@@ -14,6 +14,7 @@ use Cwd;
 use File::Basename;
 use File::Copy;
 use File::Path;
+use File::Find;
 use Getopt::Long;
 
 my $config = Warewulf::Config->new("vnfs.conf");
@@ -38,6 +39,7 @@ my @exclude_files;
 my @hybridize_files;
 my $wwsh_bin;
 my $create_config;
+my $gzip_found=0;
 
 Getopt::Long::Configure ("bundling");
 
@@ -235,6 +237,20 @@ foreach my $dir (split(":", $ENV{"PATH"})) {
 &dprint("Sanitizing the PATH environment variable\n");
 $ENV{"PATH"} = "/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin";
 
+# Figure out if the given 'gzip program' is availible
+# Needs to be done after the Path is sanitized
+my $gzip = $config->get("gzip program") || "gzip";
+sub wanted {
+    /^$gzip$/ && ($gzip_found = 1);
+}
+find({ untaint=>1, wanted=>\&wanted }, split(':', $ENV{"PATH"}));
+
+if($gzip_found == 0) {
+    # Figure gzip is going to be in our path
+    &dprint("gzip program $gzip not found. Falling back to gzip");
+    $gzip = "gzip";
+}
+
 &dprint("Starting main conditional\n");
 if (-d $opt_chroot) {
     &dprint("Looking for init at: $opt_chroot/sbin/init\n");
@@ -294,7 +310,7 @@ if (-d $opt_chroot) {
             }
 
             &nprint("Building and compressing the final image\n");
-            system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | gzip -9 > $output");
+            system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip -9 > $output");
             &nprint("Cleaning temporary files\n");
             system("rm -rf $tmpdir");
         } elsif ($opt_includefile) {
@@ -308,7 +324,7 @@ if (-d $opt_chroot) {
 
         } else {
             &nprint("Building and compressing VNFS image\n");
-            system("(cd $opt_chroot; find . | cpio --quiet -o -H newc ) | gzip -9 > $output");
+            system("(cd $opt_chroot; find . | cpio --quiet -o -H newc ) | $gzip -9 > $output");
         }
 
         if (-f $output) {
