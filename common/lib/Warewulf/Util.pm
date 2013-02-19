@@ -201,10 +201,15 @@ expand_bracket(@)
                         # The range counts down, so swap the endpoints.
                         ($start, $end) = ($end, $start);
                     }
+		    $slen = length($start);
                     $len = length($end);
 
                     for (my $i = $start; $i <= $end; $i++) {
-                        push(@ret, sprintf("%s%0.${len}d%s", $prefix, $i, $suffix));
+			if($slen == 1) {
+			    push(@ret, sprintf("%s%d%s", $prefix, $i, $suffix));
+			} else {
+	                    push(@ret, sprintf("%s%0.${len}d%s", $prefix, $i, $suffix));
+			}
                     }
                 } elsif ($r =~ /^(\d+)$/ ) {
                     my $num = $1;
