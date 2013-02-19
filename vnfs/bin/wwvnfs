@@ -21,6 +21,8 @@ my $config = Warewulf::Config->new("vnfs.conf");
 my $randstring = &rand_string("12");
 my $output = "/tmp/$randstring.vnfs";
 my $command = "$0 ". join(" ", @ARGV);
+my $gzip_cmd = $config->get("gzip command") || "gzip -9";
+my ($gzip_bin, $gzip_opts) = split(/\s+/, $gzip_cmd, 2);
 my $opt_output;
 my $opt_chroot;
 my $opt_help;
@@ -39,7 +41,7 @@ my @exclude_files;
 my @hybridize_files;
 my $wwsh_bin;
 my $create_config;
-my $gzip_found=0;
+
 
 Getopt::Long::Configure ("bundling");
 
@@ -237,19 +239,37 @@ foreach my $dir (split(":", $ENV{"PATH"})) {
 &dprint("Sanitizing the PATH environment variable\n");
 $ENV{"PATH"} = "/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin";
 
-# Figure out if the given 'gzip program' is availible
-# Needs to be done after the Path is sanitized
-my $gzip = $config->get("gzip program") || "gzip";
-sub wanted {
-    /^$gzip$/ && ($gzip_found = 1);
-}
-find({ untaint=>1, wanted=>\&wanted }, split(':', $ENV{"PATH"}));
 
-if($gzip_found == 0) {
-    # Figure gzip is going to be in our path
-    &dprint("gzip program $gzip not found. Falling back to gzip");
-    $gzip = "gzip";
+# Checking gzip command
+if (-x $gzip_bin) {
+    &dprint("Using given full path to gzip ($gzip_bin)\n");
+} else {
+    &dprint("Looking for gzip program in PATH\n");
+    my $found;
+    foreach my $p (split(":", $ENV{"PATH"})) {
+        &dprint("Looking for gzip at '$p/$gzip_bin'\n");
+        if (-x "$p/$gzip_bin") {
+            &dprint("Found full path to gzip ($gzip_bin)\n");
+            $gzip_bin = "$p/$gzip_bin";
+            $found = 1;
+            last;
+        }
+    }
+    if (! $found) {
+        &eprint("gzip program '$gzip_bin' not found!\n");
+        exit 255;
+    }
 }
+
+if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
+    $gzip_bin = $1;
+} else {
+    &eprint("gzip command contains illegal characters!\n");
+    exit 255;
+}
+
+&iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
+
 
 &dprint("Starting main conditional\n");
 if (-d $opt_chroot) {
@@ -310,7 +330,7 @@ if (-d $opt_chroot) {
             }
 
             &nprint("Building and compressing the final image\n");
-            system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip -9 > $output");
+            system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
             &nprint("Cleaning temporary files\n");
             system("rm -rf $tmpdir");
         } elsif ($opt_includefile) {
@@ -324,7 +344,7 @@ if (-d $opt_chroot) {
 
         } else {
             &nprint("Building and compressing VNFS image\n");
-            system("(cd $opt_chroot; find . | cpio --quiet -o -H newc ) | $gzip -9 > $output");
+            system("(cd $opt_chroot; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
         }
 
         if (-f $output) {
