@@ -65,7 +65,7 @@ rootfs: busybox e2fsprogs
 	cp _work/$(E2FSPROGS_DIR)/misc/mke2fs rootfs/sbin/mkfs.ext4
 	ln -s mkfs.ext4 rootfs/sbin/mkfs.ext3
 	cp -L --parents /lib*/ld-linux* rootfs/
-	find rootfs -type f -perm -o+x  -print | xargs ldd | grep "=>" | awk '{print $$3}' | grep "^/" | sort | uniq | while read i; do cp -L --parents $$i rootfs/; done
+	find rootfs -type f -perm -o+x  -print | grep -v ld-linux | xargs ldd | grep "=>" | awk '{print $$3}' | grep "^/" | sort | uniq | while read i; do cp -L --parents $$i rootfs/; done
 	find rootfs -type f -perm -o+x -print | xargs strip -g
 	rm -f rootfs/linuxrc
 	install -m 755 $(srcdir)/init rootfs/init
