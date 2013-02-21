@@ -23,6 +23,7 @@ $ENV{"PATH"} = "/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin";
 
 my $randstring = &rand_string("12");
 my $tmpdir = "/var/tmp/wwinitrd.$randstring";
+my $initramfsdir = "$tmpdir/initramfs";
 my $output = "/tmp/$randstring.wwbs";
 my $opt_debug;
 my $opt_verbose;
@@ -279,6 +280,19 @@ if ($config->get("firmware")) {
         &nprint("Number of firmware images included in bootstrap: $firmware_count\n");
     }
 }
+
+
+
+if ($config->get("modulelist")) {
+    mkpath("$initramfsdir/etc") || die "Can't create directory $initramfsdir/etc";
+    open(MODCONFFILE, ">> $initramfsdir/etc/modules.conf.warewulf") || die "Can't create modules.conf.warewulf";
+    foreach my $mod ($config->get("modulelist")) {
+        print MODCONFFILE "$mod";
+    }
+    print MODCONFFILE "\n";
+    close MODCONFFILE;
+}
+
 
 copy("$opt_chroot/boot/vmlinuz-$opt_kversion", "$tmpdir/kernel");
 
