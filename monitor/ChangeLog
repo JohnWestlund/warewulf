@@ -20,3 +20,7 @@ with parenthesis-aligned continuation indentation).
 
 One down, several to go...
 ----------------------------------------------------------------------
+Fri Feb 22 13:49:05 2013                        Michael Jennings (mej)
+
+Fixes and cleanups for src/getstats.c
+----------------------------------------------------------------------
