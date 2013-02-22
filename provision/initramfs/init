@@ -3,7 +3,7 @@
 #
 # Copyright (c) 2001-2003 Gregory M. Kurtzer
 #
-# Copyright (c) 2003-2011, The Regents of the University of California,
+# Copyright (c) 2003-2013, The Regents of the University of California,
 # through Lawrence Berkeley National Laboratory (subject to receipt of any
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
@@ -46,14 +46,22 @@ if [ -x "/sbin/mdev" ]; then
    /sbin/mdev -s
 fi
 
-msg_white  "Loading drivers: "
-for module in `/sbin/detect | sort | uniq`; do
-    msg_gray "$module "
-    cmd=`grep "^$module " /etc/modules.conf.warewulf`
-    if [ "$cmd" ]; then
-        modprobe $cmd 2>/dev/null
-    else
-        modprobe $module 2>/dev/null
+if [ -f "/etc/wwmodprobe" ]; then
+    msg_white  "Loading drivers: "
+    for module in `grep -v "^#"`; do
+        if modprobe $module 2>/dev/null; then
+            name=`echo "$module" | cut -d " " -f 1`
+            msg_gray "$name "
+        fi
+    done
+    wwsuccess
+fi
+
+msg_white "Detecting hardware: "
+for module in `/sbin/detect`; do
+    if modprobe $module 2>/dev/null; then
+        name=`echo "$module" | cut -d " " -f 1`
+        msg_gray "$name "
     fi
 done
 wwsuccess

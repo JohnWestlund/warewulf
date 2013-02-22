@@ -2,13 +2,12 @@
 #
 # Copyright (c) 2001-2003 Gregory M. Kurtzer
 #
-# Copyright (c) 2003-2011, The Regents of the University of California,
+# Copyright (c) 2003-2013, The Regents of the University of California,
 # through Lawrence Berkeley National Laboratory (subject to receipt of any
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 
 KVERSION=`uname -r`
-AUTOLOAD="uhci-hcd ohci-hcd ehci-hcd whci-hcd isp116x-hcd isp1362-hcd xhci-hcd sl811-hcd sd_mod"
 IGNOREMOD="ib_mthca@|@ib_ipath@|@iw_cxgb3@|@iw_cxgb4@|@iw_nes@|@mlx4_ib@|@ib_qib"
 
 if [ ! -f /lib/modules/$KVERSION/modules.pcimap ]; then
@@ -53,12 +52,3 @@ for pci in /sys/bus/pci/devices/*; do
         fi
     done
 done
-
-if [ -n "$AUTOLOAD" ]; then
-    for mod in $AUTOLOAD; do
-        if modcheck $mod; then
-            echo $mod
-        fi
-    done
-fi
-
