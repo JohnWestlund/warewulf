@@ -12,3 +12,11 @@ Also fixed "make distcheck."
 
 More fixes and cleanups to come....
 ----------------------------------------------------------------------
+Thu Feb 21 17:00:03 2013                        Michael Jennings (mej)
+
+Going file by file re-indenting to improve readability and consistency
+and to get rid of tab characters (which are inherently incompatible
+with parenthesis-aligned continuation indentation).
+
+One down, several to go...
+----------------------------------------------------------------------
