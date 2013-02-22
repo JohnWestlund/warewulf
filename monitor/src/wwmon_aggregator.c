@@ -10,6 +10,8 @@
  *
  */
 
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -113,22 +115,22 @@ readndumpData(int fd)
 {
 
   struct sockaddr_in their_addr;
-  int addr_len, numbytes;
+  socklen_t addr_len;
+  int numbytes;
   char buf[MAXPKTSIZE];
   json_object *json_db = json_object_new_object();
 
   addr_len = sizeof(struct sockaddr);
-  if ((numbytes=recvfrom(fd, buf, MAXPKTSIZE-1 , 0,
-                         (struct sockaddr *)&their_addr, &addr_len)) == -1) {
+  numbytes = recvfrom(fd, buf, MAXPKTSIZE-1, 0, (struct sockaddr *) &their_addr, &addr_len);
+  if (numbytes < 0) {
       perror("recvfrom");
+      return;
   }
+  buf[numbytes] = 0;
 #ifdef WWDEBUG
   printf("got packet from %s\n",inet_ntoa(their_addr.sin_addr));
   printf("packet is %d bytes long\n",numbytes);
-  buf[numbytes] = '\0';
   printf("packet contains \"%s\"\n",buf);
-#else
-  buf[numbytes] = '\0';
 #endif
 
   sqlite3_exec(db, "select rowid,NodeName,key,value from wwstats", json_from_db, json_db, NULL);
@@ -193,18 +195,19 @@ writeHandler(int fd)
 int
 readHandler(int fd)
 {
+  char rbuf[MAXPKTSIZE] = "";
+  int readbytes;
+  json_object *jobj;
+  int ctype;
+  int is_reg_pkt = 0;
+  int numtoread;
+
 #ifdef WWDEBUG
   fprintf(stderr,"About to read on FD - %d, type - %d\n",fd,sock_data[fd].ctype);
 #endif
 
-  char rbuf[MAXPKTSIZE];
-  rbuf[0] = '\0';
-  int readbytes;
-  json_object *jobj;
-
   // First check if there is any remaining payload from previous
   // transmission for this socket and decide the # of bytes to read.
-  int numtoread;
   if( sock_data[fd].r_payloadlen > 0 && sock_data[fd].r_payloadlen < MAXPKTSIZE-1 ) {
     numtoread = sock_data[fd].r_payloadlen;
   } else {
@@ -225,7 +228,7 @@ readHandler(int fd)
   if (strlen(rbuf) == 0)
   {
 #ifdef WWDEBUG
-    fprintf(stderr,"\nSeams like the remote client connected\n");
+    fprintf(stderr,"\nSeems like the remote client connected\n");
     fprintf(stderr,"to this socket has closed its connection\n");
     fprintf(stderr,"So I'm closing the socket\n");
 #endif
@@ -275,8 +278,6 @@ readHandler(int fd)
    } else if(sock_data[fd].ctype == COLLECTOR) {
 */
 
-  int ctype;
-  int is_reg_pkt = 0;
   ctype = get_int_from_json(json_tokener_parse(sock_data[fd].accural_buf),"CONN_TYPE");
   if(ctype == -1) {
 #ifdef WWDEBUG
@@ -290,14 +291,17 @@ readHandler(int fd)
 
   if (is_reg_pkt != 1) {
     if(sock_data[fd].ctype == COLLECTOR) {
-       //printf("%s\n",sock_data[fd].accural_buf);
        apphdr *app_h = (apphdr *) rbuf;
+
+       //printf("%s\n",sock_data[fd].accural_buf);
        jobj = json_tokener_parse(sock_data[fd].accural_buf);
        update_dbase(app_h->timestamp,app_h->nodename,jobj);
        json_object_put(jobj);
      } else if(sock_data[fd].ctype == APPLICATION) {
+       size_t len;
+
        jobj = json_tokener_parse(sock_data[fd].accural_buf);
-       sock_data[fd].sqlite_cmd = malloc(MAX_SQL_SIZE); 
+       sock_data[fd].sqlite_cmd = malloc(MAX_SQL_SIZE);
        strcpy(sock_data[fd].sqlite_cmd,"select nodename,jsonblob from ");
        strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
        strcat(sock_data[fd].sqlite_cmd," left join ");
@@ -307,7 +311,7 @@ readHandler(int fd)
        strcat(sock_data[fd].sqlite_cmd,".rowid = ");
        strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB2NAME);
        strcat(sock_data[fd].sqlite_cmd,".blobid where ");
-       int len = strlen(sock_data[fd].sqlite_cmd);
+       len = strlen(sock_data[fd].sqlite_cmd);
        strcat(sock_data[fd].sqlite_cmd, json_object_get_string(json_object_object_get(jobj, "sqlite_cmd")));
 
        if (len == strlen(sock_data[fd].sqlite_cmd)) {
@@ -442,7 +446,8 @@ main(int argc, char *argv[])
 #ifdef WWDEBUG
   printf("Attempting to open database: %s\n", SQLITE_DB_FNAME);
 #endif
-  if( rc = sqlite3_open(SQLITE_DB_FNAME, &db)  ){
+  rc = sqlite3_open(SQLITE_DB_FNAME, &db);
+  if (rc) {
     fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
     sqlite3_close(db);
     exit(1);

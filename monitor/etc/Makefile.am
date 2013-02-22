@@ -1,5 +1,5 @@
-confdir = $(sysconfdir)/warewulf/
-initdir = /etc/init.d/
+confdir = $(sysconfdir)/warewulf
+initdir = $(sysconfdir)/init.d
 
 SUBDIRS = 
 

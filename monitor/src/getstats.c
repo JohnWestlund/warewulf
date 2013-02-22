@@ -160,7 +160,7 @@ char * get_cpu_util(json_object *jobj)
      */
 
 //    snprintf(ret, BUFFERSIZE, "CPUUTIL=0\n");
-    json_object_object_add(jobj,"CPUUTIL",json_object_new_int(result));
+    json_object_object_add(jobj,"CPUUTIL",json_object_new_int(0));
     ret[BUFFERSIZE] = '\0';
 
   } else {

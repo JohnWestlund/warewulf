@@ -10,6 +10,9 @@
  *
  */
 
+#include "config.h"
+
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -34,7 +37,7 @@
 
 /* Any forward declarations */
 static int
-nothing_todo(void *NotUsed, int argc, char **argv, char **azColName)
+nothing_todo(void *NotUsed UNUSED, int argc, char **argv, char **azColName)
 {
   int i;
   for(i=0; i<argc; i++){
@@ -45,7 +48,7 @@ nothing_todo(void *NotUsed, int argc, char **argv, char **azColName)
 }
 
 static int
-getjson_callback(void *void_json, int argc, char **argv, char **azColName)
+getjson_callback(void *void_json, int argc, char **argv, char **azColName UNUSED)
 {
   json_object *json_db = (json_object *)void_json;
   json_object_object_add(json_db, "NODE-JSON", json_object_new_string(argv[argc-1]));
@@ -54,7 +57,7 @@ getjson_callback(void *void_json, int argc, char **argv, char **azColName)
 }
 
 static int
-getint_callback(void *void_int, int argc, char **argv, char **azColName)
+getint_callback(void *void_int, int argc, char **argv, char **azColName UNUSED)
 {
   int *int_value = (int *)void_int;
   *int_value = atoi(argv[argc-1]);
@@ -71,11 +74,13 @@ update_insertLookups(int blobid, json_object *jobj, sqlite3 *db, int overwrite)
   char *sqlite_cmd = malloc(MAX_SQL_SIZE+1);
   enum json_type type;
   int slen, rc;
+  int rowid = -1;
+  char *emsg = 0;
 
   sprintf(blobID,"%d",blobid);
   json_object_object_foreach(jobj, key, value){
-
     char vals[65]; //TODO : check the length
+
     type = json_object_get_type(value);
     switch(type) {
       case json_type_int:
@@ -84,13 +89,15 @@ update_insertLookups(int blobid, json_object *jobj, sqlite3 *db, int overwrite)
       case json_type_string:
         sprintf(vals, "'%s'",json_object_get_string(value));
         break;
+      default:
+        /* If we reach this line, the following assert() will fail. */
+        assert(type == json_type_int || type == json_type_string);
+        break;
     }
 
     //First check if the key exisits in the table
-    int rowid = -1;
     slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1, "select rowid from %s where key='%s'", SQLITE_DB_TB2NAME, key);
     //printf("UIL SQL CMD - %s\n",sqlite_cmd);
-    char *emsg = 0;
     rc = sqlite3_exec(db, sqlite_cmd, getint_callback, &rowid, &emsg);
     if( rc!=SQLITE_OK ){
       fprintf(stderr, "UIL : SQL error: %s\n", emsg);
@@ -129,26 +136,30 @@ insertLookups(int blobid, json_object *jobj, sqlite3 *db)
   char *sqlite_cmd = malloc(MAX_SQL_SIZE+1);
   enum json_type type;
   int slen, rc;
+  char *emsg = 0;
 
   sprintf(blobID,"%d",blobid);
   json_object_object_foreach(jobj, key, value){
-
     char vals[65]; //TODO : Check the length
+
     type = json_object_get_type(value);
     switch(type) {
       case json_type_int:
         sprintf(vals, "%d",json_object_get_int(value));
-	break;
+        break;
       case json_type_string:
-	sprintf(vals, "'%s'",json_object_get_string(value));
-	break;
+        sprintf(vals, "'%s'",json_object_get_string(value));
+        break;
+      default:
+        /* If we reach this line, the following assert() will fail. */
+        assert(type == json_type_int || type == json_type_string);
+        break;
     }
     slen = snprintf(sqlite_cmd, MAX_SQL_SIZE+1, 
                     "insert into %s(blobid, key, value) values('%s','%s',%s)", 
                     SQLITE_DB_TB2NAME, blobID, key, vals);
     //printf("IL SQL CMD - %s\n",sqlite_cmd);
-    char *emsg = 0;
-    int rc = sqlite3_exec(db, sqlite_cmd, nothing_todo, 0, &emsg);
+    rc = sqlite3_exec(db, sqlite_cmd, nothing_todo, 0, &emsg);
     if( rc!=SQLITE_OK ){
       fprintf(stderr, "SQL error: %s\n", emsg);
       sqlite3_free(emsg);
@@ -167,8 +178,8 @@ insert_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db)
   char *emsg = 0;
 
   slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, 
-                  "insert into %s(jsonblob, timestamp, nodename) values('%s',%d,'%s')", 
-                  SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), timestamp, nodename); 
+                  "insert into %s(jsonblob, timestamp, nodename) values('%s',%ld,'%s')", 
+                  SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), (long) timestamp, nodename); 
   //printf("IJ CMD - %s\n",sqlcmd);
   if( (rc = sqlite3_exec(db, sqlcmd, nothing_todo, 0, &emsg) != SQLITE_OK )) {
     fprintf(stderr, "SQL error: %s\n", emsg);
@@ -186,7 +197,7 @@ update_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db, in
   int slen, rc; char *emsg = 0;
 
   if (overwrite == 1) { 
-    slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "update %s set jsonblob='%s', timestamp=%d where nodename='%s'", SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), timestamp, nodename); 
+      slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "update %s set jsonblob='%s', timestamp=%ld where nodename='%s'", SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), (long) timestamp, nodename); 
   } else if (overwrite == 0) {
     slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "update %s set jsonblob='%s' where nodename='%s'", SQLITE_DB_TB1NAME, json_object_to_json_string(jobj), nodename); 
   }
@@ -209,6 +220,9 @@ merge_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db, int
   json_object *nodejobj;
   json_object *json_db = json_object_new_object();
   char *sqlcmd = malloc(MAX_SQL_SIZE+1);
+  json_object *newjobj, *oldjobj;
+  int found = 0;
+  enum json_type oldkey_type;
 
   slen = snprintf(sqlcmd, MAX_SQL_SIZE+1, "select jsonblob from %s where nodename='%s'", SQLITE_DB_TB1NAME, nodename); 
   //printf("JB CMD - %s\n",sqlcmd);
@@ -225,7 +239,6 @@ merge_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db, int
   }
   //printf("Obtained string - %s\n", json_object_to_json_string(nodejobj));
 
-  json_object *newjobj, *oldjobj;
   if ( overwrite == 1 ) {
     newjobj = jobj;
     oldjobj = nodejobj;
@@ -234,8 +247,6 @@ merge_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db, int
     oldjobj = jobj;
   }
 
-  int found = 0;
-  enum json_type oldkey_type;
   json_object_object_foreach(oldjobj, oldkey, oldval) {
     found = 0;
     json_object_object_foreach(newjobj, newkey, newval) {
@@ -246,12 +257,16 @@ merge_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db, int
        //printf("Exisiting old key %s is missing from new Json Object, lets add it now \n", oldkey);
        oldkey_type = json_object_get_type(oldval);
        switch(oldkey_type) {
-       case json_type_string: 
-	 json_object_object_add(newjobj, oldkey, json_object_new_string(json_object_get_string(oldval)));
-         break;
-       case json_type_int: 
-	 json_object_object_add(newjobj, oldkey, json_object_new_int(json_object_get_int(oldval)));
-         break;
+         case json_type_string: 
+           json_object_object_add(newjobj, oldkey, json_object_new_string(json_object_get_string(oldval)));
+           break;
+         case json_type_int: 
+	       json_object_object_add(newjobj, oldkey, json_object_new_int(json_object_get_int(oldval)));
+           break;
+         default:
+           /* If we reach this line, the following assert() will fail. */
+           assert(oldkey_type == json_type_int || oldkey_type == json_type_string);
+           break;
        }
     } 
   }
@@ -289,7 +304,7 @@ insert_update_json(int dbts, char *nodename, time_t timestamp, json_object *jobj
   } else {
     strcat(sqlcmd,"timestamp='");
   }
-  sprintf(TimeStamp,"%d",timestamp);
+  sprintf(TimeStamp,"%ld", (long) timestamp);
   strcat(sqlcmd,TimeStamp);
   strcat(sqlcmd,"'");
 
@@ -365,7 +380,7 @@ recvall(int sock)
   char *rbuf = malloc(MAXPKTSIZE);
 
   apphdr *app_h = (apphdr *) rbuf;
-  appdata *app_d = (appdata *) (rbuf + sizeof(apphdr));
+  appdata *app_d UNUSED = (appdata *) (rbuf + sizeof(apphdr));
 
   /* block to receive the whole header */
   if ((count=recv(sock, rbuf, sizeof(apphdr), MSG_WAITALL)) == -1) {
@@ -482,9 +497,11 @@ send_json(int sock, json_object *jobj)
 void
 array_list_print(array_list *ls)
 {
+  int i;
+
   printf("[");
-  for(int i = 0; i < array_list_length(ls); i++){
-    printf("%d: %s", i, array_list_get_idx(ls, i));
+  for(i = 0; i < array_list_length(ls); i++){
+    printf("%d: %s", i, (char *) array_list_get_idx(ls, i));
     if(i != array_list_length(ls) -1) printf(",");
   }
   printf(" ]\n");
@@ -496,6 +513,7 @@ void
 json_parse_complete(json_object *jobj)
 {
   enum json_type type;
+
   json_object_object_foreach(jobj, key, val) {
     type = json_object_get_type(val);
     switch (type) {
@@ -509,6 +527,11 @@ json_parse_complete(json_object *jobj)
       printf("%s :\n",key);
       json_parse_complete(json_object_object_get(jobj, key));
       printf("\n");
+      break;
+    default:
+      /* If we reach this line, the following assert() will fail. */
+      assert(type == json_type_int || type == json_type_string
+             || type == json_type_object);
       break;
     }
   }
@@ -525,7 +548,7 @@ json_parse(json_object *jobj) {
  * Removes the new line character from the end of the 
  * string if it exists.
  */
-char *chop(char *s)
+char *chomp(char *s)
 {
   if(s[strlen(s)-1] == '\n') s[strlen(s)-1] = '\0';
   return s;
@@ -542,20 +565,25 @@ json_object *
 fast_data_parser(char *file_name, array_list *keys, int num_keys) 
 {
   FILE *fp;
-  json_object *jobj = json_object_new_object();
   int i, keys_found = 0;
-  if(fp = fopen(file_name, "r")) {
-    char *line = malloc(sizeof(char)*100);
-    char *data = malloc(sizeof(char)*100);
+  json_object *jobj;
+
+  jobj = json_object_new_object();
+  if((fp = fopen(file_name, "r")) != NULL) {
+    char *line, *data;
+
+    line = malloc(100);
+    data = malloc(100);
+
     while(fgets(line, 100,fp)){
       for(i = 0; i < num_keys; i++) {
-	if(data = strstr(line, array_list_get_idx(keys, i))){
-	  while(*data != ':') data++;
-	  while(isspace(*data) || ispunct(*data)) data ++;
-	  json_object_object_add(jobj, array_list_get_idx(keys, i), (json_object *) json_object_new_string(chop(data)));
-	  keys_found += 1;
-	  if(keys_found == num_keys) break; 
-	}
+        if((data = strstr(line, array_list_get_idx(keys, i))) != NULL) {
+          while(*data != ':') data++;
+          while(isspace(*data) || ispunct(*data)) data ++;
+          json_object_object_add(jobj, array_list_get_idx(keys, i), (json_object *) json_object_new_string(chomp(data)));
+          keys_found += 1;
+          if(keys_found == num_keys) break; 
+        }
       }
     }
     free(line);
@@ -573,18 +601,22 @@ get_jiffs(cpu_data *cd)
 {
   long total_jiffs, work_jiffs;
   int i=0;
+  FILE *fp;
+
   total_jiffs = 0;
   work_jiffs = 0;
-  FILE *fp;
-  if(fp = fopen("/proc/stat", "r")){
-    char *line = malloc(sizeof(char)*100);
-    char *data = malloc(sizeof(char)*100);
+  if((fp = fopen("/proc/stat", "r")) != NULL) {
+    char *line, *data;
+
+    line = malloc(100);
+    data = malloc(100);
     while(fgets(line, 100, fp)){
-      if(data = strstr(line, "cpu")) {
-        char * result = NULL;
+        if((data = strstr(line, "cpu")) != NULL) {
+          char *result;
+
         result = strtok(data, " ");
         while(result != NULL) {
-          chop(result);
+          chomp(result);
           if(strcmp("cpu", result)) {
             if(i++ < 3) work_jiffs += atoi(result); // calculating work_jiffs
               total_jiffs += atoi(result); // calculating total_jiffs
@@ -635,10 +667,10 @@ key_exists_in_json(json_object *jobj, char *kname)
 {
   json_object_object_foreach(jobj, key, value) {
     if(strcmp(key,kname) == 0) {
-      return(1);
+      return 1;
     }
   }
-  return(0);
+  return 0;
 }
 
 int
@@ -646,11 +678,10 @@ get_int_from_json(json_object *jobj, char *kname)
 {
   json_object_object_foreach(jobj,key,value) {
     if(strcmp(key,kname) == 0) {
-      return(json_object_get_int(value));
-    } else {
-      return -1;
+      return json_object_get_int(value);
     }
   }
+  return -1;
 }
 
 void
