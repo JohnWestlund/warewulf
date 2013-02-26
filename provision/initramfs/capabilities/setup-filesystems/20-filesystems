@@ -118,7 +118,11 @@ for DEV in `echo $WWDISKPARTITION | sed 's/,/ /g'` ; do
                                 PARTED=1
                             fi
                             if [ -n "$WWFS_SIZE" ]; then
-                                SIZE="+${WWFS_SIZE}M"
+                                if [ "x$WWFS_SIZE" = "xfill" ]; then
+                                    SIZE="\n";
+                                else
+                                    SIZE="+${WWFS_SIZE}M"
+                                fi
                             elif [ -n "$WWFS_END" ]; then
                                 SIZE=$WWFS_END
                             fi

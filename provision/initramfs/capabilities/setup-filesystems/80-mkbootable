@@ -70,8 +70,28 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                     if chroot $NEWROOT /sbin/grub-install $WWBOOTLOADER >/dev/null; then
                         exit 0
                     else
-                        echo "Running grub-install failed!"
-                        exit 255
+                        gscript="/root/grubinstall.sh";
+                        grubscript=${NEWROOT}${gscript};
+                        grubtext=$NEWROOT/root/grubinstall.txt;
+
+                        echo -n "Running grub-install failed. Trying manually.";
+
+                        # Setup Commands to install GRUB
+                        echo "root (hd0,0)" > $grubtext;
+                        echo "setup (hd0)" >> $grubtext;
+                        echo "quit" >> $grubtext;
+
+                        # Bash script to run grub.
+                        echo "#!/bin/bash" > $grubscript;
+                        echo "/sbin/grub --batch < /root/grubinstall.txt &>/root/grubinstall.out" >> $grubscript;
+                        chmod 755 $grubscript;
+
+                        if chroot $NEWROOT $gscript &>/dev/null; then
+                            exit 0;
+                        else
+                            echo "Running grub-install failed!"
+                            exit 255
+                        fi
                     fi
                 else
                     echo "Could not find INITRD and/or KERNEL version!"
@@ -92,3 +112,6 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
 else
     exit 1
 fi
+
+# vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
+
