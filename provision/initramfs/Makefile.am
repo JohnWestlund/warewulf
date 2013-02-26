@@ -98,3 +98,4 @@ clean-local:
 
 EXTRA_DIST = busybox.config init devs.cpio functions dhcp-script detect transporthandler provisionhandler wwlogger
 
+MAINTAINERCLEANFILES = Makefile.in

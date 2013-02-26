@@ -43,3 +43,4 @@ uninstall-local:
 
 clean-local:
 	rm -rf _work rootfs unionfs capability.cpio
+MAINTAINERCLEANFILES = Makefile.in
