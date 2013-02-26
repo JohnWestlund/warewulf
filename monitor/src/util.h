@@ -19,6 +19,37 @@
 
 #include "globals.h"
 
+/****** MACROS ******/
+/**
+ * Returns the length of a literal string.
+ *
+ * This macro is like libc's strlen() function, except that it
+ * requires the string parameter be a literal rather than a variable.
+ * This makes calculating the string length for a literal easy without
+ * incurring the speed penalty of a call to strlen().
+ *
+ * @param x The literal string (i.e., a fixed string in quotes, like
+ *          "this.").
+ * @return The length of the string.
+ */
+#define CONST_STRLEN(x)            (sizeof(x) - 1)
+/**
+ * Compares the beginning of a string with a literal.
+ *
+ * This macro, like the libc str*cmp() functions, returns an integer
+ * less than, equal to, or greater than zero depending on if the
+ * initial part of string @a s is found to be less than, to match, or
+ * to be greater than the literal string.  Generally, this is used as
+ * a boolean value (as !BEG_STRCMP()) to determine whether @a s starts
+ * with @a constr or not.
+ *
+ * @param s      The string variable to compare to.
+ * @param constr A literal string representing what should be the
+ *               beginning of @a s.
+ * @return See above.
+ */
+#define BEG_STRCMP(s, constr)  (strncmp((char *) (s), (constr), CONST_STRLEN(constr)))
+
 void insertLookups(int, json_object *, sqlite3 *);
 void updateLookups(int, json_object *, sqlite3 *);
 void fillLookups(int, json_object *, sqlite3 *);

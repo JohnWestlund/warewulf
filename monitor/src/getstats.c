@@ -21,6 +21,7 @@
 #include <ctype.h>
 
 #include "getstats.h"
+#include "util.h"
 
 // The Generic Buffersize to use
 #define BUFFERSIZE 512
@@ -39,7 +40,7 @@ get_cpu_info(json_object *jobj)
     unsigned int cpu_clock = 0;
     char *tmp;
     char buffer[BUFFERSIZE];
-    char cpu_model[BUFFERSIZE];
+    char cpu_model[BUFFERSIZE] = "";
     static char ret[BUFFERSIZE];
 
     if ((fd = fopen("/proc/cpuinfo", "r")) == NULL) {
@@ -48,14 +49,14 @@ get_cpu_info(json_object *jobj)
     }
 
     while (fgets(buffer, sizeof(buffer), fd)) {
-        if (!strncmp(buffer, "processor", 9)) {
+        if (!BEG_STRCMP(buffer, "processor  ")) {
 //      printf("found: %s\n", buffer);
             cpu_count++;
-        } else if (!strncmp(buffer, "cpu MHz", 7)) {
+        } else if (!cpu_clock && !BEG_STRCMP(buffer, "cpu MHz  ")) {
             tmp = strchr(buffer, ':') + 1;
             cpu_clock = atoll(tmp);
 //      printf("clock: -%d-\n", cpu_clock);
-        } else if (!strncmp(buffer, "model name", 10)) {
+        } else if (!*cpu_model && !BEG_STRCMP(buffer, "model name  ")) {
             tmp = strchr(buffer, ':') + 1;
             while (isspace(*tmp)) {
                 tmp++;
@@ -114,7 +115,7 @@ get_cpu_util(json_object *jobj)
     }
 
     while (fgets(buffer, sizeof(buffer), fd)) {
-        if (!strncmp(buffer, "cpu ", 4)) {
+        if (!BEG_STRCMP(buffer, "cpu ")) {
 //      printf("found: %s\n", buffer);
 
             /* FIXME:  Use sscanf() here? */
@@ -183,22 +184,22 @@ get_mem_stats(json_object *jobj)
     }
 
     while (fgets(buffer, sizeof(buffer), fd)) {
-        if (!strncmp(buffer, "MemTotal:", 9)) {
+        if (!BEG_STRCMP(buffer, "MemTotal:")) {
             tmp = strchr(buffer, ':') + 1;
             memt = atoll(tmp);
-        } else if (!strncmp(buffer, "MemFree:", 8)) {
+        } else if (!BEG_STRCMP(buffer, "MemFree:")) {
             tmp = strchr(buffer, ':') + 1;
             memf = atoll(tmp);
-        } else if (!strncmp(buffer, "Buffers:", 8)) {
+        } else if (!BEG_STRCMP(buffer, "Buffers:")) {
             tmp = strchr(buffer, ':') + 1;
             memb = atoll(tmp);
-        } else if (!strncmp(buffer, "Cached:", 7)) {
+        } else if (!BEG_STRCMP(buffer, "Cached:")) {
             tmp = strchr(buffer, ':') + 1;
             memc = atoll(tmp);
-        } else if (!strncmp(buffer, "SwapTotal:", 10)) {
+        } else if (!BEG_STRCMP(buffer, "SwapTotal:")) {
             tmp = strchr(buffer, ':') + 1;
             swapt = atoll(tmp);
-        } else if (!strncmp(buffer, "SwapFree:", 9)) {
+        } else if (!BEG_STRCMP(buffer, "SwapFree:")) {
             tmp = strchr(buffer, ':') + 1;
             swapf = atoll(tmp);
         }

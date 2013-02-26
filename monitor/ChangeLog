@@ -24,3 +24,7 @@ Fri Feb 22 13:49:05 2013                        Michael Jennings (mej)
 
 Fixes and cleanups for src/getstats.c
 ----------------------------------------------------------------------
+Mon Feb 25 17:26:08 2013                        Michael Jennings (mej)
+
+Replace partial string comparisons to literals with a safer macro.
+----------------------------------------------------------------------
