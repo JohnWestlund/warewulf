@@ -41,7 +41,7 @@ if ! grep -q "^#WWEXPORT:/home:$NETWORK/$NETMASK" /etc/exports; then
     wwprint "Exporting /home to $NETWORK/$NETMASK\n"
     echo >> /etc/exports
     echo "#WWEXPORT:/home:$NETWORK/$NETMASK" >> /etc/exports
-    echo "/home $NETWORK/$NETMASK(rw,root_squash)" >> /etc/exports
+    echo "/home $NETWORK/$NETMASK(rw,no_root_squash)" >> /etc/exports
     RETVAL=0
 fi
 
