@@ -14,13 +14,14 @@
 #define _GLOBALS_H  1
 
 #include <time.h>
+#include <netinet/in.h>
 #include <sqlite3.h>
 
 
 #define MAXPKTSIZE 10024   // PKTSIZE Should be DATASIZE + sizeof(apphdr);
 #define MAXDATASIZE 10020
 
-#define MAX_IPADDR_LEN   50
+#define MAX_IPADDR_LEN   INET6_ADDRSTRLEN
 #define MAX_NODENAME_LEN  50
 #define MAX_SQL_SIZE 1024
 
@@ -33,34 +34,29 @@
 #define APPLICATION 2
 
 typedef struct private_info_of_any_socket {
-  // Variables used by all sockets
-  int     ctype;  // connection type
-  int     r_payloadlen; // Remaining payload length that needs to be read
+    // Variables used by all sockets
+    int     ctype;  // connection type
+    int     r_payloadlen; // Remaining payload length that needs to be read
 
-  char    *accural_buf;
-  char    *sqlite_cmd;
+    char    *accrual_buf;
+    char    *sqlite_cmd;
 
-  char remote_sock_ipaddr[MAX_IPADDR_LEN];
+    char remote_sock_ipaddr[MAX_IPADDR_LEN];
 
-  // Now all the variables for ctype - 1 (the collector socket)
-  // Now all the variables for ctype - 2 (the app socket)
+    // Now all the variables for ctype - 1 (the collector socket)
+    // Now all the variables for ctype - 2 (the app socket)
 
 } sockdata;
 
 typedef struct application_hdr {
-  int 	len; //To record the actual size of the payload
-  time_t 	timestamp;
-  char    nodename[MAX_NODENAME_LEN];
+    int     len; //To record the actual size of the payload
+    time_t  timestamp;
+    char    nodename[MAX_NODENAME_LEN];
 }  __attribute__((packed)) apphdr;
 
 typedef struct application_data {
-  char    payload[MAXDATASIZE];
-} appdata; 	
-
-typedef struct cpu_data {
-  long tj;  // Total Jiffs
-  long wj;  //  Work Jiffs
-} cpu_data;
+    char    payload[MAXDATASIZE];
+} appdata;  
 
 //Global structure array with values of each socket
 sockdata sock_data[FD_SETSIZE];
@@ -71,5 +67,5 @@ fd_set rfds, wfds;
 #endif /* _GLOBALS_H */
 
 /*
- * vim:filetype=c:syntax=c:expandtab:ts=2:sw=2
+ * vim:filetype=c:syntax=c:expandtab:ts=4:sw=4
  */

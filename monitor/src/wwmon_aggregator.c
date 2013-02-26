@@ -237,10 +237,10 @@ readHandler(int fd)
     return(0);
   }
  
-  // If the read buffer is from pending transmission append to accuralbuf
+  // If the read buffer is from pending transmission append to accrualbuf
   // Or else treat it as a new packet.
   if (sock_data[fd].r_payloadlen > 0) {
-    strcat(sock_data[fd].accural_buf,rbuf);
+    strcat(sock_data[fd].accrual_buf,rbuf);
     sock_data[fd].r_payloadlen = sock_data[fd].r_payloadlen - readbytes;
   } else {
     apphdr *app_h = (apphdr *) rbuf;
@@ -249,10 +249,10 @@ readHandler(int fd)
     //printf("Len of the payload - %d, %s\n", app_h->len,app_d->payload);
  
     // plus 1 to store the NULL char
-    sock_data[fd].accural_buf = (char *) malloc(app_h->len+1);
-    strcpy(sock_data[fd].accural_buf,app_d->payload);
-    sock_data[fd].r_payloadlen = app_h->len - strlen(sock_data[fd].accural_buf);
-    //printf("strlen(sock_data[%d].accural_buf) = %d\n", fd, strlen(sock_data[fd].accural_buf));
+    sock_data[fd].accrual_buf = (char *) malloc(app_h->len+1);
+    strcpy(sock_data[fd].accrual_buf,app_d->payload);
+    sock_data[fd].r_payloadlen = app_h->len - strlen(sock_data[fd].accrual_buf);
+    //printf("strlen(sock_data[%d].accrual_buf) = %d\n", fd, strlen(sock_data[fd].accrual_buf));
   }
 
   if (sock_data[fd].r_payloadlen > 0) {
@@ -268,7 +268,7 @@ readHandler(int fd)
 /*
   if(sock_data[fd].ctype == UNKNOWN) {
 	int ctype;
-	ctype = get_int_from_json(json_tokener_parse(sock_data[fd].accural_buf),"CONN_TYPE");
+	ctype = get_int_from_json(json_tokener_parse(sock_data[fd].accrual_buf),"CONN_TYPE");
 	if(ctype == -1) {
 	  printf("Not able to determine type\n");
 	} else {
@@ -278,7 +278,7 @@ readHandler(int fd)
    } else if(sock_data[fd].ctype == COLLECTOR) {
 */
 
-  ctype = get_int_from_json(json_tokener_parse(sock_data[fd].accural_buf),"CONN_TYPE");
+  ctype = get_int_from_json(json_tokener_parse(sock_data[fd].accrual_buf),"CONN_TYPE");
   if(ctype == -1) {
 #ifdef WWDEBUG
     printf("Either not able to determine type or not a registration packet\n");
@@ -293,14 +293,14 @@ readHandler(int fd)
     if(sock_data[fd].ctype == COLLECTOR) {
        apphdr *app_h = (apphdr *) rbuf;
 
-       //printf("%s\n",sock_data[fd].accural_buf);
-       jobj = json_tokener_parse(sock_data[fd].accural_buf);
+       //printf("%s\n",sock_data[fd].accrual_buf);
+       jobj = json_tokener_parse(sock_data[fd].accrual_buf);
        update_dbase(app_h->timestamp,app_h->nodename,jobj);
        json_object_put(jobj);
      } else if(sock_data[fd].ctype == APPLICATION) {
        size_t len;
 
-       jobj = json_tokener_parse(sock_data[fd].accural_buf);
+       jobj = json_tokener_parse(sock_data[fd].accrual_buf);
        sock_data[fd].sqlite_cmd = malloc(MAX_SQL_SIZE);
        strcpy(sock_data[fd].sqlite_cmd,"select nodename,jsonblob from ");
        strcat(sock_data[fd].sqlite_cmd,SQLITE_DB_TB1NAME);
@@ -322,8 +322,8 @@ readHandler(int fd)
      }
    }
 
-  if(sock_data[fd].accural_buf != NULL){
-    free(sock_data[fd].accural_buf);
+  if(sock_data[fd].accrual_buf != NULL){
+    free(sock_data[fd].accrual_buf);
   }
   FD_CLR(fd, &rfds);
   FD_SET(fd, &wfds);
@@ -405,7 +405,7 @@ acceptConn(int fd)
   sock_data[c].ctype = UNKNOWN;
   sock_data[c].r_payloadlen = 0;
   sock_data[c].sqlite_cmd = NULL;
-  sock_data[c].accural_buf = NULL;
+  sock_data[c].accrual_buf = NULL;
 
   // Register interest in a read on this socket to know more about the connection.
   FD_SET(c, &rfds);

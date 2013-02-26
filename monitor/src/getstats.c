@@ -293,7 +293,7 @@ get_net_stats(json_object *jobj)
             /* Ignore loopback interface */
             continue;
         }
-        if (sscanf(data, "%Lu %*Lu %*Lu %*Lu %*Lu %*Lu %*Lu %*Lu %Lu", &r, &t) == 2) {
+        if (sscanf(data, "%Lu %*u %*u %*u %*u %*u %*u %*u %Lu", &r, &t) == 2) {
             receive += r;
             transmit += t;
         }

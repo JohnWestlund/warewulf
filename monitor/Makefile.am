@@ -2,7 +2,7 @@ SUBDIRS = lib bin src etc
 
 MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure compile config.* ltmain.sh depcomp install-sh missing stamp-*
 DISTCLEANFILES = 
-CLEANFILES = *.m4
+CLEANFILES =
 EXTRA_DIST = warewulf-monitor.spec
 
 # Fix for make distcheck

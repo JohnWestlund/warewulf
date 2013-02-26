@@ -28,3 +28,19 @@ Mon Feb 25 17:26:08 2013                        Michael Jennings (mej)
 
 Replace partial string comparisons to literals with a safer macro.
 ----------------------------------------------------------------------
+Tue Feb 26 10:49:41 2013                        Michael Jennings (mej)
+
+Fix "make clean"
+
+Re-indent globals.h.
+
+Fix typo in data structure member name.  "Accural" is not a word, but
+"accrual" is.
+
+The cpu_data structure does not need to be a global definition.
+
+Base size limit for IP address string on actual limit, not random
+integer extracted from unspecified source.
+
+Fix sscanf() warnings I accidentally introduced during optimization.
+----------------------------------------------------------------------

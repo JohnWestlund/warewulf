@@ -50,6 +50,13 @@
  */
 #define BEG_STRCMP(s, constr)  (strncmp((char *) (s), (constr), CONST_STRLEN(constr)))
 
+/****** DATA STRUCTURES ******/
+typedef struct cpu_data {
+    long tj;  // Total Jiffs
+    long wj;  //  Work Jiffs
+} cpu_data;
+
+/****** FUNCTION PROTOTYPES ******/
 void insertLookups(int, json_object *, sqlite3 *);
 void updateLookups(int, json_object *, sqlite3 *);
 void fillLookups(int, json_object *, sqlite3 *);
