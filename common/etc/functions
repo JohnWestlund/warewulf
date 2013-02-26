@@ -168,7 +168,7 @@ wwisuser() {
     if [ -n $USERNAME ]; then
         REQUESTED_UID=`id -u $USERNAME`
         ACTUAL_UID=`id -u`
-        if [ "x$REQUESTED_UID" == "x$ACTUAL_UID" ]; then
+        if [ "x$REQUESTED_UID" = "x$ACTUAL_UID" ]; then
             return 0
         fi
     fi
