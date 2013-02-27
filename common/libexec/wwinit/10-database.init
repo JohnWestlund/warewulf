@@ -24,27 +24,43 @@ wwreqroot
 DATASTORE=`egrep "^database driver\s*=" /etc/warewulf/database.conf | awk -F = '{print $2}' | sed -e 's/\s*//g'`
 
 
-if [ $DATASTORE == "mysql" ]; then
-    wwprint "Checking /etc/rc.d/init.d/mysqld is installed"
-    if ! wwtest test -f /etc/rc.d/init.d/mysqld; then
-        exit 255
-    fi
+if [ "$DATASTORE" = "mysql" ]; then
+    if [ -f "/etc/redhat-release" ]; then
+        wwprint "Checking /etc/rc.d/init.d/mysqld is installed"
+        if ! wwtest test -f /etc/rc.d/init.d/mysqld; then
+            exit 255
+        fi
 
-    wwprint "Confirming mysqld is configured to start at boot:\n"
-    if ! wwrun chkconfig mysqld on; then
-        exit 255
-    fi
+        wwprint "Confirming mysqld is configured to start at boot:\n"
+        if ! wwrun chkconfig mysqld on; then
+            exit 255
+        fi
+  
+        wwprint "Checking to see if MySQL needs to be started:\n"
+        if ! wwrun service mysqld start; then
+            exit 255
+        fi
+    elif [ -f "/etc/debian_version" ]; then
+        wwprint "Checking /etc/init.d/mysql is installed"
+        if ! wwtest test -f /etc/init.d/mysql; then
+            exit 255
+        fi
 
-    wwprint "Checking to see if MySQL needs to be started:\n"
-    if ! wwrun service mysqld start; then
-        exit 255
-    fi
+# TODO: How to generically turn a service on at boot in Debian with Upstart?
+#        wwprint "Confirming mysqld is configured to start at boot:\n"
+#        if ! wwrun chkconfig mysql on; then
+#            exit 255
+#        fi
 
+        wwprint "Checking to see if MySQL needs to be started:\n"
+        if ! wwrun service mysql status; then
+            if ! wwrun service mysql start; then
+                exit 255
+            fi
+        fi
+    fi
 else
     wwprint "Skipping configuration of datastore driver: $DATABASE\n"
-
 fi
-
-
 
 exit 0
