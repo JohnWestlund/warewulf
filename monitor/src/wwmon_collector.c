@@ -56,7 +56,7 @@ main(int argc, char *argv[])
         exit(0);
     }
 #else
-    printf("Debug build... running in forgroung\n\n");
+    printf("Debug build... running in forground\n\n");
     sleep(2);
 #endif
 
