@@ -58,7 +58,7 @@ get_cpu_info(json_object *jobj)
 //      printf("clock: -%d-\n", cpu_clock);
         } else if (!*cpu_model && !BEG_STRCMP(buffer, "model name  ")) {
             tmp = strchr(buffer, ':') + 1;
-            while (isspace(*tmp)) {
+            while (*tmp && isspace(*tmp)) {
                 tmp++;
             }
             strcpy(cpu_model, tmp);
@@ -254,7 +254,7 @@ get_node_status(json_object *jobj)
         fclose(fd);
     }
 
-    while (!isspace(buffer[tmp])) {
+    while (buffer[tmp] && !isspace(buffer[tmp])) {
         tmp++;
     }
     buffer[tmp] = '\0';
@@ -288,7 +288,7 @@ get_net_stats(json_object *jobj)
         }
         *data = 0;
         data++;
-        for (ifname = buffer; isspace(*ifname); ifname++) ;
+        for (ifname = buffer; *ifname && isspace(*ifname); ifname++) ;
         if (!strcmp(ifname, "lo")) {
             /* Ignore loopback interface */
             continue;

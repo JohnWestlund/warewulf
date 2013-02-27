@@ -447,7 +447,7 @@ send_json(int sock, json_object *jobj)
 
     timer = time(NULL);
     uname(&unameinfo);
-    buffer = (char *) malloc(sizeof(char) * MAXPKTSIZE);
+    buffer = (char *) malloc(MAXPKTSIZE);
     json_len = (int) strlen(json_object_to_json_string(jobj));
     // plus 1 for NULL char
     json_str = (char *) malloc(json_len + 1);

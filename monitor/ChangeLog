@@ -53,3 +53,9 @@ rearrangements, and rewrites.  Should fix some fairly large memory
 leaks too and avoid multiple invocations of the JSON parser on the
 same buffer.
 ----------------------------------------------------------------------
+Tue Feb 26 17:47:08 2013                        Michael Jennings (mej)
+
+Fix buffer overrun in parsing of /.nodestatus
+
+sizeof(char) is *guaranteed* to be 1, always.
+----------------------------------------------------------------------
