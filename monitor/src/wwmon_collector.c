@@ -38,6 +38,11 @@
 int
 main(int argc, char *argv[])
 {
+    int setup_connection = 1;
+    int sock;
+    time_t timer;
+    char *rbuf;
+    json_object *jobj;
 
     if (argc != 3) {
         fprintf(stderr, "Usage: %s aggregator_hostname [port] \n", argv[0]);
@@ -45,7 +50,10 @@ main(int argc, char *argv[])
     }
 
 /* Include this only if we are *not* compiling a debug version */
-#ifndef WWDEBUG
+#ifdef WWDEBUG
+    printf("Debug build...running in foreground\n\n");
+    sleep(2);
+#else
     /* Fork and background (basically) */
     pid_t pid = fork();
     if (pid != 0) {
@@ -55,20 +63,9 @@ main(int argc, char *argv[])
         }
         exit(0);
     }
-#else
-    printf("Debug build... running in forground\n\n");
-    sleep(2);
 #endif
 
-    int sock;
-
-    time_t timer;
-    char *rbuf;
-    json_object *jobj;
-
-    int setup_connection = 1;
     while (1) {
-
         if (setup_connection == 1) {
             if ((sock = setup_ConnectSocket(argv[1], atoi(argv[2]))) < 0) {
 #ifdef WWDEBUG
@@ -79,8 +76,6 @@ main(int argc, char *argv[])
                 setup_connection = 0;
             }
         } else {
-            int rval = 0;
-
             registerConntype(sock, PROGRAM_TYPE);
             rbuf = recvall(sock);
 #ifdef WWDEBUG
@@ -106,7 +101,7 @@ main(int argc, char *argv[])
             printf("%s\n", json_object_to_json_string(jobj));
 #endif
 
-            if ((rval = send_json(sock, jobj)) == ESPIPE) {
+            if ((send_json(sock, jobj)) == ESPIPE) {
                 //printf("Remove pipe has been severed \n");
                 setup_connection = 1;
             }
