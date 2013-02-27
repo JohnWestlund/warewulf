@@ -13,7 +13,6 @@ else
 fi
 
 if [ -z "$NO_CONFIGURE" ]; then
-#   ./configure CFLAGS="-g -std=gnu99 -ljson -lsqlite3" $@ 
-   ./configure $@ 
+   ./configure "$@" 
 fi
 

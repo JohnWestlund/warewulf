@@ -44,3 +44,12 @@ integer extracted from unspecified source.
 
 Fix sscanf() warnings I accidentally introduced during optimization.
 ----------------------------------------------------------------------
+Tue Feb 26 16:26:05 2013                        Michael Jennings (mej)
+
+Fix autogen.sh to properly pass configure arguments.
+
+Code cleanup for the aggregator.  Various optimizations,
+rearrangements, and rewrites.  Should fix some fairly large memory
+leaks too and avoid multiple invocations of the JSON parser on the
+same buffer.
+----------------------------------------------------------------------

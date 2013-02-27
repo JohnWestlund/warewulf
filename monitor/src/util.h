@@ -52,8 +52,8 @@
 
 /****** DATA STRUCTURES ******/
 typedef struct cpu_data {
-    long tj;  // Total Jiffs
-    long wj;  //  Work Jiffs
+    long tj;  /* Total "jiffies" (hundredths of seconds) spent processing */
+    long wj;  /* Jiffies spent doing "work" (user + nice + system) */
 } cpu_data;
 
 /****** FUNCTION PROTOTYPES ******/
