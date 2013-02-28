@@ -46,11 +46,11 @@ if [ "$DATASTORE" = "mysql" ]; then
             exit 255
         fi
 
-# TODO: How to generically turn a service on at boot in Debian with Upstart?
-#        wwprint "Confirming mysqld is configured to start at boot:\n"
-#        if ! wwrun chkconfig mysql on; then
-#            exit 255
-#        fi
+        wwprint "Confirming mysqld is configured to start at boot:\n"
+        if ! wwrun initctl show-config mysql; then
+            wwprint "WARNING: MySQL is not configured to start at boot.\n" RED
+            wwprint "Fix that manually.\n" RED
+        fi
 
         wwprint "Checking to see if MySQL needs to be started:\n"
         if ! wwrun service mysql status; then
