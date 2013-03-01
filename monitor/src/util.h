@@ -88,7 +88,7 @@ int registerConntype(int, int);
 int setup_ConnectSocket(char *, int);
 
 /* SQLite Functions */
-int createTable(sqlite3 *, char *);
+int createTable(sqlite3 *, char);
 
 #endif /* _UTIL_H */
 

@@ -422,6 +422,15 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    /* Limit memory usage by SQLite to a reasonable, relatively small level. */
+#ifdef WWDEBUG
+    printf("Current SQLite heap size limit is %ld.  Setting it to 8MB.\n", sqlite3_soft_heap_limit(-1));
+#endif
+    sqlite3_soft_heap_limit(8*1024*1024);
+#ifdef WWDEBUG
+    printf("New SQLite heap size limit is %ld.\n", sqlite3_soft_heap_limit(-1));
+#endif
+
 /* Include this only if we are *not* compiling a debug version */
 #ifndef WWDEBUG
     /* Fork and background (basically) */
@@ -449,8 +458,8 @@ main(int argc, char *argv[])
         exit(1);
     } else {
         // Now check & create tables if required 
-        createTable(db, SQLITE_DB_TB1NAME);
-        createTable(db, SQLITE_DB_TB2NAME);
+        createTable(db, 1);
+        createTable(db, 2);
 #ifdef WWDEBUG
         printf("Database ready for reading and writing...\n");
 #endif

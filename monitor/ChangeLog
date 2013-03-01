@@ -59,3 +59,8 @@ Fix buffer overrun in parsing of /.nodestatus
 
 sizeof(char) is *guaranteed* to be 1, always.
 ----------------------------------------------------------------------
+Fri Mar  1 09:55:39 2013                        Michael Jennings (mej)
+
+Plug a major memory leak, and cap SQLite's memory utilization so that
+it doesn't go off the deep end unnecessarily.
+----------------------------------------------------------------------

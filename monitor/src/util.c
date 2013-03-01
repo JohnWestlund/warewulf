@@ -280,6 +280,7 @@ merge_json(char *nodename, time_t timestamp, json_object *jobj, sqlite3 *db, int
 
     // Add the newjobj back in the table
     update_json(nodename, timestamp, newjobj, db, overwrite);
+    json_object_put(nodejobj);
     json_object_put(json_db);
     return;
 }
@@ -392,8 +393,10 @@ recvall(int sock)
         perror("recv");
         exit(1);
     }
-//  printf("app_h->len: %d\n", app_h->len);
-//  printf("Received - %s\n",app_d->payload);
+#ifdef WWDEBUG
+    printf("Received %d-byte header from %s into %lu-byte struct:  len %d, ts %d\n", count, app_h->nodename, sizeof(apphdr),
+           app_h->len, (int) app_h->timestamp);
+#endif
 
     /* plus 1 to store the NULL char */
     buffer = (char *) malloc(app_h->len + 1);
@@ -415,6 +418,10 @@ recvall(int sock)
         r_payloadlen -= count;
     }
     free(rbuf);
+
+#ifdef WWDEBUG
+    printf("Payload:  %s\n", buffer);
+#endif
     return buffer;
 }
 
@@ -762,23 +769,18 @@ setup_ConnectSocket(char *hostname, int port)
 }
 
 int
-createTable(sqlite3 *db, char *tName)
+createTable(sqlite3 *db, char tbl)
 {
     int rc;
     char *eMsg = 0;
-    char *sqlcmd = malloc(MAX_SQL_SIZE);
+    char sqlcmd[MAX_SQL_SIZE];
 
-    //printf("Table Name - %s\n",tName);
-    strcpy(sqlcmd, "create table if not exists ");
-    strcat(sqlcmd, tName);
-
-    if (strcmp(tName, SQLITE_DB_TB1NAME) == 0) {
-        strcat(sqlcmd, " (nodename, timestamp, jsonblob, primary key(nodename))");
-    } else if (strcmp(tName, SQLITE_DB_TB2NAME) == 0) {
-        strcat(sqlcmd, " (blobid, key, value, primary key(blobid, key))");
+    if (tbl == 1) {
+        strcpy(sqlcmd, "CREATE TABLE IF NOT EXISTS " SQLITE_DB_TB1NAME " (nodename, timestamp, jsonblob, PRIMARY KEY(nodename))");
+    } else if (tbl == 2) {
+        strcpy(sqlcmd, "CREATE TABLE IF NOT EXISTS " SQLITE_DB_TB2NAME " (blobid, key, value, PRIMARY KEY(blobid, key))");
     } else {
         printf("createTable : Error - Unsupported table name \n");
-        free(sqlcmd);
         return 1;
     }
 //  printf("SQL cmd : %s\n",sqlcmd);
@@ -787,7 +789,6 @@ createTable(sqlite3 *db, char *tName)
         fprintf(stderr, "SQL error: %s\n", eMsg);
         sqlite3_free(eMsg);
     }
-    free(sqlcmd);
 
     return 0;
 }
