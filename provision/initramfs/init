@@ -48,7 +48,7 @@ fi
 
 if [ -f "/etc/wwmodprobe" ]; then
     msg_white  "Loading drivers: "
-    for module in `grep -v "^#" /etc/modprobe`; do
+    for module in `grep -v "^#" /etc/wwmodprobe`; do
         if modprobe $module 2>/dev/null; then
             name=`echo "$module" | cut -d " " -f 1`
             msg_gray "$name "
