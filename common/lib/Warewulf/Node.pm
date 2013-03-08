@@ -392,13 +392,15 @@ netdel()
 {
     my ($self, $devname) = @_;
     my $netdev;
+    my $nodename;
 
     if (!($devname = &validate_netdev_name($devname))) {
         return undef;
     }
+
     $netdev = $self->netdevs($devname);
+    $nodename = $self->nodename() || "UNDEF";
     if ($netdev) {
-        my $nodename = $self->nodename() || "UNDEF";
         my $hwaddr = $netdev->get("hwaddr");
         my $ipaddr = $netdev->get("ipaddr");
 
@@ -412,6 +414,7 @@ netdel()
         }
     } else {
         &eprint("Object $nodename has no netdev \"$devname\" configured!\n");
+        return undef;
     }
     return $netdev;
 }

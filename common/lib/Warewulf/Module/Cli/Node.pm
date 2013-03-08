@@ -331,8 +331,9 @@ exec()
                         $opt_netdev = shift(@devs);
                     }
                 }
-                $o->netdel($opt_netdev);
-                $persist_count++;
+                if(defined $o->netdel($opt_netdev) ) {
+                    $persist_count++;
+                }
             }
             push(@changes, sprintf("%8s: %-20s\n", "DEL", $opt_netdev));
         } else {
