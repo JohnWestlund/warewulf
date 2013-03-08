@@ -297,8 +297,8 @@ if (-d $opt_chroot) {
             }
 
             foreach my $line (@exclude_files) {
-                if ($line =~ /^\/(.*)$/) {
-                    foreach my $file (glob("$tmpdir/$line")) {
+                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.]+)$/) {
+                    foreach my $file (glob("$tmpdir/$1")) {
                         if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             my $realfile = $1;
                             if (-e "$tmpdir/$realfile") {
@@ -309,12 +309,14 @@ if (-d $opt_chroot) {
                             }
                         }
                     }
+                } else {
+                    &eprint("Exclude entry has illegal characters: $line\n");
                 }
             }
 
             foreach my $line (@hybridize_files) {
-                if ($line =~ /^\/(.*)$/) {
-                    foreach my $file (glob("$tmpdir/$line")) {
+                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.]+)$/) {
+                    foreach my $file (glob("$tmpdir/$1")) {
                         if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             my $realfile = $1;
                             if (-e "$tmpdir/$realfile") {
@@ -326,6 +328,8 @@ if (-d $opt_chroot) {
                             }
                         }
                     }
+                } else {
+                    &eprint("Hybridize entry has illegal characters: $line\n");
                 }
             }
 
