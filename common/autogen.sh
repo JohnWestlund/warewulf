@@ -11,6 +11,6 @@ else
 fi
 
 if [ -z "$NO_CONFIGURE" ]; then
-   ./configure $@
+   ./configure "$@"
 fi
 

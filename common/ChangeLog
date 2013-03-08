@@ -478,3 +478,13 @@ Fri Oct 12 09:00:06 2012                        Michael Jennings (mej)
 
 Update docs and (hopefully) resolve TODOs.
 ----------------------------------------------------------------------
+Fri Mar  8 14:18:27 2013                        Michael Jennings (mej)
+
+Fix some issues spotted by Matias Cabral <matias.a.cabral@intel.com>
+that resulted in Perl errors when deleting object members directly
+(something one should never do, but it shouldn't generate warnings
+either).
+
+Also fixed the autogen.sh script to correctly pass configure
+arguments.
+----------------------------------------------------------------------

@@ -190,13 +190,15 @@ exec()
         @opt_print = ("name");
         foreach my $setstring (@opt_set, @opt_add, @opt_del) {
             if ($setstring =~ /^([^=]+)/) {
-                if (!exists($modifiers{"$1"})) {
-                    push(@mod_print, $1);
-                    $modifiers{"$1"} = 1;
+                my $field = lc($1);
+
+                if (!exists($modifiers{$field})) {
+                    push(@mod_print, $field);
+                    $modifiers{$field} = 1;
                 }
             }
         }
-        push(@opt_print, @mod_print);
+        push(@opt_print, grep { $_ ne "name" } @mod_print);
     } elsif (scalar(@opt_print)) {
         @opt_print = split(",", join(",", @opt_print));
     } else {
@@ -391,9 +393,14 @@ exec()
                             $val = $subtype;
                         }
                     }
-                    push @values, $val;
+                    push @values, ((defined($val)) ? ($val) : ("UNDEF"));
                 }
-                printf("%-26s " x (scalar(@values)) ."\n", @values);
+                if (scalar(@values)) {
+                    printf("%-26s " x (scalar(@values)) ."\n", @values);
+                } else {
+                    printf("No values to print!\n");
+                    return 0;
+                }
             }
         }
     }
