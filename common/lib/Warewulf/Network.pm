@@ -198,35 +198,37 @@ sub
 calc_prefix()
 {
     my ($self, $device) = @_;
+    my ($nm, $mask, $mask_bin, $bits);
+    my ($bits, $mask_ok) = (0, 1);
+    my @digits;
 
-    my $nm = $self->netmask($device);
-
-    if(! $nm) {
+    $nm = $self->netmask($device);
+    if (! $nm) {
         &eprint("Invalid netmask recieved\n");
-        return ();
+        return undef;
+    }
+
+    $mask = inet_aton($nm);
+    if (!defined($mask)) {
+        &eprint("Invalid netmask:  $nm\n");
+        return undef;
     }
 
     # convert the mask to binary
-    my $mask_bin = unpack( "B*", inet_aton($nm) );
-    my $bits     = 0;
-    my $mask_ok  = 1;
-    my @digits   = split m//, $mask_bin;
+    $mask_bin = unpack("B*", $mask);
+    @digits = split(//, $mask_bin);
 
     # Count the number of 1s
     # If there is a 0 in between the 1s, mark it as invalid
-    map {
-        my $tmp = $_;
-        $bits += $tmp;
-        $mask_ok = ($mask_ok and (($bits and $tmp) or (!$bits and !$tmp))) ? $mask_ok : 0;
-    } reverse(@digits);
-
-    # check the mask was valid
-    if ( not $mask_ok ) {
-        &eprint("Invalid mask for CIR format.");
-        return ();
+    $bits = 0;
+    foreach my $bit (reverse(@digits)) {
+        $bits += $bit;
+        if ($bits && !$bit) {
+            &eprint("Invalid netmask for CIDR format:  $nm\n");
+            return undef;
+        }
     }
-
-    return ($bits);
+    return $bits;
 }
 
 =item calc_network($ipaddr, $netmask)
@@ -239,13 +241,20 @@ sub
 calc_network()
 {
     my ($self, $ipaddr, $netmask) = @_;
+    my ($ip_bits, $nm_bits, $ip_bin, $nm_bin, $net_bin);
 
     if ($ipaddr && $netmask) {
-        my $net_bin = unpack("N", inet_aton($ipaddr));
-        my $mask_bin = unpack("N", inet_aton($netmask));
-        my $net = $net_bin & $mask_bin;
+        $ip_bits = inet_aton($ipaddr);
+        $nm_bits = inet_aton($netmask);
+        if (!defined($ip_bits) || !defined($nm_bits)) {
+            &eprint("Invalid network address:  $ipaddr/$netmask\n");
+            return undef;
+        }
+        $ip_bin = unpack("N", $ip_bits);
+        $nm_bin = unpack("N", $nm_bits);
+        $net_bin = $ip_bin & $nm_bin;
 
-        return inet_ntoa(pack('N',$net));
+        return inet_ntoa(pack("N", $net_bin));
     }
 
     return undef;
@@ -303,12 +312,15 @@ sub
 ip_serialize()
 {
     my ($self, $string) = @_;
+    my $ip;
 
     if (defined($string)) {
-        if ($string =~ /^\d+\.\d+\.\d+\.\d+$/) {
-            return unpack("N", inet_aton($string));
-        } elsif ($string =~ /^\d+$/) {
-            return $string;
+        if ($string =~ /^(\d+)$/) {
+            return $1;
+        }
+        $ip = inet_aton($string);
+        if (defined($ip)) {
+            return unpack("N", $ip);
         }
     }
     return undef;
@@ -326,9 +338,10 @@ ip_unserialize()
     my ($self, $string) = @_;
 
     if (defined($string)) {
-        if ( $string =~ /^\d+$/ ) {
-            return inet_ntoa(pack('N', $string));
-        } elsif ($string =~ /^\d+\.\d+\.\d+\.\d+$/) {
+        if ($string =~ /^(\d+)$/) {
+            return inet_ntoa(pack("N", $1));
+        }
+        if (defined(inet_aton($string))) {
             return $string;
         }
     }

@@ -488,3 +488,9 @@ either).
 Also fixed the autogen.sh script to correctly pass configure
 arguments.
 ----------------------------------------------------------------------
+Tue Mar 12 12:54:35 2013                        Michael Jennings (mej)
+
+Validate addresses more carefully rather than just assuming they
+resolved successfully.  Noted by Matias Cabral
+<matias.a.cabral@intel.com>.
+----------------------------------------------------------------------
