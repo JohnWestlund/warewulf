@@ -366,20 +366,25 @@ exec()
                 my @values;
 
                 foreach my $field (@opt_print) {
-                    my $cref;
-                    my $val;
+                    my ($cref, $val);
+                    my @vals;
 
                     $cref = $o->can($field);
                     if (ref($cref) eq "CODE") {
-                        $val = $cref->($o);
+                        @vals = $cref->($o);
                     } else {
-                        $val = $o->get($field);
-                        if (!defined($val)) {
-                            $val = "UNDEF";
-                        }
+                        @vals = $o->get($field);
                     }
 
-                    if (ref($val) eq "ARRAY") {
+                    if (scalar(@vals) > 1) {
+                        $val = \@vals;
+                    } else {
+                        $val = $vals[0];
+                    }
+
+                    if (!defined($val)) {
+                        $val = "UNDEF";
+                    } elsif (ref($val) eq "ARRAY") {
                         $val = ((scalar(@{$val})) ? (join(',', sort(@{$val}))) : ("UNDEF"));
                     } elsif (ref($val) =~ /^Warewulf::(.*)$/) {
                         my $subtype = $1;
