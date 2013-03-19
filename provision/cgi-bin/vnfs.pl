@@ -20,6 +20,7 @@ use File::Path;
 use File::Basename;
 
 &daemonized(1);
+&set_log_level("WARNING");
 
 my $q = CGI->new();
 my $db = Warewulf::DataStore->new();

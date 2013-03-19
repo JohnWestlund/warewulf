@@ -16,6 +16,8 @@ use Warewulf::Logger;
 use Warewulf::Object;
 use Warewulf::ObjectSet;
 
+&set_log_level("WARNING");
+
 my $db = Warewulf::DataStore->new();
 my $q = CGI->new();
 my $hwaddr = $q->param('hwaddr');
