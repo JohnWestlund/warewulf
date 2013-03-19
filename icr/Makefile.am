@@ -1,6 +1,7 @@
 SUBDIRS = etc lib libexec
 
 MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure compile config.* ltmain.sh install-sh missing
+AUTOMAKE_OPTIONS = foreign
 DISTCLEANFILES = 
 CLEANFILES = 
 EXTRA_DIST = warewulf-icr.spec

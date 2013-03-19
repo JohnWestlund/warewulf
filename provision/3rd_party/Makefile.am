@@ -1,5 +1,7 @@
 SUBDIRS = GPL BSD
 
+MAINTAINERCLEANFILES = Makefile.in
+
 all: gpxelinux.0 chain.c32
 
 SYSLINUX_VERSION = 4.04

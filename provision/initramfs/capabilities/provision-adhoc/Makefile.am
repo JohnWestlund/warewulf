@@ -1,5 +1,6 @@
 METHODSCRIPTS = 05-adhoc-pre 90-adhoc-post
 
+MAINTAINERCLEANFILES = Makefile.in
 
 rootfs:
 	rm -rf rootfs

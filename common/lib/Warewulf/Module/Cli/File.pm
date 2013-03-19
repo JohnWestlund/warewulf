@@ -583,3 +583,5 @@ set_file_member()
 }
 
 1;
+
+# vim:filetype=perl:syntax=perl:expandtab:ts=4:sw=4:

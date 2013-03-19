@@ -43,7 +43,7 @@
 # distribute, and sublicense such enhancements or derivative works thereof,
 # in binary and source code form.
 #
-## Copyright (c) 2012, Intel(R) Corporation
+## Copyright (c) 2013, Intel(R) Corporation
 ##
 ## Redistribution and use in source and binary forms, with or without 
 ## modification, are permitted provided that the following conditions are met:
@@ -113,10 +113,12 @@ is when they are ran.
  
 CONFIGURATION VARIABLES (wwfirstboot.conf):
 
+  GLOBAL:
   SKIP = [true|false]
     - If undefined or true, wwfirstboot will exit upon reading the 
     configuration file
 
+  00-format.wwfb:
   FORMAT = [never|first|always]
     - How to format the partitions. If set to 'never' or undefined, then 
     wwfirstboot will not format the disk.
@@ -149,9 +151,17 @@ CONFIGURATION VARIABLES (wwfirstboot.conf):
         [mp] - Mount point.
      [perms] - Directory permissions
 
+  99-michost.wwfb:
+  MICPATH = [path]
+    - Where to create the nodes MIC images. These images must be unique for 
+    each card en each node.
+    - Will use: /var/intel/mic/filesystem - as the default if not specified
+    because it is expected that /opt is NFS shared from the master node
+
 KNOWN ISSUES:
 
-  1) Limited to a DOS partition table and four (4) primary partitions only
+  1) 00-format.wwfb: Limited to a DOS partition table and four (4) primary 
+    partitions only
 
 wwfirstboot EXAMPLE CONFIGURATION:
 
@@ -182,5 +192,7 @@ PART_1="2048:swap"
 PART_2="114280:ext3:/scratch:1777"
 PART_3="fill:ext4:/storage:0755"
 #
+# 99-michost
+MICPATH=/storage/mic_dir
+#
 
- 

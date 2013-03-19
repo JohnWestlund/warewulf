@@ -1,5 +1,7 @@
 METHODSCRIPTS = 30-getvnfs 50-config 60-runtimesupport 70-devtree 70-kernelmodules
 
+MAINTAINERCLEANFILES = Makefile.in
+
 rootfs:
 	rm -rf rootfs
 	mkdir -p rootfs/warewulf/provision/

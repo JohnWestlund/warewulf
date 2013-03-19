@@ -1,4 +1,4 @@
-METHODSCRIPTS = 20-filesystems 80-mkbootable 95-umount 99-postreboot
+METHODSCRIPTS = 85-michost
 
 MAINTAINERCLEANFILES = Makefile.in
 
@@ -15,14 +15,13 @@ capability.cpio: rootfs
 
 install-data-local: capability.cpio
 	install -d -m 755 $(DESTDIR)/$(WAREWULF_STATEDIR)/warewulf/initramfs/capabilities
-	install -m 644 capability.cpio $(DESTDIR)/$(WAREWULF_STATEDIR)/warewulf/initramfs/capabilities/setup-filesystems
+	install -m 644 capability.cpio $(DESTDIR)/$(WAREWULF_STATEDIR)/warewulf/initramfs/capabilities/provision-michost
 
 uninstall-local:
-	rm -rf $(DESTDIR)/$(WAREWULF_STATEDIR)/warewulf/initramfs/capabilities/setup-filesystems
+	rm -rf $(DESTDIR)/$(WAREWULF_STATEDIR)/warewulf/initramfs/capabilities/provision-michost
 
 clean-local:
 	rm -rf rootfs capability.cpio
 
 
 EXTRA_DIST = $(METHODSCRIPTS) $(INITSCRIPT)
-MAINTAINERCLEANFILES = Makefile.in

@@ -1,2 +1,3 @@
-SUBDIRS = provision-adhoc provision-files provision-vnfs setup-filesystems transport-http
+SUBDIRS = provision-adhoc provision-files provision-vnfs setup-filesystems transport-http provision-michost
 MAINTAINERCLEANFILES = Makefile.in
+

@@ -5,6 +5,33 @@
 # through Lawrence Berkeley National Laboratory (subject to receipt of any
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
+#########################
+# Copyright (c) 2013, Intel(R) Corporation #{
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#    * Redistributions of source code must retain the above copyright notice,
+#      this list of conditions and the following disclaimer.
+#    * Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#    * Neither the name of Intel(R) Corporation nor the names of its
+#      contributors may be used to endorse or promote products derived from
+#      this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#########################}
 
 
 
@@ -96,6 +123,7 @@ help()
     $h .= "     -H, --hwaddr        Set hardware/MAC address\n";
     $h .= "     -f, --fqdn          Set FQDN of given netdev\n";
     $h .= "     -m, --mtu           Set MTU of given netdev\n";
+    $h .= "         --mic           Set the number of MIC devices on this node\n";
     $h .= "     -c, --cluster       Specify cluster name for this node\n";
     $h .= "     -d, --domain        Specify domain name for this node\n";
     $h .= "     -n, --name          Specify new name for this node\n";
@@ -182,6 +210,7 @@ exec()
     my $opt_domain;
     my $opt_fqdn;
     my $opt_mtu;
+    my $opt_mic;
     my @opt_print;
     my @opt_groups;
     my @opt_groupadd;
@@ -213,6 +242,7 @@ exec()
         'n|name=s'      => \$opt_name,
         'f|fqdn=s'      => \$opt_fqdn,
         'm|mtu=s'       => \$opt_mtu,
+        'mic=s'         => \$opt_mic,
         'd|domain=s'    => \$opt_domain,
         'l|lookup=s'    => \$opt_lookup,
 
@@ -298,6 +328,8 @@ exec()
             printf("%15s: %-16s = %s\n", $nodename, "CLUSTER", ($o->cluster() || "UNDEF"));
             printf("%15s: %-16s = %s\n", $nodename, "DOMAIN", ($o->domain() || "UNDEF"));
             printf("%15s: %-16s = %s\n", $nodename, "GROUPS", join(",", $o->groups()) || "UNDEF");
+            printf("%15s: %-16s = %s\n", $nodename, "MICCOUNT", $o->miccount())
+            if (defined $o->miccount && $o->miccount > 0);
             foreach my $devname (sort($o->netdevs_list())) {
                 printf("%15s: %-16s = %s\n", $nodename, "$devname.HWADDR", $o->hwaddr($devname) || "UNDEF");
                 printf("%15s: %-16s = %s\n", $nodename, "$devname.IPADDR", $o->ipaddr($devname) || "UNDEF");
@@ -321,7 +353,6 @@ exec()
                 return undef;
             }
         }
-
 
         if ($opt_devremove) {
             foreach my $o ($objSet->get_list()) {
@@ -415,9 +446,6 @@ exec()
                     &eprint("Option 'netmask' has invalid characters\n");
                 }
             }
-
-
-
             if ($opt_network) {
                 if ($opt_network =~ /^(\d+\.\d+\.\d+\.\d+)$/) {
                     my $show_changes;
@@ -518,8 +546,26 @@ exec()
                     &eprint("Option 'mtu' has invalid characters\n");
                 }
             }
-        }
+            if (defined $opt_mic) {
+                if ($opt_mic =~ /^([0-9]+)$/) {
+                    my $show_changes;
+                    foreach my $obj ($objSet->get_list()) {
+                        $obj->miccount($opt_mic);
+                        $persist_count++;
+                        $show_changes = 1;
 
+                        my $nodename = $obj->get("name") || "UNDEF";
+                        &dprint("Setting miccount=$opt_mic in $nodename\n");
+                    }
+
+                    if ($show_changes) {
+                        push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "MICCOUNT", $opt_mic));
+                    }
+                } else {
+                    &eprint("Option 'mic' has invalid characters\n");
+                }
+            }
+        }
         if ($opt_name) {
             if (uc($opt_name) eq "UNDEF") {
                 &eprint("You must define the name you wish to reference the node as!\n");

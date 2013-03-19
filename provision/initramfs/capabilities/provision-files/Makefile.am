@@ -1,5 +1,7 @@
 METHODSCRIPTS = 80-files
 
+MAINTAINERCLEANFILES = Makefile.in
+
 rootfs:
 	rm -rf rootfs
 	mkdir -p rootfs/warewulf/provision/

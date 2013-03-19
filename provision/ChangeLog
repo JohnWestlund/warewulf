@@ -127,3 +127,7 @@ Mon Oct 29 15:44:59 2012                        Michael Jennings (mej)
 
 Allow -x to work with -r as well as -a.
 ----------------------------------------------------------------------
+Mon Mar 11 16:47:40 2013     Jason Stover(jms) Matias Cabral(macabral)
+
+Implementation of MIC support for Warewulf. 85-michost
+----------------------------------------------------------------------

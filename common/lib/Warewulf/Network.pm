@@ -6,7 +6,7 @@
 #
 #
 #########################
-# Copyright (c) 2012, Intel(R) Corporation
+# Copyright (c) 2013, Intel(R) Corporation
 #
 # Redistribution and use in source and binary forms, with or without 
 # modification, are permitted provided that the following conditions are met:

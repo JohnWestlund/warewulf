@@ -152,7 +152,6 @@ wwrun() {
     RETVAL=$?
     if [ $RETVAL -eq 0 ]; then
         reply_ok
-        return 0
     else
         reply_error
         cat $TMPFILE | while read i; do

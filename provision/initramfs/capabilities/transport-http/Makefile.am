@@ -1,5 +1,7 @@
 METHODSCRIPTS = wwgetscript wwgetnodeconfig wwgetvnfs register functions wwgetfiles
 
+MAINTAINERCLEANFILES = Makefile.in
+
 TRANSPORT_NAME = http
 
 

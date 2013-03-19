@@ -41,3 +41,13 @@ Fri Dec 14 16:50:18-0600 2012                       Jason Stover (jms)
 Rework wwfirstboot to allow for multiple steps to be done during the
 system initialization.
 ----------------------------------------------------------------------
+Fri Dec 14 16:50:18-0600 2012                       Jason Stover (jms)
+
+Rework wwfirstboot to allow for multiple steps to be done during the
+system initialization.
+----------------------------------------------------------------------
+Mon Mar 11 16:47:40 2013     Jason Stover(jms) Matias Cabral(macabral)
+
+Implementation of MIC support for Warewulf. 99-michost.wwfb
+----------------------------------------------------------------------
+
