@@ -1,4 +1,4 @@
-SUBDIRS = Gres
+SUBDIRS = GRes
 
 perlmodsdir = ${PERL_VENDORLIB}/Warewulf
 

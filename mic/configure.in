@@ -40,6 +40,6 @@ AC_OUTPUT(
    warewulf-mic.spec
    lib/Makefile
    lib/Warewulf/Makefile
-   lib/Warewulf/Gres/Makefile
+   lib/Warewulf/GRes/Makefile
 )
 
