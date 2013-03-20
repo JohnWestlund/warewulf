@@ -588,25 +588,6 @@ mtu()
                                        qr/^([0-9]+)$/);
 }
 
-=item miccount($devices)
-
-Get or set the number of MIC cards on a given host.
-
-=cut
-
-sub
-miccount()
-{
-    my $self = shift;
-    my $count = $self->prop("miccount", qr/^([0-9]+)$/, @_);
-
-    if (scalar(@_) && defined($_[0])) {
-        &dprint("Set number of MIC devices to: $_[0]\n");
-    }
-
-    return $count;
-}
-
 =back
 
 =head1 SEE ALSO

@@ -1,0 +1,12 @@
+Wed Mar 19 14:56:50-0700 2013                   Matias A. Cabral (mac)
+
+Implementation of Intel(R) Xeon Phi(TM) support for Warewulf
+----------------------------------------------------------------------
+Wed Mar 20 12:37:56-0500 2013                       Jason Stover (jms)
+
+Start of Xeon Phi move from main packages into a new warewulf-mic
+package. This just creates the structure and moves the miccount
+function from Warewulf::Node to Warewulf::Gres::MIC.
+
+Eventually, most changes from r1312 will be moved into warewulf-mic.
+----------------------------------------------------------------------
