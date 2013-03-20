@@ -1,3 +1,5 @@
+MAINTAINERCLEANFILES = Makefile.in
+
 all: unionfs
 
 top_srcdir = @top_srcdir@
@@ -43,4 +45,3 @@ uninstall-local:
 
 clean-local:
 	rm -rf _work rootfs unionfs capability.cpio
-MAINTAINERCLEANFILES = Makefile.in

@@ -1,12 +1,36 @@
 AC_PREREQ(2.59)
 AC_INIT([warewulf-mic], [3.4], [warewulf-devel@lbl.gov])
 AC_CONFIG_SRCDIR([.])
-AM_CONFIG_HEADER([config.h])
 
 AC_PROG_INSTALL
 AM_INIT_AUTOMAKE
 AC_PROG_LIBTOOL
 AC_PROG_CC
+
+AC_PATH_PROG(WWCONFIGBIN, wwconfig)
+if test -z "$WWCONFIGBIN"; then
+   AC_MSG_ERROR([wwconfig not found! (Warewulf common component)])
+fi
+AC_SUBST(WWCONFIGBIN)
+
+WAREWULF_PREFIX=`$WWCONFIGBIN PREFIX`
+force_prefix=""
+AC_MSG_CHECKING([warewulf-common prefix vs. current prefix])
+if test "${prefix}" = "$WAREWULF_PREFIX"; then
+   AC_MSG_RESULT([identical (${prefix})])
+else
+   AC_MSG_RESULT([MISMATCH (${prefix} vs. $WAREWULF_PREFIX), forcing install prefix on all paths])
+   force_prefix="${prefix}"
+fi
+
+AC_MSG_CHECKING([for Warewulf's configuration for statedir])
+eval `$WWCONFIGBIN -s statedir`
+if test -z "$WAREWULF_STATEDIR"; then
+    AC_MSG_ERROR([Warewulf statedir not found])
+fi
+WAREWULF_STATEDIR="$force_prefix$WAREWULF_STATEDIR"
+AC_MSG_RESULT($WAREWULF_STATEDIR)
+AC_SUBST(WAREWULF_STATEDIR)
 
 AC_PATH_PROG(PERLBIN, perl)
 if test -z "$PERLBIN"; then
@@ -28,6 +52,9 @@ AC_SUBST(PERL_VENDORLIB)
 
 AC_SUBST(PERLBIN)
 
+initramfsdir="$localstatedir/warewulf/initramfs/";
+AC_SUBST(initramfsdir)
+
 dnl# Try to get SVN revision
 SVNVERSION=`svnversion -c | sed 's/^.*://g' 2>/dev/null || echo 0000`
 if test "$SVNVERSION" = "0000" ; then
@@ -38,6 +65,9 @@ AC_SUBST(SVNVERSION)
 AC_OUTPUT(
    Makefile
    warewulf-mic.spec
+   initramfs/Makefile
+   initramfs/capabilities/Makefile
+   initramfs/capabilities/provision-michost/Makefile
    lib/Makefile
    lib/Warewulf/Makefile
    lib/Warewulf/GRes/Makefile

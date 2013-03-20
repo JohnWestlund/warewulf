@@ -1,7 +1,5 @@
 SUBDIRS = capabilities
 
-MAINTAINERCLEANFILES = Makefile.in
-
 all: initramfs.cpio
 
 top_srcdir = @top_srcdir@

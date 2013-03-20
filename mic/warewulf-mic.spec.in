@@ -10,7 +10,7 @@ Group: System Environment/Clustering
 URL: http://warewulf.lbl.gov/
 Source: %{name}-%{version}.tar.gz
 ExclusiveOS: linux
-Requires: warewulf-common warewulf-provision
+Requires: warewulf-common warewulf-provision intel-mic-kmod
 BuildRequires: warewulf-common
 Conflicts: warewulf < 3
 BuildRoot: %{?_tmppath}%{!?_tmppath:/var/tmp}/%{name}-%{version}-%{release}-root
@@ -42,6 +42,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-, root, root)
 %doc AUTHORS COPYING ChangeLog INSTALL TODO LICENSE LICENSE.Intel NEWS README
+%{_localstatedir}/warewulf/*
 %{perl_vendorlib}/*
 
 

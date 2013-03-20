@@ -28,4 +28,4 @@ clean-local:
 
 
 EXTRA_DIST = $(METHODSCRIPTS)
-MAINTAINERCLEANFILES = Makefile.in
+
