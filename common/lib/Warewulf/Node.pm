@@ -49,7 +49,7 @@ Warewulf::Node - Warewulf's Node object interface.
 
     use Warewulf::Node;
 
-    my $obj = Warewulf::Node->new();
+    my $o = Warewulf::Node->new();
     $o->name("test0000");
 
     $o->hwaddr("eth0", "00:00:00:00:00:00");
