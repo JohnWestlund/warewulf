@@ -1,4 +1,4 @@
-perlmodsdir = ${PERL_VENDORLIB}/Warewulf/Gres
+perlmodsdir = ${PERL_VENDORLIB}/Warewulf/GRes
 
 dist_perlmods_SCRIPTS = MIC.pm
 

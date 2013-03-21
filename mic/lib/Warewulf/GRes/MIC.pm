@@ -33,7 +33,7 @@
 #########################}
 #
 
-package Warewulf::Gres::MIC;
+package Warewulf::GRes::MIC;
 
 use Warewulf::Logger;
 use Warewulf::Object;
@@ -41,16 +41,16 @@ use Warewulf::Node;
 
 our @ISA = ('Warewulf::Object');
 
-push(@Warewulf::Node::ISA, 'Warewulf::Gres::MIC');
+push(@Warewulf::Node::ISA, 'Warewulf::GRes::MIC');
 
 =head1 NAME
 
-Warewulf::Gres::MIC - Warewulf's Intel(R) Xeon Phi(TM) interface.
+Warewulf::GRes::MIC - Warewulf's Intel(R) Xeon Phi(TM) interface.
 
 =head1 SYNOPSIS
 
     use Warewulf::Node;
-    use Warewulf::Gres::MIC;
+    use Warewulf::GRes::MIC;
 
     my $obj = Warewulf::Node->new();
     $obj->name("test0000");
@@ -60,7 +60,7 @@ Warewulf::Gres::MIC - Warewulf's Intel(R) Xeon Phi(TM) interface.
 
 =head1 DESCRIPTION
 
-The C<Warewulf::Gres::MIC> package contains the Intel(R) Xeon Phi(TM)
+The C<Warewulf::GRes::MIC> package contains the Intel(R) Xeon Phi(TM)
 extension for a C<Warewulf::Node> object.
 
 =head1 METHODS

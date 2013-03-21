@@ -71,5 +71,7 @@ AC_OUTPUT(
    lib/Makefile
    lib/Warewulf/Makefile
    lib/Warewulf/GRes/Makefile
+   lib/Warewulf/Module/Makefile
+   lib/Warewulf/Module/Cli/Makefile
 )
 
