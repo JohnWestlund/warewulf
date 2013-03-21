@@ -10,3 +10,20 @@ function from Warewulf::Node to Warewulf::Gres::MIC.
 
 Eventually, most changes from r1312 will be moved into warewulf-mic.
 ----------------------------------------------------------------------
+Thu Mar 21 10:25:09-0700 2013                       Jason Stover (jms)
+
+Final (I hope) move of the Intel(R) Xeon Phi(TM) changes from
+Matias. There now exists a 'mic' command for wwsh. The
+miccount() settings can be obtained like:
+
+  # wwsh mic set --mic=2 node000
+  # wwsh mic print
+
+Absolute *minimal* testing done. The RPM package builds,
+install, the mic command appears to do what it is supposed
+to do, etc...
+----------------------------------------------------------------------
+Thu Mar 21 12:41:14-0500 2013                       Jason Stover (jms)
+
+Minor fix in README
+----------------------------------------------------------------------
