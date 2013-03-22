@@ -22,6 +22,20 @@ utilization and maintenance of clusters or groups of computers.
 This is the Intel(R) Xeon Phi(TM) package for Warewulf. This 
 adds basic provisioning support for the Xeon Phi(TM) cards.
 
+%package node
+Summary: Warewulf Intel(R) Xeon Phi(TM) Package
+Group: System Environment/Clustering
+Requires: warewulf-cluster-node
+
+%description node
+Warewulf >= 3 is a set of utilities designed to better enable
+utilization and maintenance of clusters or groups of computers.
+
+This is the mic-node module, that is installed onto the
+provisioned nodes. This contains a wwfirstboot script for
+configuring the Node Intel(R) Xeon Phi(TM) cards.
+
+
 %prep
 %setup
 
@@ -33,6 +47,9 @@ adds basic provisioning support for the Xeon Phi(TM) cards.
 
 %install
 %{__make} install DESTDIR=$RPM_BUILD_ROOT %{?mflags_install}
+cp -r $RPM_BUILD_ROOT/etc/warewulf/vnfs/include/* $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT/etc/warewulf/vnfs
+rmdir $RPM_BUILD_ROOT/etc/warewulf >/dev/null 2>&1 || :
 
 
 %clean
@@ -44,6 +61,11 @@ rm -rf $RPM_BUILD_ROOT
 %doc AUTHORS COPYING ChangeLog INSTALL TODO LICENSE LICENSE.Intel NEWS README
 %{_localstatedir}/warewulf/*
 %{perl_vendorlib}/*
+
+%files node
+%doc AUTHORS COPYING LICENSE
+%defattr(0755, root, root)
+%{_libexecdir}/warewulf/wwfirstboot/*
 
 
 %changelog

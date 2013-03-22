@@ -1,4 +1,4 @@
-SUBDIRS = lib initramfs
+SUBDIRS = lib libexec initramfs
 
 MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure compile config.* ltmain.sh install-sh missing stamp-h1
 DISTCLEANFILES = 
