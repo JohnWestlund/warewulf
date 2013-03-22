@@ -63,7 +63,7 @@ rm -rf $RPM_BUILD_ROOT
 %{perl_vendorlib}/*
 
 %files node
-%doc AUTHORS COPYING LICENSE
+%doc AUTHORS COPYING LICENSE LICENSE.Intel README
 %defattr(0755, root, root)
 %{_libexecdir}/warewulf/wwfirstboot/*
 
