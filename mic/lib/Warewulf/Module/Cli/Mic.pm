@@ -230,7 +230,7 @@ exec()
             my $nodename = $o->name() || "UNDEF";
 
             &nprintf("#### %s %s#\n", $nodename, "#" x (72 - length($nodename)));
-            printf("%15s: %-16s = %s\n", "MICCOUNT", $o->miccount() || "UNDEF");
+            printf("%15s: %-16s = %s\n", $nodename, "MICCOUNT", $o->miccount() || "UNDEF");
             $return_count++;
         }
     } elsif ($command eq "set") {
