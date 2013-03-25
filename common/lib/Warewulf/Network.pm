@@ -198,7 +198,7 @@ sub
 calc_prefix()
 {
     my ($self, $device) = @_;
-    my ($nm, $mask, $mask_bin, $bits);
+    my ($nm, $mask, $mask_bin);
     my ($bits, $mask_ok) = (0, 1);
     my @digits;
 
