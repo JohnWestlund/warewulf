@@ -2,6 +2,8 @@
 
 eval `wwconfig -as`
 
+MEDIA_MOUNTPATH="/tmp/wwmkchroot.mount"
+
 export FUNCTIONS="sanity_check
                   init
                   prechroot
@@ -17,7 +19,8 @@ export FUNCTIONS="sanity_check
                   configure_runlevel
                   configure_services
                   configure_timezone
-                  finalize"
+                  finalize
+                  cleanup"
 
 
 
@@ -40,9 +43,33 @@ sanity_check() {
 
 init() {
     if [ ! -d "$CHROOTDIR" ]; then
-        mkdir -p "$CHROOTDIR"
-        return $?
+        if ! mkdir -p "$CHROOTDIR"; then
+            echo "ERROR: Could not create directory $CHROOTDIR"
+            exit 1
+        fi
     fi
+
+    if [ -n "$INSTALL_ISO" ]; then
+        count=0
+        for i in `echo $INSTALL_ISO | sed -e 's/,/ /'`; do
+            if [ -f "$i" ]; then
+                if ! grep -q "^$i" /proc/mounts; then
+                    mkdir -p $MEDIA_MOUNTPATH.$count
+                    if ! mount -o loop $i $MEDIA_MOUNTPATH.$count; then
+                        echo "ERROR: Could not mount: $INSTALL_ISO"
+                        cleanup
+                        exit 1
+                    fi
+                    count=`expr $count + 1`
+                fi
+            else
+                echo "ERROR: Could not locate INSTALL_ISO: $INSTALL_ISO"
+                cleanup
+                exit 1
+            fi
+        done
+    fi
+
     return 0
 }
 
@@ -176,6 +203,20 @@ configure_ntp() {
 }
 
 configure_services() {
+    return 0
+}
+
+cleanup() {
+    if [ -n "$INSTALL_ISO" ]; then
+        for i in `ls -d $MEDIA_MOUNTPATH.*`; do
+            if umount $i; then
+                rmdir $i
+            else
+                echo "ERROR: Could not unmount $i"
+            fi
+        done
+    fi
+
     return 0
 }
 
