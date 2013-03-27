@@ -297,7 +297,7 @@ if (-d $opt_chroot) {
             }
 
             foreach my $line (@exclude_files) {
-                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.]+)$/) {
+                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
                     foreach my $file (glob("$tmpdir/$1")) {
                         if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             my $realfile = $1;
@@ -315,7 +315,7 @@ if (-d $opt_chroot) {
             }
 
             foreach my $line (@hybridize_files) {
-                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.]+)$/) {
+                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
                     foreach my $file (glob("$tmpdir/$1")) {
                         if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
                             my $realfile = $1;
