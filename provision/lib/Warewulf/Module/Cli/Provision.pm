@@ -83,7 +83,7 @@ help()
     $h .= "\n";
     $h .= "     -l, --lookup        How should we reference this node? (default is name)\n";
     $h .= "     -b, --bootstrap     Define the bootstrap image that this node should use\n";
-    $h .= "     -v, --vnfs          Define the VNFS that this node should use\n";
+    $h .= "     -V, --vnfs          Define the VNFS that this node should use\n";
 # TODO: Master and bootserver are not used yet...
 #    $h .= "         --master        Specifically set the Warewulf master(s) for this node\n";
 #    $h .= "         --bootserver    If you have multiple DHCP/TFTP servers, which should be\n";
@@ -195,7 +195,7 @@ exec()
         'master=s'      => \@opt_master,
         'bootserver=s'  => \@opt_bootserver,
         'b|bootstrap=s' => \$opt_bootstrap,
-        'v|vnfs=s'      => \$opt_vnfs,
+        'V|vnfs=s'      => \$opt_vnfs,
         'preshell=s'    => \$opt_preshell,
         'postshell=s'   => \$opt_postshell,
         'bootlocal=s'   => \$opt_bootlocal,
