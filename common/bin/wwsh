@@ -70,11 +70,11 @@ my $opt_noask;
 Getopt::Long::Configure ("bundling", "passthrough");
 
 GetOptions(
-    'd|debug'       => \$opt_debug,
-    'v|verbose'     => \$opt_verbose,
-    'q|quiet'       => \$opt_quiet,
+    'debug'         => \$opt_debug,
+    'verbose'       => \$opt_verbose,
+    'quiet'         => \$opt_quiet,
     'noask'         => \$opt_noask,
-    'y|yes'         => \$opt_noask,
+    'yes'           => \$opt_noask,
 );
 
 
