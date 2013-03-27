@@ -227,11 +227,17 @@ persist()
         &dprint("Evaluating node: $nodename (object ID: $db_id)\n");
         my @bootservers = $n->get("bootserver");
         if (! @bootservers or scalar(grep { $_ eq $ipaddr} @bootservers)) {
-            my ($master_ipv4_bin) = $n->get("master");
-            my $master_ipv4_addr = $netobj->ip_unserialize($master_ipv4_bin);
             my $clustername = $n->cluster();
             my $domainname = $n->domain();
+            my $master_ipv4_addr;
             my $domain;
+
+            if ($n->get("master")) {
+                my $master_ipv4_bin = $n->get("master");
+                $master_ipv4_addr = $netobj->ip_unserialize($master_ipv4_bin);
+            } else {
+                $master_ipv4_addr = $ipaddr;
+            }
 
             if ($clustername) {
                 if ($domain) {
@@ -299,9 +305,7 @@ persist()
                     }
                     $dhcpd_contents .= "      hardware ethernet $hwaddr;\n";
                     $dhcpd_contents .= "      fixed-address $node_ipaddr;\n";
-                    if ($master_ipv4_bin) {
-                        $dhcpd_contents .= "      next-server $master_ipv4_addr;\n";
-                    }
+                    $dhcpd_contents .= "      next-server $master_ipv4_addr;\n";
                     $dhcpd_contents .= "   }\n";
 
                     $seen{"NODESTRING"}{"$nodename-$devname"} = "$nodename-$devname";
