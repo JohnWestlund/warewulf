@@ -1,6 +1,7 @@
-SUBDIRS = lib libexec initramfs
+SUBDIRS = etc lib libexec initramfs
 
 MAINTAINERCLEANFILES = Makefile.in aclocal.m4 configure compile config.* ltmain.sh install-sh missing stamp-h1
+AUTOMAKE_OPTIONS = foreign
 DISTCLEANFILES = 
 CLEANFILES = 
 EXTRA_DIST = AUTHORS ChangeLog COPYING LICENSE LICENSE.Intel TODO warewulf-mic.spec

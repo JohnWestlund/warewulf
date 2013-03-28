@@ -33,3 +33,7 @@ Added LICENSE.Intel to the warewulf-mic-node package
 
 Now... we hope that everything is fixed.
 ----------------------------------------------------------------------
+Wed Mar 27 16:25:24-0500 2013                    Matias A. Cabral (mac)
+
+Created wwinit mic module to install and configure Intel(R) MPSS.
+----------------------------------------------------------------------

@@ -65,6 +65,7 @@ AC_SUBST(SVNVERSION)
 AC_OUTPUT(
    Makefile
    warewulf-mic.spec
+   etc/Makefile
    initramfs/Makefile
    initramfs/capabilities/Makefile
    initramfs/capabilities/provision-michost/Makefile
@@ -74,6 +75,7 @@ AC_OUTPUT(
    lib/Warewulf/Module/Makefile
    lib/Warewulf/Module/Cli/Makefile
    libexec/Makefile
+   libexec/wwinit/Makefile
    libexec/wwfirstboot/Makefile
 )
 

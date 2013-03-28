@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc AUTHORS COPYING ChangeLog INSTALL TODO LICENSE LICENSE.Intel NEWS README
 %{_localstatedir}/warewulf/*
 %{perl_vendorlib}/*
+%attr(0755, root, warewulf) %dir %{_sysconfdir}/warewulf/wwinit/
+%attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/mic.functions
+%{_libexecdir}/warewulf/wwinit
 
 %files node
 %doc AUTHORS COPYING LICENSE LICENSE.Intel README

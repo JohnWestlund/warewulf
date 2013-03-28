@@ -152,7 +152,7 @@ icr_configs() {
 
     # if no ICR version defined default to 1.2
     if [ -z "$icr_version" ]; then
-	    icr_version="1.2"
+	    icr_version="1.3"
     fi	
 
     wwprint " + Setting Intel(R) Cluster Ready version ${icr_version}";
@@ -453,9 +453,9 @@ inst_clck(){
    
     /bin/sed -i -e "s/\(ACTIVATION=\).*/\1license_file/" $clck_silent &>/dev/null;    
     echo "PSET_LICENSE_FILE=$lic_file" >> $clck_silent;
-    /bin/sed -i -e "s/\(ACCEPT_EULA=\)reject/\1accept/" $clck_silent &>/dev/null;    
+    /bin/sed -i -e "s/\(ACCEPT_EULA=\).*/\1accept/" $clck_silent &>/dev/null;    
 
-    if ! $(${clck_dir}/install.sh -s $clck_silent) ;then
+    if ! $(${clck_dir}/install.sh -s $clck_silent &>/dev/null) ;then
 	    wwprint "  ! ERROR: Failure when installing Intel(R) Cluster checker." error;
 	    /bin/rm -rf $tmpdir;
 	    reply_error;
@@ -549,14 +549,11 @@ inst_iLAN_drivers(){
     wwprint " + Extracting the Intel(R) LAN drivers package";
     tmpdir=$(mktemp -d /tmp/LAN_ICR-XXXXXXXXXX);
     /usr/bin/unzip -q $pkg_file -d $tmpdir &>/dev/null;
-    if [ "$?" -ne 0 ]; then
-        RETVAL=1;
-    fi
+    RETVAL=$?;
+
     tarfile="${tmpdir}/${version}.tar.gz";
     /bin/tar -xzf $tarfile  -C $tmpdir &>/dev/null;
-    if [ "$?" -ne 0 ]; then
-        RETVAL=1;
-    fi
+    RETVAL=$?;
 
     if [ "$RETVAL" -ne 0 ]; then
         wwprint " ! ERROR: Failure when extracting the Intel(R) LAN drivers package" error;
@@ -573,6 +570,9 @@ inst_iLAN_drivers(){
     wwprint " + Building and installing Intel(R) LAN drivers";
     drivers_source_dir="${tmpdir}/drivers/";
     drivers_rpm_dir="/root/rpmbuild/RPMS/x86_64/";
+
+    # Ensure all the files are owned by root
+    chown -R root.root ${drivers_source_dir}/*
 
     for file in $(find $drivers_source_dir -name "*.tar.gz");do
         pkg_name=$(basename $file .tar.gz)

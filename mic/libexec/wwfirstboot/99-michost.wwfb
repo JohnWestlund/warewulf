@@ -189,6 +189,7 @@ for netdev in $NETDEVLIST; do
      --ip=$nip $ndev &>/dev/null;
 
     if [ $? -ne 0 ]; then
+        echo;
         msg_yellow "Error configuring IP $nip for $ndev";
         logger 99_michost "Error configuring IP $nip for $ndev";
         logger 99_michost "${MICCTRL} --network=static --bridge=br0 --hosts=yes

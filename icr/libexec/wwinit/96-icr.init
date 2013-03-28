@@ -115,10 +115,20 @@ wwprint "Installing and configuring Intel(R) LAN drivers\n";
 inst_iLAN_drivers; 
 
 # Call OFED build wwinit module 
-if [ -f "${WWINITDIR}/89-ofed.init" ]; then
-    sh ${WWINITDIR}/89-ofed.init;
+if [ -f "${WWINITDIR}/88-ofed.init" ]; then
+    sh ${WWINITDIR}/88-ofed.init;
 else
     wwprint "ERROR: Could not locate OFED wwinit module!" error;
+fi
+
+# If the MIC module was requested, call it
+if [[ ! -z "$MIC_ENABLE" && "$MIC_ENABLE" -eq 1 ]];then
+    # Call MIC  wwinit module 
+    if [ -f "${WWINITDIR}/89-mic.init" ]; then
+        sh ${WWINITDIR}/89-mic.init;
+    else
+        wwprint "ERROR: Could not locate MIC wwinit module!" error;
+    fi
 fi
 
 # Rebuild VNFS and the bootstrap with the installed stuff
