@@ -469,10 +469,8 @@ exec()
         }
     } elsif ($command eq "print") {
         foreach my $o ($objSet->get_list()) {
-            my $name = $o->nodename() || "UNDEF";
-            if (my ($cluster) = $o->get("cluster")) {
-               $name .= ".$cluster";
-            }
+            my $name = $o->name() || "UNDEF";
+            
             &nprintf("#### %s %s#\n", $name, "#" x (72 - length($name)));
             printf("%15s: %-16s = %s\n", $name, "IPMI_IPADDR", $o->get("ipmi_ipaddr") || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "IPMI_NETMASK", $o->get("ipmi_netmask") || "UNDEF");
@@ -483,13 +481,11 @@ exec()
         }
 
     } elsif ($command eq "list") {
-        &nprintf("%-19s %-4s    %-14s %-14s\n", "NAME(.CLUSTER)", "AUTO", "IPMI_IPADDR", "IPMI_NETMASK");
+        &nprintf("%-19s %-4s    %-14s %-14s\n", "NAME", "AUTO", "IPMI_IPADDR", "IPMI_NETMASK");
         &nprint("================================================================================\n");
         foreach my $o ($objSet->get_list()) {
-            my $name = $o->nodename() || "UNDEF";
-            if (my ($cluster) = $o->get("cluster")) {
-               $name .= ".$cluster";
-            }
+            my $name = $o->name() || "UNDEF";
+
             printf("%-19s %-4s    %-14s %-14s\n",
                 &ellipsis(19, $name, "end"),
                 ($o->get("ipmi_autoconfig") ? "yes" : "no"),
