@@ -294,12 +294,13 @@ set_ssh_keys(){
     if [ ! -z "$CHROOTDIR" ]; then
 
         if [[ ! -d $CHROOTDIR/root/.ssh ]]; then
-            mkdir -m 0700 -p $CHROOTDIR/root/.ssh
+            mkdir -m 0700 -p $CHROOTDIR/root/.ssh;
         fi
 
         # Override if already existed
-        cat $HOME/.ssh/id_rsa > $CHROOTDIR/root/.ssh/id_rsa
-        cat $HOME/.ssh/id_rsa.pub > $CHROOTDIR/root/.ssh/id_rsa.pub
+        cat $HOME/.ssh/id_rsa > $CHROOTDIR/root/.ssh/id_rsa;
+        chmod 600  $CHROOTDIR/root/.ssh/id_rsa;
+        cat $HOME/.ssh/id_rsa.pub > $CHROOTDIR/root/.ssh/id_rsa.pub;
     fi
     
     reply_ok;
