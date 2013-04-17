@@ -271,6 +271,8 @@ if [ -x "$NEWROOT/sbin/init" ]; then
     else
         wwfailure
     fi
+    mkdir $NEWROOT/var/log >/dev/null 2>&1
+    mv /var/log/* $NEWROOT/var/log/ 2>&1
     wwlogger "Calling /sbin/init"
     seq 1 5 | tac | while read i; do
         echo -ne "\rCalling /sbin/init in $i seconds..."
