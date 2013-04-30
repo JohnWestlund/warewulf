@@ -123,6 +123,10 @@ uninst_pkg(){
 # Install the Intel(R) Manycore Platform Software Satack
 inst_mpss() {
 
+    # Packages in OFED that conflict with IB support in MPSS
+    conflict_OFED_pkgs="dapl dapl-utils compat-dapl-utils dapl-devel\
+    kernel-ib-devel kernel-ib dapl-devel-static";
+
     pkg_file=${MPSS_FILE:-$1};
 
     # Look for the package if not passed
@@ -167,8 +171,6 @@ inst_mpss() {
     # If InfinBand is set, Install the OFED components
     if [[ ! -z "$OFED_FLAG" &&  "$OFED_FLAG" -ne 0 ]]; then
         # romove conflicting OFED pakcages 
-        conflict_OFED_pkgs="dapl dapl-utils compat-dapl-utils dapl-devel\
-        kernel-ib-devel kernel-ib";
         wwprint " + Removing conflicting OFED packages.";
         uninst_pkg $conflict_OFED_pkgs;
         if [ "$?" -ne 0 ]; then
@@ -179,7 +181,7 @@ inst_mpss() {
         reply_ok;
 
         MPSS_OFED_path="${MPSS_path}/ofed/";
-        MPSS_OFED_rpms=$(/bin/ls -1 -r ${MPSS_OFED_path}*.rpm |grep -v devel);
+        MPSS_OFED_rpms=$(/bin/ls -1 -r ${MPSS_OFED_path}*.rpm);
         wwprint " + Installing the Intel(R) MPSS OFED package";
 
         rpm_install $MPSS_OFED_rpms;
@@ -215,8 +217,6 @@ inst_mpss() {
 
         # If InfinBand is set, Install the OFED components
         if [[ ! -z "$OFED_FLAG" && "$OFED_FLAG" -ne 0 ]]; then
-            conflict_OFED_pkgs="dapl dapl-utils compat-dapl-utils dapl-devel\
-            kernel-ib-devel kernel-ib";
             wwprint " + Removing conflicting OFED packages in the chroot";
             uninst_pkg 'CHROOT_FLAG' $conflict_OFED_pkgs;
             if [ "$?" -ne 0 ]; then
