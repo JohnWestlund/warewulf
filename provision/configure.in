@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT(warewulf-provision, 3.4, warewulf-devel@lbl.gov)
+AC_INIT([warewulf-provision], [3.4], [warewulf-devel@lbl.gov])
 AC_CONFIG_SRCDIR([.])
 
 AC_PROG_INSTALL
@@ -22,6 +22,8 @@ else
    force_prefix="${prefix}"
 fi
 
+AC_EXPAND_DIR(datadir, "${datadir}")
+
 AC_MSG_CHECKING([for Warewulf's configuration for statedir])
 eval `$WWCONFIGBIN -s statedir`
 if test -z "$WAREWULF_STATEDIR"; then
@@ -31,6 +33,9 @@ WAREWULF_STATEDIR="$force_prefix$WAREWULF_STATEDIR"
 AC_MSG_RESULT($WAREWULF_STATEDIR)
 AC_SUBST(WAREWULF_STATEDIR)
 
+
+AC_MSG_CHECKING([for Debian based system])
+AM_CONDITIONAL(ISDEB, [test -f /etc/debian_version])
 
 AC_PATH_PROG(PERLBIN, perl)
 if test -z "$PERLBIN"; then
@@ -53,9 +58,6 @@ AC_SUBST(PERL_VENDORLIB)
 #AC_CHECK_LIB(fuse, fuse_main, , [
 #AC_MSG_ERROR([Fatal:  Fuse libraries not found.])
 #])
-
-AC_EXPAND_DIR(fulldatadir, "$datadir")
-AC_SUBST(fulldatadir)
 
 AC_EXPAND_DIR(fulllibexecdir, "$libexecdir")
 AC_SUBST(fulllibexecdir)
