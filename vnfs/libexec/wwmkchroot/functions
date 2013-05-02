@@ -163,7 +163,7 @@ configure_sshkeys() {
 }
 
 configure_network() {
-    if [ -d /etc/sysconfig ]; then
+    if [ -d $CHROOTDIR/etc/sysconfig ]; then
         echo "NETWORKING=yes" > $CHROOTDIR/etc/sysconfig/network
     fi
     return 0
