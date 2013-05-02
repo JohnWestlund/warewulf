@@ -1,0 +1,13 @@
+#DESC: A base Debian chroot to match this build host
+
+# The general Deb include has all of the necessary functions, but requires
+# some basic variables specific to each chroot type to be defined.
+. include-deb
+
+DEB_MIRROR="http://http.us.debian.org/debian/"
+
+# Install additional packages with debootstrap
+PKGLIST="openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,nfs-common,\
+ethtool,iproute,iputils-ping,iputils-arping,net-tools,firmware-bnx2,linux-image-2.6.32-5-amd64"
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

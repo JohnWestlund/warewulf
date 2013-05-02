@@ -127,22 +127,24 @@ configure_fstab() {
     echo "sysfs /sys sysfs defaults 0 0" >> $CHROOTDIR/etc/fstab
     echo "proc /proc proc defaults 0 0" >> $CHROOTDIR/etc/fstab
 
-    grep "^#WWEXPORT:" /etc/exports  | while read i; do
-        SHARE=`echo $i | cut -d : -f 2`
-        echo "$WWIPADDR:$SHARE $SHARE nfs defaults 0 0" >> $CHROOTDIR/etc/fstab
-        mkdir -p $CHROOTDIR/$SHARE
-    done
+    if [ -f /etc/exports ]; then
+        grep "^#WWEXPORT:" /etc/exports  | while read i; do
+            SHARE=`echo $i | cut -d : -f 2`
+            echo "$WWIPADDR:$SHARE $SHARE nfs defaults 0 0" >> $CHROOTDIR/etc/fstab
+            mkdir -p $CHROOTDIR/$SHARE
+        done
+    fi
     return 0
 }
 
 configure_sshkeys() {
     if [ -f "$WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_key" ]; then
-        cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_key* $CHROOTDIR/etc/ssh/
+        /bin/cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_key* $CHROOTDIR/etc/ssh/
     else
         /usr/bin/ssh-keygen -q -t rsa1 -f $CHROOTDIR/etc/ssh/ssh_host_key -C '' -N ''
     fi
     if [ -f "$WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_rsa_key" ]; then
-        cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_rsa_key* $CHROOTDIR/etc/ssh/
+        /bin/cp -a $WAREWULF_SYSCONFDIR/warewulf/vnfs/ssh/ssh_host_rsa_key* $CHROOTDIR/etc/ssh/
     else
         /usr/bin/ssh-keygen -q -t rsa -f $CHROOTDIR/etc/ssh/ssh_host_rsa_key -C '' -N ''
     fi
@@ -161,7 +163,9 @@ configure_sshkeys() {
 }
 
 configure_network() {
-    echo "NETWORKING=yes" > $CHROOTDIR/etc/sysconfig/network
+    if [ -d /etc/sysconfig ]; then
+        echo "NETWORKING=yes" > $CHROOTDIR/etc/sysconfig/network
+    fi
     return 0
 }
 
