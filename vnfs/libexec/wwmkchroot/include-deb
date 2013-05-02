@@ -30,8 +30,6 @@ configure_pam() {
 
 prechroot() {
 
-    echo "In prechroot()";
-
     if [ -n "$OS_MIRROR" ]; then
         DEB_MIRROR="$OS_MIRROR"
     fi
