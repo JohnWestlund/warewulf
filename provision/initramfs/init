@@ -85,6 +85,15 @@ ifup() {
             msg_gray "($WWIPADDR/$WWNETMASK)"
             if ifconfig $DEVICE $WWIPADDR netmask $WWNETMASK up; then
                 wwsuccess
+                if [ -n "$WWGATEWAY" ]; then
+                    msg_white "Configuring gateway: "
+                    msg_gray "($WWGATEWAY)"
+                    if route add default gw $WWGATEWAY; then
+                        wwsuccess
+                    else
+                        wwfailure
+                    fi
+                fi
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
                 echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
                 echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
