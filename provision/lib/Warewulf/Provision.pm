@@ -199,6 +199,36 @@ fileiddel()
 }
 
 
+=item master(@strings)
+
+Set or return the master of this object.
+
+=cut
+
+sub
+master()
+{
+    my ($self, @strings) = @_;
+    my $key = "master";
+    my @masters;
+
+    if (@strings) {
+        my $name = $self->get("name");
+        foreach my $string (@strings) {
+            if ($string =~ /^([a-zA-Z0-9\.\-_]+)$/) {
+                push(@masters, $1);
+            } else {
+                &eprint("Invalid characters to set $key = '$string'\n");
+            }
+        }
+        &dprint("Object $name set $key = @masters\n");
+        $self->set($key, @masters);
+    }
+
+    return $self->get($key);
+}
+
+
 =item preshell($bool)
 
 Set or return the preshell boolean

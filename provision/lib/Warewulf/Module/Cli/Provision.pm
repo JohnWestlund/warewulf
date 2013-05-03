@@ -84,8 +84,8 @@ help()
     $h .= "     -l, --lookup        How should we reference this node? (default is name)\n";
     $h .= "     -b, --bootstrap     Define the bootstrap image that this node should use\n";
     $h .= "     -V, --vnfs          Define the VNFS that this node should use\n";
-# TODO: Master and bootserver are not used yet...
-#    $h .= "         --master        Specifically set the Warewulf master(s) for this node\n";
+    $h .= "         --master        Specifically set the Warewulf master(s) for this node\n";
+# TODO: Bootserver is not being used yet...
 #    $h .= "         --bootserver    If you have multiple DHCP/TFTP servers, which should be\n";
 #    $h .= "                         used to boot this node\n";
     $h .= "         --files         Define the files that should be provisioned to this node\n";
@@ -345,6 +345,18 @@ exec()
                 }
                 push(@changes, sprintf("     SET: %-20s = %s\n", "BOOTLOCAL", 1));
             }
+        }
+
+        if (@opt_master) {
+            foreach my $obj ($objSet->get_list()) {
+                my $nodename = $obj->get("name") || "UNDEF";
+
+                $obj->master(split(",", join(",", @opt_master)));
+
+                &dprint("Setting master for node name: $nodename\n");
+                $persist_bool = 1;
+            }
+            push(@changes, sprintf("     SET: %-20s = %s\n", "MASTER", join(",", @opt_master)));
         }
 
         if (@opt_files) {
