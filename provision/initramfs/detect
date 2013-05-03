@@ -10,8 +10,8 @@
 KVERSION=`uname -r`
 IGNOREMOD="ib_mthca@|@ib_ipath@|@iw_cxgb3@|@iw_cxgb4@|@iw_nes@|@mlx4_ib@|@ib_qib"
 
-if [ ! -f /lib/modules/$KVERSION/modules.pcimap ]; then
-    echo "PCI map for this kernel is not available!" 1>&2
+if [ ! -f /lib/modules/$KVERSION/modules.alias ]; then
+    echo "PCI aliases for this kernel is not available!" 1>&2
     exit 1
 fi
 
@@ -41,12 +41,12 @@ if [ -n "$WWKMODS" ]; then
     done
 fi
 
+
 for pci in /sys/bus/pci/devices/*; do
     VENDOR_1=`cat $pci/vendor`
     DEVICE_1=`cat $pci/device`
-    VENDOR=`printf "0x%08x\n" $VENDOR_1`
-    DEVICE=`printf "0x%08x\n" $DEVICE_1`
-    for MODULE in `grep "$VENDOR $DEVICE" /lib/modules/$KVERSION/modules.pcimap | awk '{print $1}'`; do
+    ALIAS=`printf "v%08xd%08x\n" $VENDOR_1 $DEVICE_1`
+    for MODULE in `grep -i "$ALIAS" /lib/modules/$KVERSION/modules.alias | awk '{print $3}'`; do
         if ! echo "@$MODULE@" | egrep -q "@$WWIGNOREMOD@"; then
             echo $MODULE
         fi
