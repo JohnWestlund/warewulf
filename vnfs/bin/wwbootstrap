@@ -152,7 +152,6 @@ if (! -f "$opt_chroot/boot/vmlinuz-$opt_kversion") {
 
 if ($config->get("drivers")) {
     my @drivers = $config->get("drivers");
-    my $depmod_map_arg = "";
     my %mod_path;
     my %mod_deps;
     my @mod_files;
@@ -231,22 +230,10 @@ if ($config->get("drivers")) {
 
     }
 
-    &dprint("Check for depmod option to create mapfiles\n");
-    open(DEPMOD, "/sbin/depmod --help 2>&1 |");
-    while (my $line = <DEPMOD>) {
-        chomp $line;
-        if ( $line =~ /^\s*-m\s+/ ) {
-            $depmod_map_arg = "-m";
-            &iprint("Will use the \"-m\" depmod option to trigger map file generation\n");
-            last;
-        }
-    }
-    close DEPMOD;
-
     if ($module_count > 0) {
         &nprint("Number of drivers included in bootstrap: $module_count\n");
         &dprint("Running depmod\n");
-        system("/sbin/depmod $depmod_map_arg -a -b $tmpdir/initramfs $opt_kversion");
+        system("/sbin/depmod -a -b $tmpdir/initramfs $opt_kversion");
     }
 }
 
