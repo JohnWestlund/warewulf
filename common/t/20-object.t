@@ -24,6 +24,7 @@ plan("tests" => (
          + 29             # get()/set() method tests
          + 5+5+3+3+7+7+3  # add()/del() method tests
          + 3+2+2+2        # prop() wrapper method tests
+         + 4+4+3          # clone() method tests
 ));
 
 my ($obj1, $obj2, $obj3);
@@ -246,3 +247,30 @@ ok(!defined(id($obj1)), "obj->prop() deletes value if undef is explicitly passed
 is(name($obj1, "newname"), "newname", "obj->prop() can reset existing member value");
 name($obj1, undef);
 ok(!defined(name($obj1)), "obj->prop() deletes value for member with validator");
+undef $obj1;
+
+#######################################
+### clone() tests
+#######################################
+my ($href1, $href2);
+
+$obj1 = new_ok($modname, [], "Instantiate new object for cloning");
+$obj1->init({"name" => "cloned", "properties" => [ 1, 2, 3, 4 ]});
+$obj3 = new_ok($modname, [{ "name" => "child", "properties" => [ 5, 6, 7, 8 ] }], "Instantiate child object");
+$obj1->set("child", $obj3);
+$obj2 = $obj1->clone();
+isnt($obj2, $obj1, "Cloned object does not refer to the original object");
+is($obj2->get("name"), $obj1->get("name"), "Names are the same");
+
+$href1 = $obj1->get_hash();
+$href2 = $obj2->get_hash();
+is_deeply($href1, $href2, "Object contents are identical");
+isnt($href1->{"PROPERTIES"}, $href2->{"PROPERTIES"}, "References differ for \"PROPERTIES\" member");
+isnt($href1->{"CHILD"}, $href2->{"CHILD"}, "References to \"CHILD\" subobjects differ");
+isnt($href1->{"CHILD"}{"PROPERTIES"}, $href2->{"CHILD"}{"PROPERTIES"}, "Child object references to \"PROPERTIES\" members differ");
+
+undef $obj2;
+$obj2 = $obj1->clone("name", "clone");
+isnt($obj2, $obj1, "Cloned object does not refer to the original object");
+isnt($obj2->get("name"), $obj1->get("name"), "Names are no longer the same");
+is($obj2->get("name"), "clone", "New name took effect");

@@ -10,6 +10,7 @@
 
 package Warewulf::Object;
 
+use Storable ('dclone');
 use Warewulf::Logger;
 use Warewulf::Util;
 
@@ -466,6 +467,33 @@ sub
 canonicalize()
 {
     return(0);
+}
+
+
+=item clone([ I<set_arg1>, ...])
+
+Create an exact, but clean, duplicate of an object.  All subobjects
+are cloned as well; referenced variables are dereferenced and
+duplicated to the extent possible; everything else is copied directly.
+
+Any arguments supplied to this method (e.g., I<set_arg1>...) will be
+passed directly to the newly-created object's C<set()> method after
+cloning.  This allows the caller to immediately differentiate the
+clone if desired.
+
+=cut
+
+sub
+clone()
+{
+    my ($self, @set_args) = @_;
+    my $newobj;
+
+    $newobj = dclone($self);
+    if (scalar(@set_args)) {
+        $newobj->set(@set_args);
+    }
+    return $newobj;
 }
 
 
