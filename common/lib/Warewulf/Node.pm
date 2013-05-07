@@ -68,6 +68,43 @@ new($$)
 }
 
 
+=item clone([ I<method>, I<value>, [...] ])
+
+Create a clone of this node.  The C<Node>'s ID is erased after cloning
+to prevent any accidental conflicts.  Names of I<method>s and their
+respective new I<value>s may be passed in and will optionally be
+invoked after the cloning process has been completed.
+
+=cut
+
+sub
+clone()
+{
+    my ($self, @args) = @_;
+    my $newnode;
+
+    $newnode = $self->SUPER::clone();
+    if ($newnode->can("id")) {
+        $newnode->set("_ID", undef);
+    }
+    if (scalar(@args)) {
+        my $href;
+
+        if (scalar(@args) == 1) {
+            $href = $args[0];
+        } else {
+            %{$href} = @args;
+        }
+        foreach my $key (keys(%{$href})) {
+            if ($newnode->can($key)) {
+                &{$newnode->can($key)}($href->{$key});
+            }
+        }
+    }
+    return $newnode;
+}
+
+
 =item name($nodename, $clustername, $domainname)
 
 Get or set the name of the node.  Because nodes can be part of multiple
