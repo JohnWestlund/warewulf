@@ -250,7 +250,7 @@ parse()
         my @values;
 
         chomp($line);
-        $line =~ s/\s*#.*//;
+        $line =~ s/(^\s*|\s+)#.*//;
         if ($line =~ /^\s*$/) {
             next;
         }
