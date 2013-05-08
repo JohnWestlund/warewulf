@@ -68,7 +68,7 @@ init()
 {
     my $self = shift;
     my $config = Warewulf::Config->new("provision.conf");
-    my $tftpboot = $config->get("tftpboot");
+    my $tftpboot = $config->get("tftpdir");
 
     if (! $tftpboot) {
         &dprint("Searching for tftpboot directory\n");
