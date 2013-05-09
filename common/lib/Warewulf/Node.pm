@@ -97,7 +97,7 @@ clone()
         }
         foreach my $key (keys(%{$href})) {
             if ($newnode->can($key)) {
-                &{$newnode->can($key)}($href->{$key});
+                &{$newnode->can($key)}($newnode, $href->{$key});
             }
         }
     }
