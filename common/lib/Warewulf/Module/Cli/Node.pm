@@ -65,6 +65,7 @@ help()
     $h .= "         list            List a summary of nodes\n";
     $h .= "         print           Print the node configuration\n";
     $h .= "         delete          Remove a node configuration from the data store\n";
+    $h .= "         clone           Clone a node configuration to another node\n";
     $h .= "         help            Show usage information\n";
     $h .= "\n";
     $h .= "TARGETS:\n";
@@ -104,6 +105,7 @@ help()
     $h .= "     Warewulf> node set --groupdel=bye --set=vnfs=sl6.vnfs\n";
     $h .= "     Warewulf> node set xx:xx:xx:xx:xx:xx --lookup=hwaddr\n";
     $h .= "     Warewulf> node print --lookup=groups mygroup hello group123\n";
+    $h .= "     Warewulf> node clone n0000 new0000\n";
     $h .= "\n";
 
     return ($h);
@@ -118,8 +120,6 @@ summary()
 
     return ($output);
 }
-
-
 
 sub
 complete()
@@ -147,10 +147,10 @@ complete()
         'l|lookup=s'    => \$opt_lookup,
     );
 
-    if (exists($ARGV[1]) and ($ARGV[1] eq "print" or $ARGV[1] eq "new" or $ARGV[1] eq "set" or $ARGV[1] eq "list")) {
+    if (exists($ARGV[1]) and ($ARGV[1] eq "print" or $ARGV[1] eq "new" or $ARGV[1] eq "set" or $ARGV[1] eq "list" or $ARGV[1] eq "clone")) {
         @ret = $db->get_lookups($entity_type, $opt_lookup);
     } else {
-        @ret = ("print", "new", "set", "delete", "list");
+        @ret = ("print", "new", "set", "delete", "list", "clone");
     }
 
     @ARGV = ();
@@ -189,6 +189,9 @@ exec()
     my $object_count = 0;
     my $persist_count = 0;
 
+    my $orignode;
+    my $newnode_name;
+
     @ARGV = ();
     push(@ARGV, @_);
 
@@ -225,6 +228,17 @@ exec()
         &eprint("You must provide a command!\n\n");
         print $self->help();
         return undef;
+    } elsif ($command eq "clone") {
+        my $onode_name = shift(@ARGV);
+        $newnode_name = shift(@ARGV);
+
+        $orignode = $db->get_objects("node", "name", $onode_name)->get_object(0);
+
+        if (!$orignode) {
+            &eprint("Nodename '$onode_name' not found");
+            return undef;
+        }
+
     } elsif ($command eq "new") {
         $objSet = Warewulf::ObjectSet->new();
         foreach my $string (&expand_bracket(@ARGV)) {
@@ -253,7 +267,7 @@ exec()
     if ($objSet) {
         $object_count = $objSet->count();
     }
-    if (! $objSet || ($object_count == 0)) {
+    if ((! $objSet || ($object_count == 0)) && ($command ne "clone")) {
         &nprint("No nodes found\n");
         return undef;
     }
@@ -630,6 +644,38 @@ exec()
 
     } elsif ($command eq "help") {
         print $self->help();
+    } elsif ($command eq "clone") {
+        my $cloneSet = Warewulf::ObjectSet->new();
+
+        if ($newnode_name =~ /^([a-zA-Z0-9\-_]+)$/) {
+            my $nodename = $1;
+            &dprint("CLONE: Pre clone() call\n");
+            $node = $orignode->clone("name","$nodename");
+            &dprint("CLONE: After clone() call\n");
+            $node->genname();
+            foreach my $dev ($node->netdevs_list()) {
+                $node->netdel($dev);
+            }
+            $cloneSet->add($node);
+            $persist_count++;
+        } else {
+            &eprint("Nodename '$newnode_name' contains invalid characters\n");
+            return undef;
+        }
+
+        if ($term->interactive()) {
+            my $question;
+
+            $question = sprintf("Are you sure you want to clone node %s to %d node(s):\n\n",
+                                $orignode->nodename(), $persist_count);
+            if (! $term->yesno($question)) {
+                &nprint("Clone not performed\n");
+                $db->del_object($cloneSet);
+                return undef;
+            }
+
+            $db->persist($cloneSet);
+        }
 
     } else {
         &eprint("Unknown command: $command\n\n");
@@ -644,3 +690,6 @@ exec()
 
 
 1;
+
+# vim:filetype=perl:syntax=perl:expandtab:ts=4:sw=4:
+
