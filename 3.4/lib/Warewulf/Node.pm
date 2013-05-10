@@ -445,7 +445,9 @@ hwaddr()
 {
     my ($self, $devname, $new_hwaddr) = @_;
 
-    return $self->update_netdev_member($devname, "hwaddr", "_hwaddr", ($new_hwaddr ? lc($new_hwaddr): undef),
+    return $self->update_netdev_member($devname, "hwaddr", "_hwaddr",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF")
+                                        : ((defined($new_hwaddr)) ? (lc($new_hwaddr)) : (undef))),
                                        qr/^((?:[0-9a-f]{2}:){5,7}[0-9a-f]{2})$/);
 }
 
@@ -476,7 +478,8 @@ ipaddr()
 {
     my ($self, $devname, $new_ipaddr) = @_;
 
-    return $self->update_netdev_member($devname, "ipaddr", "_ipaddr", $new_ipaddr,
+    return $self->update_netdev_member($devname, "ipaddr", "_ipaddr",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_ipaddr)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -492,7 +495,8 @@ netmask()
 {
     my ($self, $devname, $new_netmask) = @_;
 
-    return $self->update_netdev_member($devname, "netmask", "", $new_netmask,
+    return $self->update_netdev_member($devname, "netmask", "",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_netmask)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -508,7 +512,8 @@ network()
 {
     my ($self, $devname, $new_network) = @_;
 
-    return $self->update_netdev_member($devname, "network", "", $new_network,
+    return $self->update_netdev_member($devname, "network", "",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_network)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -524,7 +529,8 @@ gateway()
 {
     my ($self, $devname, $new_gateway) = @_;
 
-    return $self->update_netdev_member($devname, "gateway", "", $new_gateway,
+    return $self->update_netdev_member($devname, "gateway", "",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_gateway)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -540,7 +546,8 @@ fqdn()
 {
     my ($self, $devname, $new_fqdn) = @_;
 
-    return $self->update_netdev_member($devname, "fqdn", "", $new_fqdn,
+    return $self->update_netdev_member($devname, "fqdn", "",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_fqdn)),
                                        qr/^([a-zA-Z0-9\-\.\_]+)$/);
 }
 
@@ -556,7 +563,8 @@ mtu()
 {
     my ($self, $devname, $new_mtu) = @_;
 
-    return $self->update_netdev_member($devname, "mtu", "", $new_mtu,
+    return $self->update_netdev_member($devname, "mtu", "",
+                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_mtu)),
                                        qr/^([0-9]+)$/);
 }
 
@@ -616,22 +624,32 @@ update_netdev_member()
     }
 
     $netdev = $self->netdev_get_add($devname);
-    if ($new_value) {
-        if ($new_value =~ $validator) {
-            my $old_value = $netdev->get($member) || "";
+    if (defined($new_value)) {
+        my $old_value = $netdev->get($member) || "";
 
-            $new_value = $1;
-            &dprint("Updating object $nodename.$devname.$member:  \"$old_value\" -> \"$new_value\"\n");
-            $netdev->set($member, $new_value);
-            if ($tracker) {
-                if ($old_value) {
-                    # Delete the previous member if exists...
-                    $self->del($tracker, $old_value);
-                }
-                $self->add($tracker, $new_value);
-            }
+        if ($new_value eq "__UNDEF") {
+            $new_value = undef;
+            &dprint("Removing $nodename.$devname.$member (was \"$old_value\")\n");
         } else {
-            &eprint("Invalid value for $nodename.$devname.$member:  \"$new_value\"\n");
+            if ($new_value =~ $validator) {
+                $new_value = $1;
+            } else {
+                &eprint("Invalid value for $nodename.$devname.$member:  \"$new_value\"\n");
+                return undef;
+            }
+            &dprint("Updating object $nodename.$devname.$member:  \"$old_value\" -> \"$new_value\"\n");
+        }
+        $netdev->set($member, $new_value);
+        if ($tracker) {
+            if ($old_value) {
+                # Delete the previous member if exists...
+                $self->del($tracker, $old_value);
+            }
+            if (defined($new_value)) {
+                $self->add($tracker, $new_value);
+            } else {
+                return undef;
+            }
         }
     }
     return $netdev->get($member);
