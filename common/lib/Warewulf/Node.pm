@@ -634,7 +634,7 @@ sub
 update_netdev_member()
 {
     my ($self, $devname, $member, $tracker, $new_value, $validator) = @_;
-    my ($netdev, $nodename);
+    my ($netdev, $nodename, $old_value);
 
     $nodename = $self->nodename() || "UNDEF";
     if (! $devname) {
@@ -653,22 +653,26 @@ update_netdev_member()
     }
 
     $netdev = $self->netdev_get_add($devname);
-    if ($new_value) {
+    $old_value = $netdev->get($member) || "";
+    if (defined($new_value)) {
         if ($new_value =~ $validator) {
-            my $old_value = $netdev->get($member) || "";
-
             $new_value = $1;
-            &dprint("Updating object $nodename.$devname.$member:  \"$old_value\" -> \"$new_value\"\n");
-            $netdev->set($member, $new_value);
-            if ($tracker) {
-                if ($old_value) {
-                    # Delete the previous member if exists...
-                    $self->del($tracker, $old_value);
-                }
-                $self->add($tracker, $new_value);
-            }
         } else {
             &eprint("Invalid value for $nodename.$devname.$member:  \"$new_value\"\n");
+            return undef;
+        }
+        &dprint("Updating object $nodename.$devname.$member:  \"$old_value\" -> \"$new_value\"\n");
+    } else {
+        &dprint("Removing $nodename.$devname.$member (was \"$old_value\")\n");
+    }
+    $netdev->set($member, $new_value);
+    if ($tracker) {
+        if ($old_value) {
+            # Delete the previous member if exists...
+            $self->del($tracker, $old_value);
+        }
+        if (defined($new_value)) {
+            $self->add($tracker, $new_value);
         }
     }
     return $netdev->get($member);
