@@ -649,19 +649,28 @@ exec()
 
         if ($newnode_name =~ /^([a-zA-Z0-9\-_]+)$/) {
             my $nodename = $1;
-            &dprint("CLONE: Pre clone() call\n");
             $node = $orignode->clone("name","$nodename");
-            &dprint("CLONE: After clone() call\n");
             $node->genname();
-            foreach my $dev ($node->netdevs_list()) {
-                $node->netdel($dev);
+
+            foreach my $dev (sort($node->netdevs_list())) {
+                if($opt_devremove) {
+                    &dprint("CLONE: Removing network device $dev\n");
+                    $node->netdel($dev);
+                } else {
+                    &dprint("CLONE: Removing ipaddr/hwaddr for device $dev\n");
+                    $node->ipaddr($dev, undef);
+                    $node->hwaddr($dev, undef);
+                }
             }
+
             $cloneSet->add($node);
             $persist_count++;
         } else {
             &eprint("Nodename '$newnode_name' contains invalid characters\n");
             return undef;
         }
+
+        $db->persist($cloneSet);
 
         if ($term->interactive()) {
             my $question;
@@ -673,8 +682,6 @@ exec()
                 $db->del_object($cloneSet);
                 return undef;
             }
-
-            $db->persist($cloneSet);
         }
 
     } else {
