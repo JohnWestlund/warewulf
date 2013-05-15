@@ -1,4 +1,4 @@
-SUBDIRS = ICR
+SUBDIRS = ICR Event
 
 perlmodsdir = ${PERL_VENDORLIB}/Warewulf/
 

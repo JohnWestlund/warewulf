@@ -44,6 +44,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-, root, root)
 %doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO
 %{perl_vendorlib}/Warewulf/*
+%{perl_vendorlib}/Warewulf/Event/CLCK_Nodelist.pm
 %attr(0755, root, warewulf) %dir %{_sysconfdir}/warewulf/wwinit/
 %attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/ofed.functions
 %attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/icr.functions
