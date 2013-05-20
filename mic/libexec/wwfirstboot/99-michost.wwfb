@@ -134,6 +134,10 @@ sed -i.back\
     -e "s/^\(VerboseLogging\).*/\1 Enabled/"\
     /etc/sysconfig/mic/mic*.conf;
 
+# Disable power management
+sed  -i.back -e s'/PowerManagement.*/PowerManagement \"cpufreq_on;corec6_off;pc3_off;pc6_off\"/'\
+    /etc/sysconfig/mic/mic*.conf;
+
 # Clean old structure if anything exists
 if [ -d $MICPATH/mic0 ]; then
     cd $MICPATH;

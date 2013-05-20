@@ -124,14 +124,14 @@ uninst_pkg(){
 inst_mpss() {
 
     # Packages in OFED that conflict with IB support in MPSS
-    conflict_OFED_pkgs="dapl dapl-utils compat-dapl-utils dapl-devel\
-    kernel-ib-devel kernel-ib dapl-devel-static";
+    conflict_OFED_pkgs="dapl dapl-utils compat-dapl-utils dapl-devel \
+    dapl-devel-static kernel-ib-devel kernel-ib ";
 
     pkg_file=${MPSS_FILE:-$1};
 
     # Look for the package if not passed
     if [ -z "$pkg_file" ]; then
-        pkg_file=$(/bin/ls -1 $HOME/KNC_*_*.tar 2>/dev/null | sort -V | tail -1);
+        pkg_file=$(/bin/ls -1 $HOME/KNC_*_*.tar $HOME/mpss_*.tar 2>/dev/null | sort -V | tail -1);
     fi
 
     if [[ -z "$pkg_file" || ! -f "$pkg_file" ]]; then
