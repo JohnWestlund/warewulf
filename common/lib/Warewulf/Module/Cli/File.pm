@@ -449,6 +449,11 @@ exec()
             $self->set_file_member("origin", qr/^(\/[a-zA-Z0-9\-_\.\/,]+|UNDEF)$/,
                                    ((scalar(@opt_origin)) ? (join(',', @opt_origin)) : (undef)),
                                    \$persist_count, \@changes, \@objlist);
+            if ($opt_name) {
+                $self->set_file_member("name", qr/^([a-zA-Z0-9\-_\.\ ]+|UNDEF)$/, $opt_name,
+                                   \$persist_count, \@changes, \@objlist);
+            }
+
             # Then persist.
             if ($persist_count > 0) {
                 if ($self->confirm_changes($term, $objSet->count(), "file(s)", @changes)) {
