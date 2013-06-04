@@ -516,7 +516,7 @@ ipaddr()
     my ($self, $devname, $new_ipaddr) = @_;
 
     return $self->update_netdev_member($devname, "ipaddr", "_ipaddr",
-                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_ipaddr)),
+                                       (((scalar(@_) >= 3) && (!defined($new_ipaddr))) ? ("__UNDEF") : ($new_ipaddr)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -533,7 +533,7 @@ netmask()
     my ($self, $devname, $new_netmask) = @_;
 
     return $self->update_netdev_member($devname, "netmask", "",
-                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_netmask)),
+                                       (((scalar(@_) >= 3) && (!defined($new_netmask))) ? ("__UNDEF") : ($new_netmask)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -550,7 +550,7 @@ network()
     my ($self, $devname, $new_network) = @_;
 
     return $self->update_netdev_member($devname, "network", "",
-                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_network)),
+                                       (((scalar(@_) >= 3) && (!defined($new_network))) ? ("__UNDEF") : ($new_network)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -567,7 +567,7 @@ gateway()
     my ($self, $devname, $new_gateway) = @_;
 
     return $self->update_netdev_member($devname, "gateway", "",
-                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_gateway)),
+                                       (((scalar(@_) >= 3) && (!defined($new_gateway))) ? ("__UNDEF") : ($new_gateway)),
                                        qr/^(\d+\.\d+\.\d+\.\d+)$/);
 }
 
@@ -584,7 +584,7 @@ fqdn()
     my ($self, $devname, $new_fqdn) = @_;
 
     return $self->update_netdev_member($devname, "fqdn", "",
-                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_fqdn)),
+                                       (((scalar(@_) >= 3) && (!defined($new_fqdn))) ? ("__UNDEF") : ($new_fqdn)),
                                        qr/^([a-zA-Z0-9\-\.\_]+)$/);
 }
 
@@ -601,7 +601,7 @@ mtu()
     my ($self, $devname, $new_mtu) = @_;
 
     return $self->update_netdev_member($devname, "mtu", "",
-                                       (((scalar(@_) >= 3) && (!defined($new_hwaddr))) ? ("__UNDEF") : ($new_mtu)),
+                                       (((scalar(@_) >= 3) && (!defined($new_mtu))) ? ("__UNDEF") : ($new_mtu)),
                                        qr/^([0-9]+)$/);
 }
 
