@@ -40,6 +40,7 @@ AC_OUTPUT(
    etc/Makefile
    lib/Makefile
    lib/Warewulf/Makefile
+   lib/Warewulf/Event/Makefile
    lib/Warewulf/ICR/Makefile
    libexec/Makefile
    libexec/wwinit/Makefile
