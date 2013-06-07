@@ -34,3 +34,15 @@ Steps needed:
     wwsh provision set --kargs="wwkmod=mic quiet" node000
   4. Fully rebuild bootstrap: 
     wwbootstrap `uname -r`
+
+KNOWN ISSUES:
+
+  2013-04-24:
+   IP Address asignment is incorrect on the mic# devices
+   * Currently, with the handling of the _IPADDR array on a node, it is possible to
+     get the arrays used by 85-michost out of sync. This happens, when an IP address
+     is modified. The _IPADDR array is re-ordered, and the modified IP address,
+     becomes the last entry on the array, and everything is shifted. The corresponding
+     WWNETDEVS array from nodeconfig.pl does not get modified, unless a device is 
+     deleted then re-added.
+
