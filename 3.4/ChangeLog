@@ -1,0 +1,39 @@
+Wed Mar 19 14:56:50-0700 2013                   Matias A. Cabral (mac)
+
+Implementation of Intel(R) Xeon Phi(TM) support for Warewulf
+----------------------------------------------------------------------
+Wed Mar 20 12:37:56-0500 2013                       Jason Stover (jms)
+
+Start of Xeon Phi move from main packages into a new warewulf-mic
+package. This just creates the structure and moves the miccount
+function from Warewulf::Node to Warewulf::Gres::MIC.
+
+Eventually, most changes from r1312 will be moved into warewulf-mic.
+----------------------------------------------------------------------
+Thu Mar 21 10:25:09-0700 2013                       Jason Stover (jms)
+
+Final (I hope) move of the Intel(R) Xeon Phi(TM) changes from
+Matias. There now exists a 'mic' command for wwsh. The
+miccount() settings can be obtained like:
+
+  # wwsh mic set --mic=2 node000
+  # wwsh mic print
+
+Absolute *minimal* testing done. The RPM package builds,
+install, the mic command appears to do what it is supposed
+to do, etc...
+----------------------------------------------------------------------
+Thu Mar 21 12:41:14-0500 2013                       Jason Stover (jms)
+
+Minor fix in README
+----------------------------------------------------------------------
+Fri Mar 22 12:34:24-0500 2013                       Jason Stover (jms)
+
+Added LICENSE.Intel to the warewulf-mic-node package
+
+Now... we hope that everything is fixed.
+----------------------------------------------------------------------
+Wed Mar 27 16:25:24-0500 2013                    Matias A. Cabral (mac)
+
+Created wwinit mic module to install and configure Intel(R) MPSS.
+----------------------------------------------------------------------

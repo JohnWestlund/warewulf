@@ -1,0 +1,48 @@
+
+INITRAMFS CAPABILITIES
+
+MICHOST:
+Setup for MIC provisioning under Warewulf. 
+85-michost sets the basic first stage of configurations for MIC cards support.
+It mainly does two tasks:
+    a) setup a bridge interface br0 and attach eth0 to it. Note that the 
+    proper bridge support package must be available in the node image for br0 
+    to work (brigde-utils). 
+    b) Copies all the networking data setup in the master node to 
+    99-michost.wwfb so the cards get configuring during the OS boot.
+
+Use the wwfirstboot.conf MICPATH variable, to define  where to create the 
+nodes MIC images. These images must be unique for each card in each node. 
+
+Once nodes are booted and up the wwfirstboot script 99-michost.wwfb will 
+attempt the following steps:
+
+  1. Loading module mic.ko
+  2. Initialize basic configurations micctrlt --initdefaults.
+  3. Set each card filesystem to $MICPATH/mic[x]
+  4. Set the networking information configured. 
+  5. Set the NFS shares for the cards to mount.
+  6. Start MPSS
+
+Steps needed:
+  1. Set the number of MIC cards on a Node 
+    wwsh mic set --mic=2 node000
+  2. Set the IP Addresses of the cards 
+    wwsh node set --netdev=mic0 --ipaddr=192.168.1.3 --netmask=255.255.255.0 node000
+    wwsh node set --netdev=mic1 --ipaddr=192.168.1.4 --netmask=255.255.255.0 node000
+  3. Set kargs on nodes to load mic.ko module
+    wwsh provision set --kargs="wwkmod=mic quiet" node000
+  4. Fully rebuild bootstrap: 
+    wwbootstrap `uname -r`
+
+KNOWN ISSUES:
+
+  2013-04-24:
+   IP Address asignment is incorrect on the mic# devices
+   * Currently, with the handling of the _IPADDR array on a node, it is possible to
+     get the arrays used by 85-michost out of sync. This happens, when an IP address
+     is modified. The _IPADDR array is re-ordered, and the modified IP address,
+     becomes the last entry on the array, and everything is shifted. The corresponding
+     WWNETDEVS array from nodeconfig.pl does not get modified, unless a device is 
+     deleted then re-added.
+
