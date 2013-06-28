@@ -174,7 +174,9 @@ init()
                         UNIQUE KEY (object_id, field, value),
                         PRIMARY KEY (id)
                     ) ENGINE=INNODB");
-                $self->{"DBH"}->do("GRANT SELECT ON $db_name.* TO ". $self->{"DBH"}->quote($config->get("database user")) ."\@'localhost' IDENTIFIED BY ". $self->{"DBH"}->quote($config->get("database password")) .";");
+                if ($config->get("database user") and $config->get("database password")) {
+                    $self->{"DBH"}->do("GRANT SELECT ON $db_name.* TO ". $self->{"DBH"}->quote($config->get("database user")) ."\@'localhost' IDENTIFIED BY ". $self->{"DBH"}->quote($config->get("database password")) .";");
+                }
             }
 
         } else {
