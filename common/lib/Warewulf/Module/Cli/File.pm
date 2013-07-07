@@ -481,6 +481,10 @@ exec()
 
         } elsif ($command eq "sync" or $command eq "resync") {
             foreach my $obj ($objSet->get_list()) {
+                my $orig = $obj->origin() || "UNDEF";
+                if ($orig eq "UNDEF" && $obj->name() ne "dynamic_hosts") {
+                    &nprintf("%-16s :: No ORIGIN defined\n", $obj->name());
+                }
                 $obj->sync();
             }
         } elsif ($command eq "list" or $command eq "ls") {
