@@ -314,7 +314,7 @@ exec()
                     }
                     
                     $obj->file_import($path);
-                    $obj->mode($opt_mode || $mode);
+                    $obj->mode(oct($opt_mode) || $mode);
                     $obj->uid($opt_uid || $uid);
                     $obj->gid($opt_gid || $gid);
                     $obj->path($opt_path || $path);
