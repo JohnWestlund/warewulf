@@ -80,6 +80,12 @@ ifup() {
                 wwfailure
             fi
         fi
+	if [ -f "/sys/class/net/$NETDEV/address" ]; then
+            HWADDR=`cat /sys/class/net/$NETDEV/address`
+            if [ ${#HWADDR} -eq 59 ]; then
+                HWADDR=`expr substr $HWADDR 37 23`
+            fi
+        fi
         if [ -n "$WWIPADDR" -a -n "$WWNETMASK" -a -n "$WWMASTER" ]; then
             msg_white "Configuring $DEVICE statically: "
             msg_gray "($WWIPADDR/$WWNETMASK)"
@@ -103,6 +109,7 @@ ifup() {
                 if [ -n "$WWMTU" ]; then
                     echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE
                 fi
+                echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
                 COUNT=0
                 msg_white  "Trying to reach the master node at $WWMASTER "
                 while [ $COUNT -le $WWNETRETRY ]; do
@@ -137,6 +144,7 @@ ifup() {
                 if [ -n "$WWMTU" ]; then
                     echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE
                 fi
+                echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
                 return 0
             fi
             msg_white "."
@@ -198,6 +206,9 @@ NETDEV=`cat /tmp/wwdev`
 msg_white "Probing for HW Address: "
 if [ -f "/sys/class/net/$NETDEV/address" ]; then
     HWADDR=`cat /sys/class/net/$NETDEV/address`
+    if [ ${#HWADDR} -eq 59 ]; then
+        HWADDR=`expr substr $HWADDR 37 23`
+    fi
     msg_gray "($HWADDR)"
     wwsuccess
 else

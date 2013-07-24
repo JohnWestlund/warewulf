@@ -200,6 +200,7 @@ persist()
         return(1);
     }
 
+    $config_template =~ s/\%{IPADDR}/$ipaddr/g;
     $config_template =~ s/\%{NETWORK}/$network/g;
     $config_template =~ s/\%{NETMASK}/$netmask/g;
 
@@ -254,6 +255,7 @@ persist()
 
             foreach my $devname ($n->netdevs_list()) {
                 my $hwaddr = $n->hwaddr($devname);
+                my $hwprefix = $n->hwprefix($devname);
                 my $node_ipaddr = $n->ipaddr($devname);
                 my $node_netmask = $n->netmask($devname) || $netmask;
                 my $node_gateway = $n->gateway($devname);
@@ -303,7 +305,11 @@ persist()
                     if ($domain) {
                         $dhcpd_contents .= "      option domain-name \"$domain\";\n";
                     }
-                    $dhcpd_contents .= "      hardware ethernet $hwaddr;\n";
+                    if ($devname =~ /ib\d+/ && $hwprefix) {
+                        $dhcpd_contents .= "      option dhcp-client-identifier = $hwprefix:$hwaddr;\n";
+                    } else {
+                        $dhcpd_contents .= "      hardware ethernet $hwaddr;\n";
+                    }
                     $dhcpd_contents .= "      fixed-address $node_ipaddr;\n";
                     $dhcpd_contents .= "      next-server $master_ipv4_addr;\n";
                     $dhcpd_contents .= "   }\n";

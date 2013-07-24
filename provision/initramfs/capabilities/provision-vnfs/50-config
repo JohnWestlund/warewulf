@@ -8,7 +8,7 @@
 #
 
 
-cp /tmp/ifcfg-eth* $NEWROOT/etc/sysconfig/network-scripts/ 2>/dev/null
+cp /tmp/ifcfg-* $NEWROOT/etc/sysconfig/network-scripts/ 2>/dev/null
 
 if [ -n "$HOSTNAME" ]; then
     grep -v "^HOSTNAME=" $NEWROOT/etc/sysconfig/network > /tmp/network_withouthostname

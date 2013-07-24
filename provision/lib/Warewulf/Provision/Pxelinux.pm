@@ -72,7 +72,7 @@ init()
 
 =item setup()
 
-Setup the basic pxelinux environment (e.g. gpxelinux.0).
+Setup the basic pxelinux environment (e.g. pxelinux.0).
 
 =cut
 
@@ -84,20 +84,32 @@ setup()
     my $tftpdir = Warewulf::Provision::Tftp->new()->tftpdir();
 
     if ($tftpdir) {
-        if (! -f "$tftpdir/warewulf/gpxelinux.0") {
-            if (-f "$datadir/warewulf/gpxelinux.0") {
-                &iprint("Copying gpxelinux.0 to the appropriate directory\n");
+        if (! -f "$tftpdir/warewulf/pxelinux.0") {
+            if (-f "$datadir/warewulf/pxelinux.0" && -f "$datadir/warewulf/ldlinux.c32") {
+                &iprint("Copying pxelinux.0 to the appropriate directory\n");
                 mkpath("$tftpdir/warewulf/");
-                system("cp $datadir/warewulf/gpxelinux.0 $tftpdir/warewulf/gpxelinux.0");
+                system("cp $datadir/warewulf/pxelinux.0 $tftpdir/warewulf/pxelinux.0");
+                system("cp $datadir/warewulf/ldlinux.c32 $tftpdir/warewulf/ldlinux.c32");
             } else {
-                &eprint("Could not locate Warewulf's internal gpxelinux.0! Go find one!\n");
+                &eprint("Could not locate Warewulf's internal pxelinux.0! Go find one!\n");
+            }
+        }
+        if (! -f "$tftpdir/warewulf/undionly.kpxe") {
+            if (-f "$datadir/warewulf/undionly.kpxe" ) {
+                &iprint("Copying undionly.kpxe to the appropriate directory\n");
+                mkpath("$tftpdir/warewulf/");
+                system("cp $datadir/warewulf/undionly.kpxe $tftpdir/warewulf/undionly.kpxe");
+            } else {
+                &eprint("Could not locate Warewulf's internal undionly.kpxe! Go find one!\n");
             }
         }
         if (! -f "$tftpdir/warewulf/chain.c32") {
-            if (-f "$datadir/warewulf/chain.c32") {
+            if (-f "$datadir/warewulf/chain.c32" && -f "$datadir/warewulf/libcom32.c32" && -f "$datadir/warewulf/libutil.c32" ) {
                 &iprint("Copying chain.c32 to the appropriate directory\n");
                 mkpath("$tftpdir/warewulf/");
                 system("cp $datadir/warewulf/chain.c32 $tftpdir/warewulf/chain.c32");
+                system("cp $datadir/warewulf/libcom32.c32 $tftpdir/warewulf/libcom32.c32");
+                system("cp $datadir/warewulf/libutil.c32 $tftpdir/warewulf/libutil.c32");
             } else {
                 &eprint("Could not locate Warewulf's internal chain.c32! Go find one!\n");
             }
