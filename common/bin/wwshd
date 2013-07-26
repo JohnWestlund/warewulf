@@ -1,0 +1,15 @@
+#!/bin/bash
+
+PIPE=/tmp/wwshd;
+
+trap "/bin/rm -f ${PIPE}; exit" EXIT;
+
+if [ ! -p ${PIPE} ]; then
+    mkfifo -m 0660 ${PIPE};
+    chown root:warewulf ${PIPE};
+fi
+
+while true; do
+    wwsh < ${PIPE} 1>/dev/null;
+done
+
