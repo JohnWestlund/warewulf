@@ -17,7 +17,7 @@ DEFAULTFS="mountpoint=/:type=tmpfs";
 # add in the default tmpfs mount
 if [ ! -z "$WWFILESYSTEMS" ]; then
     ROOTFOUND=0
-    for fs in $WWFILESYSTEMS; do
+    for fs in `echo $WWFILESYSTEMS | sed 's/,/ /g'`; do
         if echo $fs | grep 'mountpoint=' 2>&1 >/dev/null; then
             for mnt in `echo $fs | tr ':' ' '`; do
                 tvar=$(echo $mnt | cut -f1 -d=)
