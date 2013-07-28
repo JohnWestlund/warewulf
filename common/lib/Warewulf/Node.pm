@@ -518,7 +518,9 @@ hwprefix()
 {
     my ($self, $devname, $new_hwprefix) = @_;
 
-    return $self->update_netdev_member($devname, "hwprefix", "_hwprefix", lc($new_hwprefix),
+    return $self->update_netdev_member($devname, "hwprefix", "_hwprefix",
+                                        (((scalar(@_) >= 3) && (!defined($new_hwprefix))) ? ("__UNDEF")
+                                         : ((defined($new_hwprefix)) ? (lc($new_hwprefix)) : (undef))),
                                        qr/^((?:[0-9a-f]{2}:){11}[0-9a-f]{2})$/);
 }
 
