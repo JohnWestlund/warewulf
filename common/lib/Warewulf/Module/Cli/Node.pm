@@ -480,7 +480,7 @@ exec()
                 }
             }
             if ($opt_gateway) {
-                if ($opt_gateway =~ /^(\d+\.\d+\.\d+\.\d+)$/) {
+                if ($opt_gateway =~ /^(\d+\.\d+\.\d+\.\d+|UNDEF|undef)$/) {
                     my $show_changes;
                     foreach my $o ($objSet->get_list()) {
                         my $nodename = $o->name();

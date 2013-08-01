@@ -603,7 +603,7 @@ gateway()
 
     return $self->update_netdev_member($devname, "gateway", "",
                                        (((scalar(@_) >= 3) && (!defined($new_gateway))) ? ("__UNDEF") : ($new_gateway)),
-                                       qr/^(\d+\.\d+\.\d+\.\d+)$/);
+                                       qr/^(\d+\.\d+\.\d+\.\d+|UNDEF|undef)$/);
 }
 
 
@@ -699,7 +699,7 @@ update_netdev_member()
     if (defined($new_value)) {
         my $old_value = $netdev->get($member) || "";
 
-        if ($new_value eq "__UNDEF") {
+        if ($new_value eq "__UNDEF" || lc($new_value) eq "undef" ) {
             $new_value = undef;
             &dprint("Removing $nodename.$devname.$member (was \"$old_value\")\n");
         } else {
