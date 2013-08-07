@@ -230,10 +230,10 @@ exec()
                 push(@changes, sprintf("   UNDEF: %-20s\n", "IPMI_IPADDR"));
                 $persist_bool = 1;
             } else {
-                my $increment = 0;
-                foreach my $o ($objSet->get_list()) {
-                    $o->ipmi_ipaddr(Warewulf::Network->ip_unserialize(Warewulf::Network->ip_serialize($opt_ipaddr) + $increment));
-                    $increment++;
+                my $ip_serialized = Warewulf::Network->ip_serialize($opt_ipaddr);
+                foreach my $o (sort {$a->name() cmp $b->name()} $objSet->get_list()) {
+                    $o->ipmi_ipaddr(Warewulf::Network->ip_unserialize($ip_serialized));
+                    $ip_serialized++;
                 }
                 push(@changes, sprintf("     SET: %-20s = %s\n", "IPMI_IPADDR", $opt_ipaddr));
                 $persist_bool = 1;
