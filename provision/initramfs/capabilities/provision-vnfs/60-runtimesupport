@@ -37,6 +37,10 @@ if [ -z "$WWNORUNTIMESERVICES" ]; then
     ln -s ../transports/$WWTRANSPORT/wwgetfiles $NEWROOT/warewulf/bin/wwgetfiles
     ln -s ../transports/$WWTRANSPORT/wwgetscript $NEWROOT/warewulf/bin/wwgetscript
     ln -s ../transports/$WWTRANSPORT/wwgetvnfs $NEWROOT/warewulf/bin/wwgetvnfs
+    ln -s ../transports/$WWTRANSPORT/wwgetnodeconfig $NEWROOT/warewulf/bin/wwgetnodeconfig
+
+    echo "HWADDR=$HWADDR" >> $NEWROOT/warewulf/config
+    echo "export HWADDR" >> $NEWROOT/warewulf/config
 
     echo "WWMASTER=$WWMASTER" >> $NEWROOT/warewulf/config
     echo "export WWMASTER" >> $NEWROOT/warewulf/config
@@ -44,9 +48,21 @@ if [ -z "$WWNORUNTIMESERVICES" ]; then
     echo "WWTRANSPORT=$WWTRANSPORT" >> $NEWROOT/warewulf/config
     echo "export WWTRANSPORT" >> $NEWROOT/warewulf/config
 
-    echo "HWADDR=$HWADDR" >> $NEWROOT/warewulf/config
-    echo "export HWADDR" >> $NEWROOT/warewulf/config
+    echo "WWNODENAME=$WWNODENAME" >> $NEWROOT/warewulf/config
+    echo "export WWNODENAME" >> $NEWROOT/warewulf/config
+
+    echo "WWCLUSTER=$WWCLUSTER" >> $NEWROOT/warewulf/config
+    echo "export WWCLUSTER" >> $NEWROOT/warewulf/config
+
+    echo "WWDOMAIN=$WWDOMAIN" >> $NEWROOT/warewulf/config
+    echo "export WWDOMAIN" >> $NEWROOT/warewulf/config
+
+    echo "WWGROUPS=$WWGROUPS" >> $NEWROOT/warewulf/config
+    echo "export WWGROUPS" >> $NEWROOT/warewulf/config
+
+    echo "WWFQDN=$WWFQDN" >> $NEWROOT/warewulf/config
+    echo "export WWFQDN" >> $NEWROOT/warewulf/config
 
     echo "0,5,10,15,20,25,30,35,40,45,50,55 * * * * root /warewulf/bin/wwgetfiles >/var/log/wwgetfiles.log 2>&1" > $NEWROOT/etc/cron.d/wwupdatefiles
-    echo "0,5,10,15,20,25,30,35,40,45,50,55 * * * * root /warewulf/bin/wwgetscript runtime 2>/var/log/wwgetfiles.log | /bin/sh" > $NEWROOT/etc/cron.d/wwrunscript
+    echo "0,5,10,15,20,25,30,35,40,45,50,55 * * * * root . /warewulf/config; /warewulf/bin/wwgetscript runtime 2>/var/log/wwgetfiles.log | /bin/sh" > $NEWROOT/etc/cron.d/wwrunscript
 fi
