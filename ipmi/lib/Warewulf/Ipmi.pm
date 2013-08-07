@@ -234,7 +234,7 @@ ipmi_command()
         } elsif ( $action eq "printsdr") {
             $ret .= "sdr elist";
         } elsif ( $action eq "console") {
-            $ret .= "sol activate";
+            $ret .= "-e ^ sol activate";
         } else {
             &eprint("Unsupported IPMI action: $action\n");
             return();

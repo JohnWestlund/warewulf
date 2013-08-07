@@ -18,6 +18,7 @@ use Warewulf::DataStore;
 use Warewulf::Util;
 use Warewulf::ParallelCmd;
 use Warewulf::Ipmi;
+use Warewulf::Network;
 use Getopt::Long;
 use Text::ParseWords;
 
@@ -229,8 +230,10 @@ exec()
                 push(@changes, sprintf("   UNDEF: %-20s\n", "IPMI_IPADDR"));
                 $persist_bool = 1;
             } else {
+                my $increment = 0;
                 foreach my $o ($objSet->get_list()) {
-                    $o->ipmi_ipaddr($opt_ipaddr);
+                    $o->ipmi_ipaddr(Warewulf::Network->ip_unserialize(Warewulf::Network->ip_serialize($opt_ipaddr) + $increment));
+                    $increment++;
                 }
                 push(@changes, sprintf("     SET: %-20s = %s\n", "IPMI_IPADDR", $opt_ipaddr));
                 $persist_bool = 1;
