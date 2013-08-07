@@ -406,7 +406,7 @@ exec()
                 if ($opt_ipaddr =~ /^(\d+\.\d+\.\d+\.\d+)$/) {
                     my $ip_serialized = Warewulf::Network->ip_serialize($1);
                     my $show_changes;
-                    foreach my $o ($objSet->get_list()) {
+                    foreach my $o (sort {$a->name() cmp $b->name()} $objSet->get_list()) {
                         my $nodename = $o->name();
                         if (! $opt_netdev) {
                             my @devs = $o->netdevs_list();
