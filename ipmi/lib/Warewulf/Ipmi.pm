@@ -117,8 +117,8 @@ ipmi_password()
 Set or return the IPMI interface protocol of this object. Supported protocols
 are:
 
-      lan (default)
-      lanplus
+      lanplus (default)
+      lan
       open
       free
       imb
@@ -144,7 +144,7 @@ ipmi_proto()
         }
     }
 
-    return($self->get("ipmi_proto") || "lan");
+    return($self->get("ipmi_proto") || "lanplus");
 }
 
 
