@@ -518,7 +518,7 @@ exec()
                 printf("%-16s: %-16s = %s\n", $name, "CHECKSUM", ($obj->checksum() || "UNDEF"));
                 printf("%-16s: %-16s = %s\n", $name, "INTERPRETER", ($obj->interpreter() || "UNDEF"));
                 printf("%-16s: %-16s = %s\n", $name, "SIZE", ($obj->size() || "0"));
-                printf("%-16s: %-16s = %s\n", $name, "MODE", (sprintf("%04o", $obj->mode()) || "UNDEF"));
+                printf("%-16s: %-16s = %s\n", $name, "MODE", ($obj->mode() ? sprintf("%04o", $obj->mode()) : "UNDEF"));
                 printf("%-16s: %-16s = %s\n", $name, "UID", $obj->uid());
                 printf("%-16s: %-16s = %s\n", $name, "GID", $obj->gid());
             }
