@@ -18,6 +18,7 @@ use Warewulf::Vnfs;
 use Warewulf::Provision;
 use File::Path;
 use File::Basename;
+use Fcntl qw(:flock);
 
 &daemonized(1);
 &set_log_level("WARNING");
@@ -27,6 +28,26 @@ my $db = Warewulf::DataStore->new();
 
 my $vnfs_cachedir = "/var/tmp/warewulf_cache/";
 
+sub
+lock
+{
+    my $lfh = shift;
+
+    # Non-Blocking Lock - Fail if lock cannot be obtained
+    my $ret = flock($lfh, LOCK_EX|LOCK_NB);
+
+    return $ret;
+}
+
+sub
+unlock
+{
+    my $ufh = shift;
+
+    my $ret = flock($ufh, LOCK_UN);
+
+    return $ret;
+}
 
 if ($q->param('hwaddr')) {
     my $hwaddr = $q->param('hwaddr');
@@ -67,6 +88,19 @@ if ($q->param('hwaddr')) {
                                 mkpath("$vnfs_cachedir/$vnfs_name");
                             }
                             
+                            my $lock_file = "$vnfs_cachedir/$vnfs_name/warewulf.cache.lock";
+                            my $lock_fh;
+                            
+                            if (! open($lock_fh, '>', $lock_file) || ! &lock($lock_fh)) {
+                                &eprint("Can't open VNFS cache. Locked by another request.\n");
+                                $q->print("Content-Type: application/octet-stream\r\n");
+                                $q->print("Status: 500\r\n");
+                                $q->print("\r\n");
+                                exit;
+                            }
+
+                            &dprint("VNFS cache lock obtained.\n");
+                            
                             open($cache_fh, "> $vnfs_cachedir/$vnfs_name/image.$vnfs_checksum.$rand");
                             my $binstore = $db->binstore($obj->get("_id"));
 
@@ -87,6 +121,8 @@ if ($q->param('hwaddr')) {
                                 }
                                 $use_cache = 1;
                             }
+                            &unlock($fh);
+                            close($lock_fh) && unlink($lock_file);
                         }
                     }
 
