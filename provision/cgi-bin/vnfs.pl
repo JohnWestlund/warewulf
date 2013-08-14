@@ -96,33 +96,32 @@ if ($q->param('hwaddr')) {
                                 $q->print("Content-Type: application/octet-stream\r\n");
                                 $q->print("Status: 500\r\n");
                                 $q->print("\r\n");
-                                exit;
-                            }
-
-                            &dprint("VNFS cache lock obtained.\n");
+                            } else {
+                                &dprint("VNFS cache lock obtained.\n");
                             
-                            open($cache_fh, "> $vnfs_cachedir/$vnfs_name/image.$vnfs_checksum.$rand");
-                            my $binstore = $db->binstore($obj->get("_id"));
+                                open($cache_fh, "> $vnfs_cachedir/$vnfs_name/image.$vnfs_checksum.$rand");
+                                my $binstore = $db->binstore($obj->get("_id"));
 
-                            while(my $buffer = $binstore->get_chunk()) {
-                                print $cache_fh $buffer;
-                            }
-                            if (close($cache_fh)) {
-                                rename("$vnfs_cachedir/$vnfs_name/image.$vnfs_checksum.$rand", "$vnfs_cachedir/$vnfs_name/image.$vnfs_checksum");
-                                foreach my $image (glob("$vnfs_cachedir/$vnfs_name/image.*")) {
-                                    if ($image =~ /^([a-zA-Z0-9\/\-\._]+?\/image\.[a-zA-Z0-9]+)$/) {
-                                        $image = $1;
-                                        my $basename = basename($image);
-                                        if ($basename ne "image.$vnfs_checksum") {
-                                            &wprint("Clearing old vnfs cache: $image\n");
-                                            unlink($image);
+                                while(my $buffer = $binstore->get_chunk()) {
+                                    print $cache_fh $buffer;
+                                }
+                                if (close($cache_fh)) {
+                                    rename("$vnfs_cachedir/$vnfs_name/image.$vnfs_checksum.$rand", "$vnfs_cachedir/$vnfs_name/image.$vnfs_checksum");
+                                    foreach my $image (glob("$vnfs_cachedir/$vnfs_name/image.*")) {
+                                        if ($image =~ /^([a-zA-Z0-9\/\-\._]+?\/image\.[a-zA-Z0-9]+)$/) {
+                                            $image = $1;
+                                            my $basename = basename($image);
+                                            if ($basename ne "image.$vnfs_checksum") {
+                                                &wprint("Clearing old vnfs cache: $image\n");
+                                                unlink($image);
+                                            }
                                         }
                                     }
+                                    $use_cache = 1;
                                 }
-                                $use_cache = 1;
+                                &unlock($fh);
+                                close($lock_fh) && unlink($lock_file);
                             }
-                            &unlock($fh);
-                            close($lock_fh) && unlink($lock_file);
                         }
                     }
 
@@ -181,5 +180,5 @@ if ($q->param('hwaddr')) {
     $q->print("\r\n");
 }
 
-
+# vim: filetype=perl:syntax=perl:expandtab:ts=4:sw=4:
 
