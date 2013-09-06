@@ -75,7 +75,7 @@ name()
 {
     my $self = shift;
 
-    return $self->prop("name", qr/^([a-z0-9_\.\-]+)$/, @_);
+    return $self->prop("name", qr/^([a-zA-Z0-9_\.\-]+)$/, @_);
 }
 
 
