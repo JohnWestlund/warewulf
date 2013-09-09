@@ -81,8 +81,8 @@ available the included GPL software.
 # bootable after an upgrade. This may go away or prove unnecessary
 # later. But until then, we do this here and now only on an actual version
 # upgrade.
-if [ -w /dev/tty ]; then
-    echo "Rebuilding bootstrap objects; this may take a moment..." >/dev/tty
+if [ -e /dev/tty -a -w /dev/tty ] ; then
+    echo "Rebuilding bootstrap objects; this may take a moment..." >/dev/tty 2>/dev/null || :
 else
     echo "Rebuilding bootstrap objects; this may take a moment..."
 fi
