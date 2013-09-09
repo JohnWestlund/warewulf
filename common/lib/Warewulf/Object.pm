@@ -368,7 +368,7 @@ prop()
     if (scalar(@_) > 3) {
         my $name;
 
-        $name = $self->get("name") || "??UNKNOWN??";
+        $name = $self->get("name") || ref($self) || "??UNKNOWN??";
         if ($validator) {
             if (ref($validator) eq "Regexp") {
                 my $match = $validator;
