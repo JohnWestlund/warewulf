@@ -21,8 +21,15 @@ my $config = Warewulf::Config->new("vnfs.conf");
 my $randstring = &rand_string("12");
 my $output = "/tmp/$randstring.vnfs";
 my $command = "$0 ". join(" ", @ARGV);
+
+# Get our gzip command
 my $gzip_cmd = $config->get("gzip command") || "gzip -9";
 my ($gzip_bin, $gzip_opts) = split(/\s+/, $gzip_cmd, 2);
+if (! $gzip_opts) {
+    # Nothing was passed to the command in the config file
+    $gzip_opts = "";
+}
+
 my $opt_output;
 my $opt_chroot;
 my $opt_help;
