@@ -46,6 +46,8 @@ my $opt_hybrid;
 my $opt_yes;
 my @exclude_files;
 my @hybridize_files;
+my %exclude_map;
+my %hybridize_map;
 my $wwsh_bin;
 my $create_config;
 
@@ -122,7 +124,9 @@ $opt_name = shift(@ARGV);
 @opt_hybridize = split(",", join(",", @opt_hybridize));
 
 
+
 if (! $opt_name and $opt_chroot) {
+    $opt_chroot = $1;
     $opt_name = basename($opt_chroot);
     &nprint("Using '$opt_name' as the VNFS name\n");
 }
@@ -189,7 +193,7 @@ push(@hybridize_files, $config->get("excludes"));
 
 
 
-if ($opt_chroot and $opt_chroot =~ /^([a-zA-Z0-9\/\.\-_]+)$/) {
+if ($opt_chroot and $opt_chroot =~ /^([a-zA-Z0-9\/\.\-_]+?)\/?$/) {
     $opt_chroot = $1;
 } elsif ($opt_chroot) {
     &eprint("Chroot path contains illegal characters!\n");
@@ -277,6 +281,82 @@ if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
 
 &iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
 
+my $tmpdir = "/var/tmp/wwvnfs.". &rand_string(16);
+umask("0000");
+
+sub
+vnfs_create_file($)
+{
+    my $name = shift;
+    my $path = $File::Find::name;
+    my $dir = $File::Find::dir;
+
+    if ($name and $name =~ /^([a-zA-Z0-9\,\.\-_]+)$/) {
+        $name = $1;
+    }
+
+    if ($path) {
+        if ($path =~ /^\Q$opt_chroot\E(.*)$/) {
+            $path = $1;
+        } else {
+            &eprint("Path '$path' did not pass untaint check!\n");
+            exit 1;
+        }
+    }
+    if ($dir) {
+        if ($dir =~ /^\Q$opt_chroot\E(.*)$/) {
+            $dir = $1;
+        } else {
+            &eprint("Directory '$dir' did not pass untaint check!\n");
+            exit 1;
+        }
+    }
+
+    &dprint("Evaluating path '$path'\n");
+
+    if (exists($exclude_map{"$path"})) {
+        &dprint("Excluding file: $path\n");
+
+        if (exists($hybridize_map{"$path"})) {
+            &iprint("Hybridizing file: $path\n");
+            symlink("$opt_hybrid/$path", "$tmpdir/$path");
+        }
+
+    } elsif (-d "$opt_chroot/$path") {
+        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = stat("$opt_chroot/$path");
+        $mode = $mode & 07777;
+        &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
+        mkpath("$tmpdir/$path");
+        chown($uid, $gid, "$tmpdir/$path");
+        chmod($mode, "$tmpdir/$path");
+        utime($atime, $mtime, "$tmpdir/$path");
+    } elsif (-l "$opt_chroot/$path") {
+        my ($dev, $ino, $mode, $nlink, $uid, $gid) = lstat("$opt_chroot/$path");
+        $mode = $mode & 07777;
+        my $destination = readlink("$opt_chroot/$path");
+        &dprint("Creating symbolic link: $tmpdir/$path -> $destination\n");
+        if ($destination =~ /^(.+)$/) {
+            $destination = $1;
+        } else {
+            &eprint("WTF?!?!?!?! link destination didn't pass untaint check?\n");
+            exit 1;
+        }
+        symlink($destination, "$tmpdir/$path");
+        # Not setting ownership of symlinks... Yes, this is sucky, but a PITA as the
+        # Perl 'chown' command can not change link ownership, and they don't expose
+        # lchown system call.
+    } elsif (-f "$opt_chroot/$path") {
+        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = stat("$opt_chroot/$path");
+        $mode = $mode & 07777;
+        &dprint("Copying file: $tmpdir/$path\n");
+        copy("$opt_chroot/$path", "$tmpdir/$path");
+        chown($uid, $gid, "$tmpdir/$path");
+        chmod($mode, "$tmpdir/$path");
+        utime($atime, $mtime, "$tmpdir/$path");
+    }
+
+}
+
 
 &dprint("Starting main conditional\n");
 if (-d $opt_chroot) {
@@ -293,52 +373,45 @@ if (-d $opt_chroot) {
 
         if (@exclude_files or @hybridize_files) {
             &nprint("Building template VNFS image\n");
-            my $tmpdir = "/var/tmp/wwvnfs.". &rand_string(16);
             mkpath($tmpdir);
             &iprint("Creating temporary chroot at: $tmpdir\n");
-            system("cd $opt_chroot; cp -ax . $tmpdir");
-            if ($opt_hybrid) {
-                &nprint("Excluding and hybridizing files from VNFS\n");
-            } else {
-                &nprint("Excluding files from VNFS\n");
+
+            sub build_exclude_map {
+                my $file = $File::Find::name;
+                $file =~ s/^\Q$opt_chroot\E\/?/\//;
+                $exclude_map{"$file"} = 1;
+                &dprint("Adding file to exclude map: '$file'\n");
             }
 
             foreach my $line (@exclude_files) {
                 if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
-                    foreach my $file (glob("$tmpdir/$1")) {
-                        if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
-                            my $realfile = $1;
-                            if (-e "$tmpdir/$realfile") {
-                                &dprint("Excluding from VNFS: /$realfile\n");
-                                system("rm -rf $tmpdir/$realfile");
-                            } else {
-                                &iprint("Could not exclude, file not found in VNFS: /$realfile\n");
-                            }
+                    foreach my $glob (glob("$opt_chroot/$1")) {
+                        if (-e $glob) {
+                            &iprint("Finding all files to exclude at: '$glob'\n");
+                            find({ wanted => \&build_exclude_map, untaint => 1, untaint_pattern => '^([a-zA-Z0-9\,\.\-_\/]+)$', untaint_skip => 1}, $glob);
                         }
                     }
-                } else {
-                    &eprint("Exclude entry has illegal characters: $line\n");
+                }
+            }
+            foreach my $line (@hybridize_files) {
+                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
+                    foreach my $glob (glob("$opt_chroot/$1")) {
+                        if (-e $glob) {
+                            # When hybridizing, we always exclude, and we must exclude everything under the top level.
+                            &iprint("Finding all files to exclude at: '$glob' (to be hybridized)\n");
+                            find({ wanted => \&build_exclude_map, untaint => 1, untaint_pattern => '^([a-zA-Z0-9\,\.\-_\/]+)$', untaint_skip => 1}, $glob);
+                            # Add the top level exclude to be symlinked back when creating files.
+                            $glob =~ s/^\Q$opt_chroot\E\/?/\//;
+                            $hybridize_map{"$glob"} = 1;
+                            &dprint("Adding file to hybridize map: '$glob'\n");
+                        }
+                    }
                 }
             }
 
-            foreach my $line (@hybridize_files) {
-                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
-                    foreach my $file (glob("$tmpdir/$1")) {
-                        if ($file =~ /^\Q$tmpdir\E\/+([a-zA-Z0-9_\-\/\.]+?)\/?$/) {
-                            my $realfile = $1;
-                            if (-e "$tmpdir/$realfile") {
-                                &dprint("Hybridizing location in VNFS: /$realfile\n");
-                                system("rm -rf $tmpdir/$realfile");
-                                system("ln -s $opt_hybrid/$realfile $tmpdir/$realfile");
-                            } else {
-                                &iprint("Could not hybridize, file not found in VNFS: /$realfile\n");
-                            }
-                        }
-                    }
-                } else {
-                    &eprint("Hybridize entry has illegal characters: $line\n");
-                }
-            }
+
+            &iprint("Starting file find/copy in '$opt_chroot'\n");
+            find({ wanted => \&vnfs_create_file, untaint => 1, untaint_pattern => '^([a-zA-Z0-9\,\.\-_\/]+)$', untaint_skip => 1}, $opt_chroot);
 
             &nprint("Building and compressing the final image\n");
             system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
