@@ -126,7 +126,6 @@ $opt_name = shift(@ARGV);
 
 
 if (! $opt_name and $opt_chroot) {
-    $opt_chroot = $1;
     $opt_name = basename($opt_chroot);
     &nprint("Using '$opt_name' as the VNFS name\n");
 }
