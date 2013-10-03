@@ -426,8 +426,6 @@ if (-d $opt_chroot) {
             &iprint("Starting file find/copy in '$opt_chroot'\n");
             find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
 
-            exit;
-
             &nprint("Building and compressing the final image\n");
             system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
             &nprint("Cleaning temporary files\n");
