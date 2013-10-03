@@ -10,12 +10,19 @@
 use Warewulf::Util;
 use Warewulf::Logger;
 use Warewulf::Config;
-use Cwd;
 use File::Basename;
 use File::Copy;
 use File::Path;
 use File::Find;
 use Getopt::Long;
+use Fcntl ':mode';
+use POSIX;
+{
+    local $^W = 0;
+    require "sys/sysmacros.ph";
+    require "sys/types.ph";
+    require "syscall.ph";
+}
 
 my $config = Warewulf::Config->new("vnfs.conf");
 my $randstring = &rand_string("12");
@@ -48,6 +55,7 @@ my @exclude_files;
 my @hybridize_files;
 my %exclude_map;
 my %hybridize_map;
+my %link_map;
 my $wwsh_bin;
 my $create_config;
 
@@ -286,28 +294,14 @@ umask("0000");
 sub
 vnfs_create_file($)
 {
-    my $name = shift;
     my $path = $File::Find::name;
-    my $dir = $File::Find::dir;
-
-    if ($name and $name =~ /^([a-zA-Z0-9\,\.\-_]+)$/) {
-        $name = $1;
-    }
 
     if ($path) {
-        if ($path =~ /^\Q$opt_chroot\E(.*)$/) {
+        if ($path =~ /^\Q$opt_chroot\E([[:print:]]*)$/) {
             $path = $1;
         } else {
-            &eprint("Path '$path' did not pass untaint check!\n");
-            exit 1;
-        }
-    }
-    if ($dir) {
-        if ($dir =~ /^\Q$opt_chroot\E(.*)$/) {
-            $dir = $1;
-        } else {
-            &eprint("Directory '$dir' did not pass untaint check!\n");
-            exit 1;
+            &eprint("Path '$path' did not pass untaint check, skipping.\n");
+            return;
         }
     }
 
@@ -321,39 +315,59 @@ vnfs_create_file($)
             symlink("$opt_hybrid/$path", "$tmpdir/$path");
         }
 
-    } elsif (-d "$opt_chroot/$path") {
-        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = stat("$opt_chroot/$path");
-        $mode = $mode & 07777;
-        &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
-        mkpath("$tmpdir/$path");
-        chown($uid, $gid, "$tmpdir/$path");
-        chmod($mode, "$tmpdir/$path");
-        utime($atime, $mtime, "$tmpdir/$path");
-    } elsif (-l "$opt_chroot/$path") {
-        my ($dev, $ino, $mode, $nlink, $uid, $gid) = lstat("$opt_chroot/$path");
-        $mode = $mode & 07777;
-        my $destination = readlink("$opt_chroot/$path");
-        &dprint("Creating symbolic link: $tmpdir/$path -> $destination\n");
-        if ($destination =~ /^(.+)$/) {
-            $destination = $1;
-        } else {
-            &eprint("WTF?!?!?!?! link destination didn't pass untaint check?\n");
-            exit 1;
-        }
-        symlink($destination, "$tmpdir/$path");
-        # Not setting ownership of symlinks... Yes, this is sucky, but a PITA as the
-        # Perl 'chown' command can not change link ownership, and they don't expose
-        # lchown system call.
-    } elsif (-f "$opt_chroot/$path") {
-        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = stat("$opt_chroot/$path");
-        $mode = $mode & 07777;
-        &dprint("Copying file: $tmpdir/$path\n");
-        copy("$opt_chroot/$path", "$tmpdir/$path");
-        chown($uid, $gid, "$tmpdir/$path");
-        chmod($mode, "$tmpdir/$path");
-        utime($atime, $mtime, "$tmpdir/$path");
-    }
+    } else {
+        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = lstat("$opt_chroot/$path");
 
+        if (S_ISLNK($mode)) {
+            my $destination = readlink("$opt_chroot/$path");
+            &dprint("Creating symbolic link: $tmpdir/$path -> $destination\n");
+            if ($destination =~ /^([[:print:]]+)$/) {
+                $destination = $1;
+            } else {
+                &eprint("Link destination '$destination' did not pass untaint check, skipping.\n");
+                return;
+            }
+            symlink($destination, "$tmpdir/$path");
+            # Not setting ownership of symlinks... Yes, this is sucky, but a PITA as the
+            # Perl 'chown' command can not change link ownership, and they don't expose
+            # lchown system call.
+        } elsif (exists($link_map{"$dev-$ino"})) {
+            my $destination = $link_map{"$dev-$ino"};
+            &dprint("Creating hard link: $tmpdir/$path -> $destination\n");
+            link($destination, "$tmpdir/$path");
+        } else {
+            if (S_ISDIR($mode)) {
+                &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
+                mkpath("$tmpdir/$path");
+            } elsif (S_ISREG($mode)) {
+                &dprint("Copying file: $tmpdir/$path\n");
+                copy("$opt_chroot/$path", "$tmpdir/$path");
+            } elsif (S_ISBLK($mode)) {
+                my $perm = ($mode & 07777);
+                $perm |= S_IFBLK;
+                &iprint("Creating block device: $tmpdir/$path\n");
+                syscall(&SYS_mknod, "$tmpdir/$path", $perm, $rdev);
+            } elsif (S_ISCHR($mode)) {
+                my $perm = ($mode & 07777);
+                $perm |= S_IFCHR;
+                &iprint("Creating char device: $tmpdir/$path\n");
+                syscall(&SYS_mknod, "$tmpdir/$path", $perm, $rdev);
+            } elsif (S_ISFIFO($mode)) {
+                my $perm = ($mode & 07777);
+                $perm |= S_IFIFO;
+                &iprint("Creating fifo: $tmpdir/$path\n");
+                syscall(&SYS_mknod, "$tmpdir/$path", $perm, 0);
+            } else {
+                # If we got here, we don't know how to deal with this file... Skip it!
+                &eprint("Skipping unknown file type: $opt_chroot/$path\n");
+                return;
+            }
+            chown($uid, $gid, "$tmpdir/$path");
+            chmod($mode & 07777, "$tmpdir/$path");
+            utime($atime, $mtime, "$tmpdir/$path");
+            $link_map{"$dev-$ino"} = "$tmpdir/$path";
+        }
+    }
 }
 
 
@@ -387,7 +401,7 @@ if (-d $opt_chroot) {
                     foreach my $glob (glob("$opt_chroot/$1")) {
                         if (-e $glob) {
                             &iprint("Finding all files to exclude at: '$glob'\n");
-                            find({ wanted => \&build_exclude_map, untaint => 1, untaint_pattern => '^([a-zA-Z0-9\,\.\-_\/]+)$', untaint_skip => 1}, $glob);
+                            find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
                         }
                     }
                 }
@@ -398,7 +412,7 @@ if (-d $opt_chroot) {
                         if (-e $glob) {
                             # When hybridizing, we always exclude, and we must exclude everything under the top level.
                             &iprint("Finding all files to exclude at: '$glob' (to be hybridized)\n");
-                            find({ wanted => \&build_exclude_map, untaint => 1, untaint_pattern => '^([a-zA-Z0-9\,\.\-_\/]+)$', untaint_skip => 1}, $glob);
+                            find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
                             # Add the top level exclude to be symlinked back when creating files.
                             $glob =~ s/^\Q$opt_chroot\E\/?/\//;
                             $hybridize_map{"$glob"} = 1;
@@ -410,7 +424,9 @@ if (-d $opt_chroot) {
 
 
             &iprint("Starting file find/copy in '$opt_chroot'\n");
-            find({ wanted => \&vnfs_create_file, untaint => 1, untaint_pattern => '^([a-zA-Z0-9\,\.\-_\/]+)$', untaint_skip => 1}, $opt_chroot);
+            find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
+
+            exit;
 
             &nprint("Building and compressing the final image\n");
             system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
