@@ -21,16 +21,6 @@ sanity_check() {
 
 prechroot() {
 
-    if [ -n "$OS_MIRROR" ]; then
-        YUM_MIRROR="$OS_MIRROR"
-    fi
-
-    if [ -z "$YUM_MIRROR" ]; then
-        echo "ERROR: You must define the \$YUM_MIRROR variable in the template"
-        cleanup
-        exit 1
-    fi
-
     VERSION=`rpm -qf /etc/redhat-release  --qf '%{VERSION}\n'`
 
     mkdir -p $CHROOTDIR
@@ -66,16 +56,33 @@ prechroot() {
     else
         for i in `ls -d $MEDIA_MOUNTPATH.*`; do
             if [ -z "$INSTALLDIRS" ]; then
-                INSTALLDIRS="file://$i"
+                if [ -d $i/Server ]; then
+                    INSTALLDIRS="file://$i/Server"
+                else
+                    INSTALLDIRS="file://$i"
+                fi
             else
                 INSTALLDIRS="$INSTALLDIRS,file://$i"
             fi
+
         done
         echo "[$REPO_NAME]" >> $CHROOTDIR/$YUM_CONF
         echo 'name=Linux $releasever - $basearch' >> $CHROOTDIR/$YUM_CONF
         echo "baseurl=$INSTALLDIRS" >> $CHROOTDIR/$YUM_CONF
         echo "enabled=1" >> $CHROOTDIR/$YUM_CONF
         echo "gpgcheck=0" >> $CHROOTDIR/$YUM_CONF
+
+        YUM_MIRROR=$INSTALLDIRS
+    fi
+
+    if [ -n "$OS_MIRROR" ]; then
+        YUM_MIRROR="$OS_MIRROR"
+    fi
+
+    if [ -z "$YUM_MIRROR" ]; then
+        echo "ERROR: You must define the \$YUM_MIRROR variable in the template"
+        cleanup
+        exit 1
     fi
 
 }
