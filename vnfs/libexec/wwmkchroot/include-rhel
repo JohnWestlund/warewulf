@@ -31,6 +31,15 @@ prechroot() {
         exit 1
     fi
 
+    VERSION=`rpm -qf /etc/redhat-release  --qf '%{VERSION}\n'`
+
+    mkdir -p $CHROOTDIR
+    mkdir -p $CHROOTDIR/etc
+
+    cp -rap /etc/yum.conf /etc/yum.repos.d $CHROOTDIR/etc
+    sed -i -e "s/\$releasever/$VERSION/g" `find $CHROOTDIR/etc/yum* -type f`
+
+
     YUM_CONF_DIRNAME=`dirname $YUM_CONF`
     mkdir -m 0755 -p $CHROOTDIR/$YUM_CONF_DIRNAME
 
