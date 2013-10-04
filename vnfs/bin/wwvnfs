@@ -166,6 +166,8 @@ if (! $opt_hybridizefile) {
 if (! $opt_hybrid) {
     $opt_hybrid = $config->get("hybridpath");
 }
+
+#TODO: Include file support
 if (! $opt_includefile) {
     $opt_includefile = $config->get("includefile");
 }
@@ -311,7 +313,7 @@ vnfs_create_file($)
         &dprint("Excluding file: $path\n");
 
         if (exists($hybridize_map{"$path"})) {
-            &iprint("Hybridizing file: $path\n");
+            &iprint("Hybridizing location: $tmpdir/$path\n");
             symlink("$opt_hybrid/$path", "$tmpdir/$path");
         }
 
@@ -334,7 +336,10 @@ vnfs_create_file($)
         } elsif (exists($link_map{"$dev-$ino"})) {
             my $destination = $link_map{"$dev-$ino"};
             &dprint("Creating hard link: $tmpdir/$path -> $destination\n");
-            link($destination, "$tmpdir/$path");
+            if (! link($destination, "$tmpdir/$path")) {
+                &wprint("Could not create hardlink of $tmpdir/$path. Copying file instead.\n");
+                copy("$opt_chroot/$path", "$tmpdir/$path");
+            }
         } else {
             if (S_ISDIR($mode)) {
                 &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
@@ -342,21 +347,9 @@ vnfs_create_file($)
             } elsif (S_ISREG($mode)) {
                 &dprint("Copying file: $tmpdir/$path\n");
                 copy("$opt_chroot/$path", "$tmpdir/$path");
-            } elsif (S_ISBLK($mode)) {
-                my $perm = ($mode & 07777);
-                $perm |= S_IFBLK;
-                &iprint("Creating block device: $tmpdir/$path\n");
-                syscall(&SYS_mknod, "$tmpdir/$path", $perm, $rdev);
-            } elsif (S_ISCHR($mode)) {
-                my $perm = ($mode & 07777);
-                $perm |= S_IFCHR;
-                &iprint("Creating char device: $tmpdir/$path\n");
-                syscall(&SYS_mknod, "$tmpdir/$path", $perm, $rdev);
-            } elsif (S_ISFIFO($mode)) {
-                my $perm = ($mode & 07777);
-                $perm |= S_IFIFO;
-                &iprint("Creating fifo: $tmpdir/$path\n");
-                syscall(&SYS_mknod, "$tmpdir/$path", $perm, 0);
+            } elsif (S_ISBLK($mode) or S_ISCHR($mode) or S_ISFIFO($mode) or S_ISSOCK($mode)) {
+                &iprint("Creating special file: $tmpdir/$path\n");
+                syscall(&SYS_mknod, "$tmpdir/$path", $mode, $rdev);
             } else {
                 # If we got here, we don't know how to deal with this file... Skip it!
                 &eprint("Skipping unknown file type: $opt_chroot/$path\n");
@@ -377,72 +370,53 @@ if (-d $opt_chroot) {
     if (-x "$opt_chroot/sbin/init") {
         &dprint("Checking to see if the target is a VNFS file\n");
         my $dirname = dirname($output);
-        if (! -d $dirname) {
-            &iprint("Creating target VNFS parent directory\n");
-            mkpath($dirname);
+
+        &nprint("Creating VNFS image from $opt_name\n");
+
+        sub build_exclude_map {
+            my $file = $File::Find::name;
+            $file =~ s/^\Q$opt_chroot\E\/?/\//;
+            $exclude_map{"$file"} = 1;
+            &dprint("Adding file to exclude map: '$file'\n");
         }
 
-        &nprint("Creating VNFS image for $opt_name\n");
-
-        if (@exclude_files or @hybridize_files) {
-            &nprint("Building template VNFS image\n");
-            mkpath($tmpdir);
-            &iprint("Creating temporary chroot at: $tmpdir\n");
-
-            sub build_exclude_map {
-                my $file = $File::Find::name;
-                $file =~ s/^\Q$opt_chroot\E\/?/\//;
-                $exclude_map{"$file"} = 1;
-                &dprint("Adding file to exclude map: '$file'\n");
-            }
-
-            foreach my $line (@exclude_files) {
-                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
-                    foreach my $glob (glob("$opt_chroot/$1")) {
-                        if (-e $glob) {
-                            &iprint("Finding all files to exclude at: '$glob'\n");
-                            find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
-                        }
+        foreach my $line (@exclude_files) {
+            if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
+                foreach my $glob (glob("$opt_chroot/$1")) {
+                    if (-e $glob) {
+                        &iprint("Finding all files to exclude at: '$glob'\n");
+                        find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
                     }
                 }
             }
-            foreach my $line (@hybridize_files) {
-                if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
-                    foreach my $glob (glob("$opt_chroot/$1")) {
-                        if (-e $glob) {
-                            # When hybridizing, we always exclude, and we must exclude everything under the top level.
-                            &iprint("Finding all files to exclude at: '$glob' (to be hybridized)\n");
-                            find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
-                            # Add the top level exclude to be symlinked back when creating files.
-                            $glob =~ s/^\Q$opt_chroot\E\/?/\//;
-                            $hybridize_map{"$glob"} = 1;
-                            &dprint("Adding file to hybridize map: '$glob'\n");
-                        }
+        }
+
+        foreach my $line (@hybridize_files) {
+            if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
+                foreach my $glob (glob("$opt_chroot/$1")) {
+                    if (-e $glob) {
+                        # When hybridizing, we always exclude, and we must exclude everything under the top level.
+                        &iprint("Finding all files to exclude at: '$glob' (to be hybridized)\n");
+                        find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
+                        # Add the top level exclude to be symlinked back when creating files.
+                        $glob =~ s/^\Q$opt_chroot\E\/?/\//;
+                        $hybridize_map{"$glob"} = 1;
+                        &dprint("Adding file to hybridize map: '$glob'\n");
                     }
                 }
             }
-
-
-            &iprint("Starting file find/copy in '$opt_chroot'\n");
-            find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
-
-            &nprint("Building and compressing the final image\n");
-            system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
-            &nprint("Cleaning temporary files\n");
-            system("rm -rf $tmpdir");
-        } elsif ($opt_includefile) {
-            if ($opt_includefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
-                $opt_includefile = $1;
-
-            } else {
-                &eprint("Illegal characters in include file path\n");
-                exit 1;
-            }
-
-        } else {
-            &nprint("Building and compressing VNFS image\n");
-            system("(cd $opt_chroot; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
         }
+
+        &iprint("Creating target chroot at: $tmpdir\n");
+        mkpath($tmpdir);
+
+        &nprint("Building new chroot...\n");
+        find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
+
+        &nprint("Building and compressing the final image\n");
+        system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
+        &nprint("Cleaning temporary files\n");
+        system("rm -rf $tmpdir");
 
         if (-f $output) {
             if ($opt_output) {
