@@ -1,6 +1,7 @@
 
 
 REPO_NAME="os-base"
+YUM_CONF="$CHROOTDIR/root/yum-ww.conf"
 YUM_CONF="/root/yum-ww.conf"
 YUM_CMD="yum -c $CHROOTDIR/$YUM_CONF --tolerant --installroot $CHROOTDIR -y"
 
@@ -21,6 +22,12 @@ sanity_check() {
 
 prechroot() {
 
+    if [[ -z "$YUM_MIRROR" && -z "$INSTALL_ISO" ]]; then
+        echo "ERROR: You must define the \$YUM_MIRROR variable in the template"
+        cleanup
+        exit 1
+    fi
+
     VERSION=`rpm -qf /etc/redhat-release  --qf '%{VERSION}\n'`
 
     mkdir -p $CHROOTDIR
@@ -28,7 +35,6 @@ prechroot() {
 
     cp -rap /etc/yum.conf /etc/yum.repos.d $CHROOTDIR/etc
     sed -i -e "s/\$releasever/$VERSION/g" `find $CHROOTDIR/etc/yum* -type f`
-
 
     YUM_CONF_DIRNAME=`dirname $YUM_CONF`
     mkdir -m 0755 -p $CHROOTDIR/$YUM_CONF_DIRNAME
@@ -56,15 +62,16 @@ prechroot() {
     else
         for i in `ls -d $MEDIA_MOUNTPATH.*`; do
             if [ -z "$INSTALLDIRS" ]; then
-                if [ -d $i/Server ]; then
-                    INSTALLDIRS="file://$i/Server"
-                else
+                if [ -d $i/repodata ]; then
+                    # RHEL 6.x
                     INSTALLDIRS="file://$i"
+                elif [ -d $i/Server/repodata ]; then
+                    # RHEL 5.x
+                    INSTALLDIRS="file://$i/Server"
                 fi
             else
                 INSTALLDIRS="$INSTALLDIRS,file://$i"
             fi
-
         done
         echo "[$REPO_NAME]" >> $CHROOTDIR/$YUM_CONF
         echo 'name=Linux $releasever - $basearch' >> $CHROOTDIR/$YUM_CONF
@@ -77,12 +84,6 @@ prechroot() {
 
     if [ -n "$OS_MIRROR" ]; then
         YUM_MIRROR="$OS_MIRROR"
-    fi
-
-    if [ -z "$YUM_MIRROR" ]; then
-        echo "ERROR: You must define the \$YUM_MIRROR variable in the template"
-        cleanup
-        exit 1
     fi
 
 }
