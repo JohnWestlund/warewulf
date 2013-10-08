@@ -43,7 +43,7 @@
 # distribute, and sublicense such enhancements or derivative works thereof,
 # in binary and source code form.
 #
-## Copyright (c) 2013, Intel(R) Corporation
+## Copyright (c) 2013, Intel(R) Corporation{
 ##
 ## Redistribution and use in source and binary forms, with or without 
 ## modification, are permitted provided that the following conditions are met:
@@ -68,9 +68,9 @@
 ## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
 ## POSSIBILITY OF SUCH DAMAGE.
-##
+##}
 #
-#DESC: Intel Cluster Ready 1.2 Overlay for Red Hat
+#DESC: Intel Cluster Ready 1.3 Overlay for Red Hat
 
 # The general RHEL include has all of the necessary functions, but requires
 # some basic variables specific to each chroot type to be defined.
@@ -82,25 +82,44 @@ export FUNCTIONS="sanity_check
                   overlay
                   cleanup"
 
+FIX=""
+EXT32="i686"
+INSTVER=`cat $CHROOTDIR/etc/redhat-release | rev | cut -f 2 -d ' ' | rev`
+#INSTVER=`rpm --root=$CHROOTDIR -qf /etc/redhat-release --qf '%{VERSION}'`
+
+if echo $INSTVER | grep -q ^5; then
+    EXT32="i386"
+    FIX="glibc.i686 openssl097a.i386 openssl097a.x86_64 openssl.i686 \
+    openssl-devel.i386 ncurses.i386 ncurses-devel.x86_64 ncurses-devel.i386 \
+    libcap.i386 libcap.x86_64";
+fi
+
+LIBJPEG="libjpeg.x86_64 libjpeg.${EXT32}"
+
+if [[ "x6.4" = "x${INSTVER}" ]]; then
+    # We're 6.4. libjpeg rename
+    LIBJPEG="libjpeg-turbo.x86_64 libjpeg-turbo.${EXT32}"
+fi
 
 # Many of these will probably be installed, but best to be sure!
-ICRPKG="bzip2-libs.i686 bzip2-libs.x86_64 compat-libcap1.i686 \
-    compat-libcap1.x86_64 compat-libstdc++-33.i686 compat-libstdc++-33.x86_64 \
-    fontconfig.x86_64 freetype.x86_64 glibc.i686 glibc.x86_64 glx-utils.x86_64 \
-    java-1.6.0-openjdk ksh libacl.i686 libacl.x86_64 libattr.i686 libattr.x86_64 \
-    libcap.i686 libdrm.x86_64 libgcc.i686 libgcc.x86_64 libICE.x86_64 libjpeg.i686 \
-    libjpeg.x86_64 libselinux.i686 libselinux.x86_64 libsepol.i686 libsepol.x86_64 \
-    libSM.x86_64 libstdc++.i686 libstdc++.x86_64 libuuid.i686 libX11.x86_64 \
+ICRPKG="bzip2-libs.${EXT32} bzip2-libs.x86_64 compat-libcap1.${EXT32} \
+    compat-libcap1.x86_64 compat-libstdc++-33.${EXT32} compat-libstdc++-33.x86_64 \
+    fontconfig.x86_64 freetype.x86_64 glibc.${EXT32} glibc.x86_64 glx-utils.x86_64 \
+    java-1.6.0-openjdk ksh libacl.${EXT32} libacl.x86_64 libattr.${EXT32} libattr.x86_64 \
+    libcap.${EXT32} libdrm.x86_64 libgcc.${EXT32} libgcc.x86_64 libICE.x86_64 \
+    libselinux.${EXT32} libselinux.x86_64 libsepol.${EXT32} libsepol.x86_64 selinux-policy \
+    libSM.x86_64 libstdc++.${EXT32} libstdc++.x86_64 libuuid.${EXT32} libX11.x86_64 \
     libXau.x86_64 libXcomposite.x86_64 libXcursor.x86_64 libXdamage.x86_64 \
     libXdmcp.x86_64 libXext.x86_64 libXfixes.x86_64 libXfont.x86_64 libXft.x86_64 \
     libXi.x86_64 libXinerama.x86_64 libXmu.x86_64 libXp.x86_64 libXrandr.x86_64 \
     libXrender.x86_64 libXres.x86_64 libXScrnSaver.x86_64 libXt.x86_64 \
     libXtst.x86_64 libXv.x86_64 libXvMC.x86_64 libXxf86dga.x86_64 \
-    libXxf86misc.x86_64 libXxf86vm.x86_64 lsof mesa-libGL.x86_64 ncurses-libs.i686 \
-    ncurses-libs.x86_64 nss-pam-ldapd.i686 nss-pam-ldapd.x86_64 ntp ntpdate \
-    numactl.i686 numactl.x86_64 openssl098e.i686 openssl098e.x86_64 pam.i686 \
+    libXxf86misc.x86_64 libXxf86vm.x86_64 lsof mesa-libGL.x86_64 ncurses-libs.${EXT32} \
+    ncurses-libs.x86_64 nss-pam-ldapd.${EXT32} nss-pam-ldapd.x86_64 ntp ntpdate \
+    numactl.${EXT32} numactl.x86_64 openssl098e.${EXT32} openssl098e.x86_64 pam.${EXT32} \
     pam.x86_64 redhat-lsb tcl tcsh xorg-x11-apps.x86_64 xorg-x11-drv-intel.x86_64 \
-    xorg-x11-utils.x86_64 xorg-x11-xauth.x86_64 xterm.x86_64 zlib.i686 zlib.x86_64"
+    xorg-x11-utils.x86_64 xorg-x11-xauth.x86_64 xterm.x86_64 zlib.${EXT32} zlib.x86_64 \
+    ${LIBJPEG} ${FIX}"
 
 sanity_check() { 
     if ! rpm -q yum >/dev/null 2>&1; then
