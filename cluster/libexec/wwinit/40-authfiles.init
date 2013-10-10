@@ -21,9 +21,7 @@ fi
 
 wwreqroot
 
-
 RETVAL=1
-
 
 wwprint "Checking to see if /etc/passwd is in the WW Datastore"
 if ! wwtest wwsh file list passwd; then
@@ -34,11 +32,12 @@ if ! wwtest wwsh file list passwd; then
         exit 255
     fi
 fi
+
 wwprint "Checking if /etc/passwd is part of default node configuration\n"
-if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
-    if ! grep "^files " /etc/warewulf/defaults/provision.conf | grep -q "passwd"; then
+if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf" ]; then
+    if ! grep "^files " $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf | grep -q "passwd"; then
         wwprint "Adding passwd to default new node configuration\n"
-        echo "files += passwd" >> /etc/warewulf/defaults/provision.conf
+        echo "files += passwd" >> $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf
     fi
 fi
 
@@ -51,13 +50,14 @@ if ! wwtest wwsh file list group; then
         exit 255
     fi
 fi
+
 wwprint "Checking if /etc/group is part of default node configuration\n"
-if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
-    if ! grep "^files " /etc/warewulf/defaults/provision.conf | grep -q "group"; then
+if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf" ]; then
+    if ! grep "^files " $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf | grep -q "group"; then
         wwprint "Adding group to default new node configuration\n"
-        echo "files += group" >> /etc/warewulf/defaults/provision.conf
+        echo "files += group" >> $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf
     fi
 fi
 
-
 exit $RETVAL
+

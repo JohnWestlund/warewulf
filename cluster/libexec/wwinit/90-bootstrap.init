@@ -28,14 +28,13 @@ wwprint "Checking on a Warewulf bootstrap"
 if ! wwtest wwsh bootstrap list; then
     wwprint "Creating bootstrap for $KVERSION:\n"
     if wwrun wwbootstrap $KVERSION; then
-        if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
-            sed -i -e "s/^.*bootstrap[ ]*=.*/bootstrap = $KVERSION/" /etc/warewulf/defaults/provision.conf
+        if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf" ]; then
+            sed -i -e "s/^.*bootstrap[ ]*=.*/bootstrap = $KVERSION/" $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf
         fi
         RETVAL=0
     else
         exit 255
     fi
 fi
-
 
 exit $RETVAL
