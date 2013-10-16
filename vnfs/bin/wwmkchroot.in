@@ -13,12 +13,50 @@ prefix="@prefix@"
 exec_prefix="@exec_prefix@"
 libexecdir="@libexecdir@"
 
+# add support for a more diverse context based help
+print_help () {
+
+    if [[ -z $HELPFILE ]]
+    then
+        usage ;
+    else
+        #### Loading help files
+        if [ -d "$libexecdir/warewulf/wwmkchroot" ]; then
+            pushd $libexecdir/warewulf/wwmkchroot >/dev/null
+            if [ -f "$HELPFILE.hlp" ]; then
+                . "$HELPFILE.hlp" ;
+
+		# create function print_full_help inside new help files 
+                ## context specific help
+                print_full_help ;
+            else
+				echo "Review available help context and try your search again."
+                echo "$0: Error: Can not find $libexecdir/warewulf/wwmkchroot/$helpfile.hlp"
+                exit 1
+            fi
+            popd >/dev/null
+        else
+            echo "ERROR: Template directory ($libexecdir/warewulf/wwmkchroot) does not exist!"
+            exit 1
+        fi
+    fi
+}
+
 usage() {
     echo "$0 [options] TEMPLATE_NAME PATH"
     echo
     echo "OPTIONS:"
     echo "    -d        Debug output"
     echo "    -h        Usage summary"
+    echo
+    echo
+    echo "Context Help:"
+    for i in $libexecdir/warewulf/wwmkchroot/*.hlp; do
+        NAME=`basename $i | sed -e 's/\.hlp$//'`
+        DESC=`grep '^#DESC: ' $i | sed -e 's/#DESC: //'`
+        echo "    -h $(printf " %-20s %s\n" "$NAME" "$DESC")"
+    done
+    echo
     echo
     echo "TEMPLATE_NAME (select one of the following):"
     for i in $libexecdir/warewulf/wwmkchroot/*.tmpl; do
@@ -48,7 +86,9 @@ while getopts "a:dhv" opt; do
             VERBOSE=1
         ;;
         h)
-            usage
+			shift $((OPTIND-1))
+			HELPFILE=$1
+            print_help ;
             exit
         ;;
         a)

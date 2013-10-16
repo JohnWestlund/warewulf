@@ -1,0 +1,132 @@
+cat <<EOF
+
+	This is designed to create vnfs frameworks for a wide range of distros and
+	hardware. No matter which bash capable distro or hardware architecture the
+	host machine may be.
+
+	FEATURES:
+
+		cross debootstrap:
+			Automatically uses QEMU to build vnfs for non native architecture 
+			ie. create a 32 bit vnfs on a 64 bit machine or other debian supported arch.
+			note: Building a 64 bit vnfs on a 32 operating system is likely to fail.
+
+		multiple .deb flavors:
+			By default will allow the creation of any release of Debian or Ubuntu.
+			Options exist to allow creation of most any version/architecture from
+			most any distro/repository.
+
+		warewulf import:
+			Chose to allow ( wwbootstrap  and/or wwvnfs ) to automatically import the
+			created vnfs into warewulf.
+
+		After vnfs creation, it is easy to add additional packages in the chroot environment
+		by using the included package manager for .deb based systems.
+
+			wwmkchroot -h deb-pkgmanager
+
+
+
+	TROUBLESHOOTING:
+
+          Building a 64 bit vnfs on a 32 operating system is likely to fail. Theoretically, QEMU should
+          allow the creation of 64 bit vnfs on a 32 bit OS. This may or may not be possible with 64 bit
+          kernel installed, and a CPU that supports virtualization, which must also be turned on in BIOS.
+          
+
+          There are times when building a vnfs for a distro different from the host machine, the
+          host system will fail to find the correct debootsrap build file. Many times the files
+          in question only need be a link to some standard file. For instance, when trying to
+          build an Ubuntu vnfs on a Debian host system, you may encounter an error as such :
+			  No such script: /usr/share/debootstrap/scripts/oneiric
+
+          You may choose one of the following two options to solve this type of error.
+          For instance, the script to debootstrap an Ubuntu oneiric system is the same script used for the
+          Debian gutsy release. A system wide solution would be to create a correctly named symbolic link
+          pointing to the required file. Such a solution would look like:
+
+		     sudo ln -s -T /usr/share/debootstrap/scripts/gutsy /usr/share/debootstrap/scripts/oneiric
+
+          When creating such a link is undesirable, another solution would be to add the following variable
+          to the recipe file.
+
+          QEMUFILENAME="/usr/share/debootstrap/scripts/oneiric"
+
+
+          Errors like the following are caused by a mismatch between distro and codename.
+          This error was created by trying to use an Ubuntu codename with a Debian repository.
+          Debian servers do not have Ubuntu repos.
+
+		     Failed getting release file http://ftp.us.debian.org/debian/dists/oneiric/Release
+
+
+	RECIPE'S:
+
+		Lines starting with # are comments and will be ignored.
+
+	Manditory Ingredients:
+		These variable are the minimun required, and must be in all recipe files.
+
+          DISTRO
+          ARCH
+          CODENAME
+          
+
+	Advanced Options:
+          There are 2 ways to include values in recipe files. You can either
+          add additional choices to the default list, or you can override
+          the defaults using one of the following options.
+
+	______________________________________________________________________
+          This format will add additional values to the defaults.
+          Only this variable support this format.
+
+          COMPONENTS="${COMPONENTS},source1,source-2,source_3"
+
+	______________________________________________________________________
+
+          This format will override and replace the defaults, and only these values will
+          be used. Usefull for when needing specific package versions such as kernel's
+          or excluding files and/or directories from being imported into warewulf etc .. 
+	______________________________________________________________________
+
+          
+          AUTO=1	-	The default behavior is to prompt the user to validate the steps taken
+                        This option will not prompt and force the default action for all questions.
+		
+          NO_GPG=1	-	Skip signature validation for secure mirrors.
+
+          MEMLOCK="8388608"
+
+          VARIANT="minbase"
+
+          QEMUFILENAME="qemu-arm-static"
+
+          NEWHOSTNAME="Deb-Nodes"     -     Set a default host name for the nodes
+
+          COMPONENTS="source1,source-2,source_3"    -    Change componets such as main contrib
+
+          PKGLIST="package1 package-2 package_3"    -    Replace the default package list with these
+
+          EXCLUDEPKG="package1 package-2 package_3" -    Debootstrap will exclude these packages from the install
+
+          OS_MIRROR="http://packages.linuxmint.com" -    Set a custom mirror for deboostrap to get its packages from.
+
+          EXCLUSIONS="/path_to/file /path_to/directory" - These are warewulf exclusions that will be omitted from the vnfs capsule
+
+
+          Will auto mount iso's for inclusion in vnfs capsules sources.list file
+          NOTE: debootstrap will NOT install from these. They will be added to the
+          top of the sources.list available for future chroot apt package management.
+
+          INSTALL_ISO="/path/to/iso-1.iso,/path/to/iso-2.iso,/path/to/iso-3.iso"
+
+	______________________________________________________________________
+          Adding a custom list of packages to be installed along with the defaults will
+          require using 2 options together
+
+          EXTRA=1
+          FULLINSTALL="vim-tiny,cron,rsyslog,dracut,ntp"
+
+EOF
+
