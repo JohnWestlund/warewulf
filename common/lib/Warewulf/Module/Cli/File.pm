@@ -312,13 +312,12 @@ exec()
                         &dprint("Persisting the new Warewulf file object with name: $name\n");
                         $db->persist($obj);
                     }
-                    
                     $obj->file_import($path);
-                    $obj->mode(oct($opt_mode) || $mode);
-                    $obj->uid($opt_uid || $uid);
-                    $obj->gid($opt_gid || $gid);
-                    $obj->path($opt_path || $path);
-                    $obj->origin((scalar(@opt_origin) ? (split(",", join(",",@opt_origin))) : ($path)));
+                    $obj->mode((defined($opt_mode)) ? (oct($opt_mode)) : ($mode));
+                    $obj->uid((defined($opt_uid)) ? ($opt_uid) : ($uid));
+                    $obj->gid((defined($opt_gid)) ? ($opt_gid) : ($gid));
+                    $obj->path((defined($opt_path)) ? ($opt_path) : ($path));
+                    $obj->origin((scalar(@opt_origin) ? (split(",", join(",", @opt_origin))) : ($path)));
                     $db->persist($obj);
                 } else {
                     &eprint("\"$path\" not found -- $!\n");
