@@ -20,8 +20,7 @@ fi
 
 wwreqroot
 
-
-DATASTORE=`egrep "^database driver\s*=" /etc/warewulf/database.conf | awk -F = '{print $2}' | sed -e 's/\s*//g'`
+DATASTORE=`egrep "^database driver\s*=" $WAREWULF_SYSCONFDIR/warewulf/database.conf | awk -F = '{print $2}' | sed -e 's/\s*//g'`
 
 
 if [ "$DATASTORE" = "mysql" ]; then
