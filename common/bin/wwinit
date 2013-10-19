@@ -113,7 +113,7 @@ for file in $wwinit_files; do
         sh -x $file "$@"
         RETVAL=$?
     else
-        sh $file $init "$@"
+        . $file $init "$@"
         RETVAL=$?
     fi
     if [ $RETVAL -eq 0 ]; then
