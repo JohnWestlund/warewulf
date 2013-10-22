@@ -30,7 +30,7 @@ my @skiplist = $livesync_config->get("skip list");
 my $fanout = $livesync_config->get("max sync") || 8;
 my $timeout = $livesync_config->get("timeout") || 3600;
 my $logdir = $livesync_config->get("logdir") || "/var/log/wwlivesync";
-my $skiplist_excludes_opts = "--exclude='proc' --exclude='./proc' --exclude='sys' --exclude='./sys' ";
+my $skiplist_excludes_opts = "--exclude='/proc/' --exclude='/sys/' ";
 my $opt_help;
 my $opt_debug;
 my $opt_verbose;
@@ -119,9 +119,7 @@ $pcmd->ktime($timeout);
 $pcmd->fanout($fanout);
 
 foreach my $exclude (@skiplist) {
-    $exclude =~ s/^\.?\/+//;
     $skiplist_excludes_opts .= " --exclude='$exclude'";
-    $skiplist_excludes_opts .= " --exclude='./$exclude'";
 }
 
 
@@ -145,9 +143,7 @@ foreach my $o ($objSet->get_list()) {
         if ($file) {
             my $path = $file->path();
             if ($path) {
-                $path =~ s/^\.?\/+//;
                 $excludes_opts .= " --exclude='$path'";
-                $excludes_opts .= " --exclude='./$path'";
             }
         }
     }
@@ -173,9 +169,7 @@ foreach my $o ($objSet->get_list()) {
     }
 
     foreach my $exclude (@excludes) {
-        $exclude =~ s/^\.?\/+//;
         $excludes_opts .= " --exclude='$exclude'";
-        $excludes_opts .= " --exclude='./$exclude'";
     }
 
     $cmd = "cd $chroot; rsync -avH $excludes_opts $skiplist_excludes_opts . $name:/ > $logdir/$name.log 2>&1 && echo done || echo fail";
