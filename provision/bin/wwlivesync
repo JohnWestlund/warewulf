@@ -30,7 +30,7 @@ my @skiplist = $livesync_config->get("skip list");
 my $fanout = $livesync_config->get("max sync") || 8;
 my $timeout = $livesync_config->get("timeout") || 3600;
 my $logdir = $livesync_config->get("logdir") || "/var/log/wwlivesync";
-my $skiplist_excludes_opts = "";
+my $skiplist_excludes_opts = "--exclude='proc' --exclude='./proc' --exclude='sys' --exclude='./sys' ";
 my $opt_help;
 my $opt_debug;
 my $opt_verbose;
