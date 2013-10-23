@@ -50,22 +50,21 @@ if [ "$DATASTORE" = "mysql" ]; then
 	if [ "x$(which initctl)" = "x" ]
 	then
 		wwprint "Upstart's initctl not found. Checking run levels with insserv:\n"
-		runlvls=$(which insserv) ;
-		for i in $( ${runlvls} -s | grep 'mysql' | grep 'S:' | cut -d: -f3 )
+			for i in $( $(which insserv) -s | grep 'mysql' | grep 'S:' | cut -d: -f3 )
 		do
-			wwprint "    mysql boots on run level $i " GREEN
+				wwprint "    mysql boots on run level $GREEN $i \n"
 		done
 
 		if [ "x${i}" = "x" ]
 		then
-	        wwprint "WARNING: MySQL is not configured to start at boot.\n" RED
-	        wwprint "Fix that manually.\n" RED
+			    wwprint "$RED WARNING: MySQL is not configured to start at boot.\n"
+			    wwprint "$RED Fix that manually.\n"
 		fi
 
 	else
 	    if ! wwrun initctl show-config mysql; then
-	        wwprint "WARNING: MySQL is not configured to start at boot.\n" RED
-	        wwprint "Fix that manually.\n" RED
+			    wwprint "$RED WARNING: MySQL is not configured to start at boot.\n"
+			    wwprint "$RED Fix that manually.\n"
 	    fi
 	fi
 
