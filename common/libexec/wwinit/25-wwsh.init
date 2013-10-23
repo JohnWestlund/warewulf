@@ -27,3 +27,4 @@ wwrun wwsh node list || exit 255
 wwrun wwsh node delete testnode0000 || exit 255
 
 exit 0
+# vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
