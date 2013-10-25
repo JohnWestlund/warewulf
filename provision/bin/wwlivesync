@@ -125,7 +125,7 @@ foreach my $exclude (@skiplist) {
 
 foreach my $o ($objSet->get_list()) {
     my ($name, $vnfs_name, $vnfsid, $vnfs, $vnfs_config, @excludes, $chroot,
-        $excludes_opts, $cmd);
+        $excludes_opts, $cmd, @exclude, @hybridize);
 
     $name = $o->name();
     $vnfsid = $o->vnfsid();
@@ -154,7 +154,9 @@ foreach my $o ($objSet->get_list()) {
     }
 
     $vnfs_config = Warewulf::Config->new("vnfs.conf", "vnfs/$name.conf");
+    @exclude = $vnfs_config->get("exclude");
     @excludes = $vnfs_config->get("excludes");
+    @hybridize = $vnfs_config->get("hybridize");
     $chroot = $vnfs->chroot() || $vnfs_config->get("chroot");
     $vnfs_rsync = $vnfs_config->get("rsync") || "/usr/bin/rsync";
 
@@ -168,7 +170,7 @@ foreach my $o ($objSet->get_list()) {
         next;
     }
 
-    foreach my $exclude (@excludes) {
+    foreach my $exclude (@exclude, @excludes, @hybridize) {
         $excludes_opts .= " --exclude='$exclude'";
     }
 
