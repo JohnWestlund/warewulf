@@ -82,6 +82,12 @@ help()
     $h .= "         console         Start a serial-over-lan console session.\n";
     $h .= "                         NOTE: Requires that a serial console be defined\n";
     $h .= "                         in kernel arguments, i.e. console=ttyS0,57600\n";
+    $h .= "\n";
+    $h .= "         forcepxe        Force next boot from PXE\n";
+    $h .= "         forcedisk       Force next boot from first Hard Drive\n";
+    $h .= "         forcecdrom      Force next boot from CD-ROM\n";
+    $h .= "         forcebios       Force next boot into BIOS\n";
+    $h .= "\n";
     $h .= "         help            Show usage information\n";
     $h .= "\n";
     $h .= "TARGETS:\n";
@@ -157,7 +163,8 @@ complete()
         @ret = $db->get_lookups($entity_type, $opt_lookup);
     } else {
         @ret = ("list", "set", "print", "help", "poweron", "poweroff", "console", 
-            "powercycle", "ident", "noident", "printsel", "clearsel", "printsdr");
+            "powercycle", "ident", "noident", "printsel", "clearsel", "printsdr",
+            "forcepxe", "forcedisk", "forcecdrom", "forcebios");
     }
 
     @ARGV = ();
@@ -455,6 +462,54 @@ exec()
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("printsdr");
+            if ($cmd) {
+                $parallel->queue($cmd, "$name: ", "%-20s %s\n");
+            }
+        }
+        $parallel->run();
+    } elsif ($command eq "forcepxe") {
+
+        my $parallel = Warewulf::ParallelCmd->new();
+        $parallel->ktime(30);
+        foreach my $o ($objSet->get_list()) {
+            my $name = $o->name();
+            my $cmd = $o->ipmi_command("forcepxe");
+            if ($cmd) {
+                $parallel->queue($cmd, "$name: ", "%-20s %s\n");
+            }
+        }
+        $parallel->run();
+    } elsif ($command eq "forcedisk") {
+
+        my $parallel = Warewulf::ParallelCmd->new();
+        $parallel->ktime(30);
+        foreach my $o ($objSet->get_list()) {
+            my $name = $o->name();
+            my $cmd = $o->ipmi_command("forcedisk");
+            if ($cmd) {
+                $parallel->queue($cmd, "$name: ", "%-20s %s\n");
+            }
+        }
+        $parallel->run();
+    } elsif ($command eq "forcecdrom") {
+
+        my $parallel = Warewulf::ParallelCmd->new();
+        $parallel->ktime(30);
+        foreach my $o ($objSet->get_list()) {
+            my $name = $o->name();
+            my $cmd = $o->ipmi_command("forcecdrom");
+            if ($cmd) {
+                $parallel->queue($cmd, "$name: ", "%-20s %s\n");
+            }
+        }
+        $parallel->run();
+    } elsif ($command eq "forcebios") {
+
+        my $parallel = Warewulf::ParallelCmd->new();
+        $parallel->ktime(30);
+        foreach my $o ($objSet->get_list()) {
+            my $name = $o->name();
+            my $cmd = $o->ipmi_command("forcebios");
             if ($cmd) {
                 $parallel->queue($cmd, "$name: ", "%-20s %s\n");
             }

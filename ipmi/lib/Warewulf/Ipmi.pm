@@ -199,6 +199,13 @@ Return the IPMI shell command for a given action as follows:
     printsdr    Print sensor data records
     console     Start an IPMI serial-over-lan console
 
+Commands for changing boot device on next boot:
+
+    forcepxe    Force boot from PXE
+    forcedisk   Force boot from first Hard Disk
+    forcecdrom  Force boot from CD-ROM
+    forcebios   Force boot into BIOS
+
 =cut
 
 sub
@@ -215,26 +222,34 @@ ipmi_command()
 
     if ($ipaddr and $username and $password and $proto) {
         $ret .= "-I $proto -U $username -P $password -H $ipaddr ";
-        if ($action eq "poweron") {
+        if ($action eq "poweron" ) {
             $ret .= "chassis power on";
-        } elsif ( $action eq "poweroff") {
+        } elsif ( $action eq "poweroff" ) {
             $ret .= "chassis power off";
-        } elsif ( $action eq "powercycle") {
+        } elsif ( $action eq "powercycle" ) {
             $ret .= "chassis power cycle";
-        } elsif ( $action eq "powerstatus") {
+        } elsif ( $action eq "powerstatus" ) {
             $ret .= "chassis power status";
-        } elsif ( $action eq "ident") {
+        } elsif ( $action eq "ident" ) {
             $ret .= "chassis identify force";
-        } elsif ( $action eq "noident") {
+        } elsif ( $action eq "noident" ) {
             $ret .= "chassis identify off";
-        } elsif ( $action eq "printsel") {
+        } elsif ( $action eq "printsel" ) {
             $ret .= "sel elist";
-        } elsif ( $action eq "clearsel") {
+        } elsif ( $action eq "clearsel" ) {
             $ret .= "sel clear";
-        } elsif ( $action eq "printsdr") {
+        } elsif ( $action eq "printsdr" ) {
             $ret .= "sdr elist";
-        } elsif ( $action eq "console") {
+        } elsif ( $action eq "console" ) {
             $ret .= "-e ^ sol activate";
+        } elsif ( $action eq "forcepxe" ) {
+            $ret .= "chassis bootdev pxe";
+        } elsif ( $action eq "forcedisk" ) {
+            $ret .= "chassis bootdev disk";
+        } elsif ( $action eq "forcecdrom" ) {
+            $ret .= "chassis bootdev cdrom";
+        } elsif ( $action eq "forcebios" ) {
+            $ret .= "chassis bootdev bios";
         } else {
             &eprint("Unsupported IPMI action: $action\n");
             return();
