@@ -38,7 +38,7 @@ choose_wwpw () {
     local isolduser="${1}"
 
     echo
-    echo "##################"
+    echo '-------------------------------------------------'
     echo "What mysql password set for user ${warewulfusr} ?"
     enter_password ;
 
@@ -65,7 +65,7 @@ choose_wwuser () {
     local isolduser=""
 
     echo
-    echo "##################"
+    echo '-----------------------------------------------------'
     echo "What is the mysql user name you want set for warewulf"
     echo 'If unsure, just set it to "warewulf"'
     user_input ;
@@ -87,7 +87,6 @@ choose_wwuser () {
                 warewulfusr="${CHOICE}"
                 # choose a valid password for mysql warewulf user
                 choose_wwpw ${isolduser} ;
-
             else
                 echo "Try again with a different user name ?"
                 echo "YES = Choose another name"
@@ -113,7 +112,7 @@ choose_wwuser () {
         choose_wwpw ${isolduser} ;
 
         echo
-        echo "##################"
+        echo '--------------------------------'
         echo "Create mysql warewulf user ?"
         if user_decide
         then
@@ -220,8 +219,6 @@ config_wwsql () {
         # prompt with setup info
         warn_msg config_1 ;
 
-        echo
-        echo "  ---== Walking though each step ==---"
         ##################
         # ask for and verify sql root password
         if sql_rootpw
@@ -246,7 +243,7 @@ config_wwsql () {
 
         ##################
         echo
-        echo "##################"
+        echo '------------------'
         echo "Reload mysql ?"
         if user_decide
         then
@@ -267,7 +264,7 @@ config_wwsql () {
 
 create_wwdb () {
     echo
-    echo "##################"
+    echo '-------------------------------------------------------'
     echo "What name do you want assigned to the warewulf database"
     echo 'If unsure, just set it to "warewulf"'
     user_input ;
@@ -309,8 +306,8 @@ create_wwdb () {
         fi
 
         ##################
-        echo
-        echo "##################"
+    echo
+    echo '----------------------------------------------'
         echo "Edit the mysql permissions to give"
         echo "${warewulfusr} user access to mysql and"
         echo "set permissions for user ${warewulfusr} to"
@@ -489,12 +486,14 @@ warn_msg () {
             ;;
 
         config_1)
+            echo
+            echo '------------------------------------------------'
             echo "Automatic setup can help configure the following"
             echo "You will be prompted at each stage to choose"
             echo
+            echo " - Create warewulf user account"
             echo " - Create warewulf database"
             echo " - Give warewulf user database access"
-            echo " - Create warewulf user account"
             echo " - Reload mysql when done"
             echo
             echo "Before we can automate this process you will need to"
@@ -539,9 +538,6 @@ warn_msg () {
             echo "replacing the old path /var/lib/tftpboot"
             echo
             echo "Warewulf needs to know which path it should use."
-            echo "Should Warewulf use the new path /srv/tftp  or"
-            echo "use the default warewulf path /var/lib/tftpboot ?"
-            echo
             echo "YES = Configure warewulf to use the path /srv/tftp"
             echo " NO = Configure tftpd to use the path /var/lib/tftpboot"
             ;;
@@ -558,12 +554,10 @@ warn_msg () {
 
         intro)
             echo
-            echo "Will check system for required dependencies, and can automatically"
-            echo "install the required packages. For example, would you like to execute"
-            echo "the following commands to install and setup the packages warewulf"
-            echo "needs to run ?"
+            echo "Scan system for required dependencies, and automatically install"
+            echo "the required packages. The following are some of the required"
+            echo "packages warewulf needs to run ?"
             echo
-            echo "aptidude update"
             echo "${PACKAGELIST}"
             echo
             ;;
@@ -571,14 +565,14 @@ warn_msg () {
         makecheck)
             echo "WARNING: make command not found"
             echo
-            echo "Warewulf will need to be compiled to run on .deb based distros"
+            echo "Will need to compile Warewulf to run on .deb based distros"
             echo "Would you like to add build-essential to the list of packages ?"
             ;;
 
         missing_sql)
             echo
             echo "Did not find mysql."
-            echo "Would you like to install mysql-server also ?"
+            echo "Would you also like to install mysql-server ?"
             ;;
 
         need_sql)
@@ -610,18 +604,19 @@ warn_msg () {
             echo "Current list of packages to be installed on this system."
             echo "${PACKAGELIST}"
             echo
-            echo "Proceed to download and install the current list of packages."
+            echo "Download and install the current list of packages."
             ;;
 
         remove_path)
-            echo "Eliminate later confusion do you want to delete the"
-            echo "directory ${CHOICE} and every thing in it ?"
+            echo "Eliminate later confusion do you want to"
+            echo "Delete the directory ${CHOICE} and every thing in it ?"
             echo
             echo "WARNING: Say NO if you want to keep this directory"
             ;;
 
         sql_root)
             echo
+            echo '----------------------------------------------------'
             echo "After mysql-server is installed you will be prompted"
             echo "to create the root password for mysql."
             echo
@@ -633,17 +628,16 @@ warn_msg () {
             ;;
 
         usage)
+            echo "install-wwdebsystem [version] [path (optional)]"
             echo
-            echo "install-wwdebsystem -h    # Display this message"
+            echo "      -h      Display this message"
+            echo " version      release version or nightly build date"
+            echo "    path      (optional) Path configure will use as --prefix="
+            echo "              No path, configure will use default path of /usr/local"
             echo
-            echo "To setup the system and install warewulf release version 3.4"
-            echo "with ./configure --prefix=/usr/local <--- NO trailing slash .! "
+            echo "sudo install-wwdebsystem 3.4              - will istall to the default /usr/local"
             echo
-            echo "NOTE: if not given --prefix= the install path will default to / "
-            echo
-            echo "sudo install-wwdebsystem 3.4        - will istall to the default /usr/local"
-            echo
-            echo "sudo install-wwdebsystem 2013-10-19 /usr   - will install nightly build to /usr"
+            echo "sudo install-wwdebsystem 2013-10-19 /usr  - will install nightly build to /usr"
             echo
             ;;
 
@@ -700,7 +694,7 @@ done
 shift $((OPTIND-1))
 WWVERSION=$1
 shift
-WWPREFIX=$1
+WWPREFIX=${1%/}
 shift
 
 if [[ -z "${WWVERSION}" ]]
@@ -775,7 +769,7 @@ then
 
     # most common server used is tftpd-hpa.
     # we will check for this and install if not found.
-    if [[ ! $(dpkg -s tftpd-hpa | grep Status >/dev/null 2>&1) ]]
+    if [[ ! $(dpkg -s tftpd-hpa 2>&1 | grep Status ) ]]
     then
         # WARNING tftp server not found ask to install ?
         warn_msg no_tfpt ;
@@ -857,7 +851,7 @@ then
     for i in ${compilelist}
     do
         cd ${i}* ;
-        ./configure ${WWPREFIX} ;
+        ./configure --prefix=${WWPREFIX} ;
         make || ( warn_msg compiler_error && exit 1 ) ;
         make install || ( warn_msg compiler_error && exit 1 ) ;
         cd ../ ;
@@ -867,7 +861,6 @@ then
     then
         WWPREFIX=""
     fi
-
 fi
 
 ###-----------------------------------------
