@@ -1,66 +1,62 @@
 # Prints to screen complete help
 print_full_help () {
 
-	. debian.info ;
+    . debian.info ;
 
 
 cat <<EOF
 
-	Support is built in to allow for all debian supported architectures to
-	be built on any machine. However, this is experimental and mostly untested.
-	Individule experiences could vary greatly. See Experimental architectures below.
+    Support is built in to allow for all debian supported architectures to
+    be built on any machine. However, this is experimental and mostly untested.
+    Individule experiences could vary greatly. See Experimental architectures below.
 
-		Valid architectures are:
-			x86_64 (defaults to amd64)
-			amd64
-			i386
+        Valid architectures are:
+            x86_64 (defaults to amd64)
+            amd64
+            i386
 
-		Experimental architectures are:
-			armel
-			kfreebsd-i386
-			kfreebsd-amd64
-			ia64 mips
-			mipsel
-			powerpc
-			sparc
+        Experimental architectures are:
+            armel
+            kfreebsd-i386
+            kfreebsd-amd64
+            ia64 mips
+            mipsel
+            powerpc
+            sparc
 
+    To date these are the current releases.
+    Future releases not listed below should also be supported.
 
-	To date these are the current releases.
-	Future releases not listed below should also be supported.
+    Debian:
+    RELEASE NUMBERS-CODE NAMES:
 
-	Debian:
-	RELEASE NUMBERS-CODE NAMES:
+        5.0-lenny , 6.0-squeeze , 7.0-wheezy , sid
 
-		5.0-lenny , 6.0-squeeze , 7.0-wheezy , sid
+    These are the debian defaults:
+        Components  "main,contrib,non-free"
+        Packages    "openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,
+                        nfs-common,nfs-kernel-server,ethtool,iproute,iputils-ping,
+                        iputils-arping,net-tools,firmware-bnx2,ifupdown,rsync"
 
-	These are the debian defaults:
-		Components	"main,contrib,non-free"
-		Packages	"openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,
-						nfs-common,nfs-kernel-server,ethtool,iproute,iputils-ping,
-						iputils-arping,net-tools,firmware-bnx2,ifupdown,rsync"
+    Examples recipe files:
+        To create a 32 bit vnfs from the standard repository:
 
+        ARCH="i386"
+        DISTRO="debian"
+        CODENAME="wheezy"
 
-	Examples recipe files:
-		To create a 32 bit vnfs from the standard repository:
+        To create an amd compatibla 64 bit debian vnfs from the standard
+        repository with a custom list of packages from a recipe file, and
+        automatically build and integrate the vnfs into warewulf
+        without promting for user input for an unattended install :
 
-		ARCH="i386"
-		DISTRO="debian"
-		CODENAME="wheezy"
-
-
-		To create an amd compatibla 64 bit debian vnfs from the standard
-		repository with a custom list of packages from a recipe file, and
-		automatically build and integrate the vnfs into warewulf
-		without promting for user input for an unattended install :
-
-		ARCH="amd64"
-		DISTRO="debian"
-		CODENAME="wheezy"
-		AUTO=1
-
+        ARCH="amd64"
+        DISTRO="debian"
+        CODENAME="wheezy"
+        AUTO=1
 
 EOF
 
 }
 
-
+# vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

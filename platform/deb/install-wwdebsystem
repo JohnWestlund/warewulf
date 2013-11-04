@@ -8,8 +8,8 @@
 #
 # There is no warranty of any kind implied or otherwise
 #
-#	Version: 0.1
-#	Date: 2013-10-22
+#   Version: 0.3
+#   Date: 2013-11-04
 #########################################################
 
 WWDOWNLOAD=""
@@ -17,599 +17,670 @@ WWVERSION=""
 WWPREFIX=""
 SQLUSER=""
 CHOICE=""
-
+CLUSTERVER="3.4"
 FILETYPE='.tar.gz'
+
+PACKAGELIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap isc-dhcp-server tcpdump openssh-client"
 
 
 check_sqlpw () {
-	if $( echo "quit" | mysql -u ${SQLUSER} -p${CHOICE} >/dev/null 2>&1 )
-	then
-		return 0 ;
-	else
-		return 1 ;
-	fi
+    if $( echo "quit" | mysql -u ${SQLUSER} -p${CHOICE} >/dev/null 2>&1 )
+    then
+        return 0 ;
+    else
+        return 1 ;
+    fi
 }
 
 
 choose_wwpw () {
-	# in case sql user already exists
-	local isolduser="${1}"
+    # in case sql user already exists
+    local isolduser="${1}"
 
-	echo
-	echo "##################"
-	echo "What mysql password set for user ${warewulfusr} ?"
-	enter_password ;
+    echo
+    echo "##################"
+    echo "What mysql password set for user ${warewulfusr} ?"
+    enter_password ;
 
-	if [[ "${isolduser}" == "true" ]]
-	then
-		SQLUSER="${warewulfusr}"
+    if [[ "${isolduser}" == "true" ]]
+    then
+        SQLUSER="${warewulfusr}"
 
-		if check_sqlpw
-		then
-			warewulfpassword="${CHOICE}"
-		else
-			echo
-			echo "ERROR: Not a valid mysql password for ${warewulfusr}" 
-			choose_wwpw ${isolduser} ;
-		fi
-	else
-		warewulfpassword="${CHOICE}"
-	fi
+        if check_sqlpw
+        then
+            warewulfpassword="${CHOICE}"
+        else
+            echo
+            echo "ERROR: Not a valid mysql password for ${warewulfusr}"
+            choose_wwpw ${isolduser} ;
+        fi
+    else
+        warewulfpassword="${CHOICE}"
+    fi
 }
 
 
 choose_wwuser () {
-	# check if exists and create sql warewulf user
-	local isolduser=""
+    # check if exists and create sql warewulf user
+    local isolduser=""
 
-	echo
-	echo "##################"
-	echo "What is the mysql user name you want set for warewulf"
-	echo 'If unsure, just set it to "warewulf"'
-	user_input ;
+    echo
+    echo "##################"
+    echo "What is the mysql user name you want set for warewulf"
+    echo 'If unsure, just set it to "warewulf"'
+    user_input ;
 
-	for i in $(echo "use mysql; select user from db" | mysql -u root -p${rootpassword} )
-	do
-		if [[ "${i}" == "${CHOICE}" ]]
-		then
-			echo
-			echo "User ${CHOICE} currently exists in MySQL"
-			echo "YES = Accept this user for use in warewulf."
-			echo " NO = View more options."
-			echo
-			# flag existing user
-			isolduser="true"
+    for i in $(echo "use mysql; select user from db" | mysql -u root -p${rootpassword} )
+    do
+        if [[ "${i}" == "${CHOICE}" ]]
+        then
+            echo
+            echo "User ${CHOICE} currently exists in MySQL"
+            echo "YES = Accept this user for use in warewulf."
+            echo " NO = View more options."
+            echo
+            # flag existing user
+            isolduser="true"
 
-			if user_decide
-			then
-				warewulfusr="${CHOICE}"
-				# choose a valid password for mysql warewulf user
-				choose_wwpw ${isolduser} ;
+            if user_decide
+            then
+                warewulfusr="${CHOICE}"
+                # choose a valid password for mysql warewulf user
+                choose_wwpw ${isolduser} ;
 
-			else
-				echo "Try again with a different user name ?"
-				echo "YES = Choose another name"
-				echo " NO = Skip mysql user creation"
+            else
+                echo "Try again with a different user name ?"
+                echo "YES = Choose another name"
+                echo " NO = Skip mysql user creation"
 
-				if user_decide
-				then
-					choose_wwuser ;
-					break ;
-				else
-					warewulfusr=""
-					break ;
-				fi
-			fi
-		else
-			warewulfusr="${CHOICE}"
-		fi
-	done
+                if user_decide
+                then
+                    choose_wwuser ;
+                    break ;
+                else
+                    warewulfusr=""
+                    break ;
+                fi
+            fi
+        else
+            warewulfusr="${CHOICE}"
+        fi
+    done
+
+    if [[ -z ${isolduser} ]]
+    then
+        # choose a valid password for mysql warewulf user
+        choose_wwpw ${isolduser} ;
+
+        echo
+        echo "##################"
+        echo "Create mysql warewulf user ?"
+        if user_decide
+        then
+            mysql -u root -p${rootpassword} -Bse "use mysql;replace into user (host, user, password) \
+                values('localhost','${warewulfusr}',password('${warewulfpassword}'));"
+        fi
+    fi
+}
 
 
-	if [[ -z ${isolduser} ]]
-	then
-		# choose a valid password for mysql warewulf user
-		choose_wwpw ${isolduser} ;
+path_patch () {
+    # provides functionality for non-conventional
+    # installs ie .. --prefix=/usr/local
 
-		echo
-		echo "##################"
-		echo "Create mysql warewulf user ?"
-		if user_decide
-		then
-			mysql -u root -p${rootpassword} -Bse "use mysql;replace into user (host, user, password) \
-				values('localhost','${warewulfusr}',password('${warewulfpassword}'));"
-		fi
-	fi
+    # patch broken paths with symlinks
+    if [[ ! -e /etc/apache2/conf.d/warewulf-httpd.conf ]]
+    then
+        ln -s ${WWPREFIX}/etc/apache2/conf.d/warewulf-httpd.conf /etc/apache2/conf.d/
+    fi
+
+    # Band-Aid till the newer init management tools mature and
+    # standards more widely adopted at which time warewulf
+    # will likely evolve to offer better support
+    if [[ "$( which insserv )" != "$(dirname $(which wwsh ))/insserv" ]]
+    then
+        ln -s $( which insserv ) $(dirname $(which wwsh ))/insserv ;
+    fi
 }
 
 
 config_tftpd () {
-	# prompt tftp setup message
-	warn_msg config_tftp ;
+    # prompt tftp setup message
+    warn_msg config_tftp ;
 
-	# prompt which directory tftp should use
-	warn_msg choose_dir ;
-	if user_decide
-	then
-		####	Set up Warewulf to this	####
-		# Set warewulf to use tftpd defaults
-		if [[ -z ${WWPREFIX} ]]
-		then
-			WWPREFIX="/usr/local"
-		fi
+    # prompt which directory tftp should use
+    warn_msg choose_dir ;
+    if user_decide
+    then
+        # Now lets create the required directory
+        if [[ ! -d /srv/tftp ]]
+        then
+            mkdir -p /srv/tftp ;
+        fi
 
-		####	Set up TFTP to this	####
-		# Set tftpd to use warewulf defaults
-cat <<'EOF' > /etc/default/tftpd-hpa
-# Auto Created by Warewulf install-wwdebsytem
+        # edit file in place
+        # set tftp server dir to /srv/tftp - tftp server
+        echo "$( cat /etc/default/tftpd-hpa \
+                    | sed 's/^.*TFTP_DIRECTORY.*=.*$/TFTP_DIRECTORY=\"\/srv\/tftp\"/')" > /etc/default/tftpd-hpa ;
 
-TFTP_USERNAME="tftp"
-TFTP_DIRECTORY="/srv/tftp"
-TFTP_ADDRESS="0.0.0.0:69"
-TFTP_OPTIONS="--secure"
-EOF
+        # edit file in place
+        # set tftp server dir to /srv/tftp - provision.conf
+        echo "$( cat ${WWPREFIX}/etc/warewulf/provision.conf \
+                    | sed 's/^.*tftpdir.*=.*$/tftpdir = \/srv\/tftp/')" > ${WWPREFIX}/etc/warewulf/provision.conf ;
 
-		# Now lets create the required directory
-		if [[ ! -d /srv/tftp ]]
-		then
-			mkdir -p /srv/tftp ;
-		fi
+        #choose to delete this path
+        CHOICE="/var/lib/tftpboot"
+        delete_dir ;
 
-		echo "# Auto edited by the install-wwdebsytem script" >> ${WWPREFIX}/etc/warewulf/provision.conf
-		echo "# TFTP root directory for Debian based distro's" >> ${WWPREFIX}/etc/warewulf/provision.conf
-		echo "" >> ${WWPREFIX}/etc/warewulf/provision.conf
-		echo "tftpdir = /srv/tftp" >> ${WWPREFIX}/etc/warewulf/provision.conf
-		echo "" >> ${WWPREFIX}/etc/warewulf/provision.conf
+    else
+        # Now lets create the required directory
+        if [[ ! -d /var/lib/tftpboot ]]
+        then
+            mkdir -p /var/lib/tftpboot ;
+        fi
 
-		#choose to delete this path
-		CHOICE="/var/lib/tftpboot"
-		delete_dir ;
+        # edit file in place
+        # set tftp server dir to /var/lib/tftpboot - tftp server
+        echo "$( cat /etc/default/tftpd-hpa \
+                    | sed 's/^.*TFTP_DIRECTORY.*=.*$/TFTP_DIRECTORY=\"\/var\/lib\/tftpboot\"/')" > /etc/default/tftpd-hpa ;
 
-	else
+        # edit file in place
+        echo "$( cat ${WWPREFIX}/etc/warewulf/provision.conf \
+            | sed 's/^.*tftpdir.*=.*$/tftpdir = \/var\/lib\/tftpboot/')" > ${WWPREFIX}/etc/warewulf/provision.conf ;
 
-		####	Set up TFTP to this	####
-		# Set tftpd to use warewulf defaults
-cat <<'EOF' > /etc/default/tftpd-hpa
-# Auto Created by Warewulf install-wwdebsytem
+        #choose to delete this path
+        CHOICE="/srv/tftp"
+        delete_dir ;
+    fi
 
-TFTP_USERNAME="tftp"
-TFTP_DIRECTORY="/var/lib/tftpboot"
-TFTP_ADDRESS="0.0.0.0:69"
-TFTP_OPTIONS="--secure"
-EOF
-
-		# Now lets create the required directory
-		if [[ ! -d /var/lib/tftpboot ]]
-		then
-			mkdir -p /var/lib/tftpboot ;
-		fi
-
-		#choose to delete this path
-		CHOICE="/srv/tftp"
-		delete_dir ;
-	fi
+    # restart the tftp server
+    echo "Restarting the tftp server"
+    service tftpd-hpa restart  || echo "TFTP server failed to start check your configs and try manualy" ;
 }
 
 
 config_wwsql () {
-	local baseconf="/etc/warewulf/database.conf"
-	local rootconf="/etc/warewulf/database-root.conf"
+    local baseconf="/etc/warewulf/database.conf"
+    local rootconf="/etc/warewulf/database-root.conf"
+    local apachegroup="$( groups $(cat /etc/passwd | grep '/var/www' | awk -F: '{print $1}') \
+                        | awk -F: '{print $2}' | awk '{print $1}' )" ;
 
-	if [[ -z ${WWPREFIX} ]]
-	then
-		baseconf="/usr/local/${baseconf}"
-		rootconf="/usr/local/${rootconf}"
+    baseconf="${WWPREFIX}/${baseconf}"
+    rootconf="${WWPREFIX}/${rootconf}"
 
-	elif [[ "${WWPREFIX}x" == "/x" ]]
-	then
-		baseconf="${baseconf}"
-		rootconf="${rootconf}"
-	else
-		baseconf="${WWPREFIX}/${baseconf}"
-		rootconf="${WWPREFIX}/${rootconf}"
-	fi
+    if [[ ! -d $( dirname ${baseconf} ) ]]
+    then
+        mkdir -p $( dirname ${baseconf} ) ;
+    fi
 
-	if [[ ! -d $( dirname ${baseconf} ) ]]
-	then
-		mkdir -p $( dirname ${baseconf} ) ;
-	fi
+    # prompt ask if would like to configure mysql ?
+    warn_msg config_mysql;
+    if [[ -n $(which mysql) ]] && user_decide ;
+    then
+        # prompt with setup info
+        warn_msg config_1 ;
 
-	# create /etc/warewulf/database.conf
-cat <<EOF > ${baseconf}
-# Auto Created by Warewulf install-wwdebsytem
-  # Database configuration
+        echo
+        echo "  ---== Walking though each step ==---"
+        ##################
+        # ask for and verify sql root password
+        if sql_rootpw
+        then
+            choose_wwuser ;
+            create_wwdb ;
+        fi
 
-database type       = sql
-database driver     = mysql
+        echo "Setting the warewulf config files for mysql access"
 
-# Database access
-database server     = localhost
-database name       = ${wwdatabase}
-database user       = ${warewulfusr}
-database password   = ${warewulfpassword}
-EOF
+        # edit file in place
+        # populate /etc/warewulf/database.conf
+        echo "$( cat ${baseconf} | sed "\
+                s/^.*database name.*=.*$/database name       = ${wwdatabase}/; \
+                s/^.*database user.*=.*$/database user       = ${warewulfusr}/;\
+                s/^.*database password.*=.*$/database password   = ${warewulfpassword}/" )" > ${baseconf} ;
 
-	# create /etc/warewulf/database-root.conf
-cat <<EOF > ${rootconf}
-# Auto Created by Warewulf install-wwdebsytem
+        # edit file in place
+        # populate /etc/warewulf/database-root.conf
+        echo "$( cat ${rootconf} | sed \
+                "s/^.*database password.*=.*$/database password   = ${rootpassword}/" )" > ${rootconf} ;
 
-# Database access
-database user       = root
-database password   = ${rootpassword}
-EOF
+        ##################
+        echo
+        echo "##################"
+        echo "Reload mysql ?"
+        if user_decide
+        then
+            echo "reloading mysql"
+            mysqladmin -u root -p${rootpassword} reload ;
+        fi
+    else
+        echo
+        echo "Assuming mysql is already setup and configured for"
+        echo "warewulf or you will need do it by hand later."
+    fi
+
+    # Now make sure the apache group
+    # can read the database.conf file
+    chgrp ${apachegroup} ${baseconf} ;
 }
 
 
 create_wwdb () {
-	echo
-	echo "##################"
-	echo "What name do you want assigned to the warewulf database"
-	echo 'If unsure, just set it to "warewulf"'
-	user_input ;
+    echo
+    echo "##################"
+    echo "What name do you want assigned to the warewulf database"
+    echo 'If unsure, just set it to "warewulf"'
+    user_input ;
 
-	wwdatabase="${CHOICE}"
-	CHOICE=""
+    wwdatabase="${CHOICE}"
+    CHOICE=""
 
-	for i in $( echo "show databases" | mysql -u root -p${rootpassword} )
-	do
-		if [[ "${i}" == "${wwdatabase}" ]]
-		then
-			echo
-			echo "The database ${CHOICE} already exists"
-			echo
-			echo "Would you like to use the existing database ${CHOICE} ?"
-			echo "YES = Use existing database"
-			echo " NO = Choose a different database"
-			echo
+    for i in $( echo "show databases" | mysql -u root -p${rootpassword} )
+    do
+        if [[ "${i}" == "${wwdatabase}" ]]
+        then
+            echo
+            echo "The database ${CHOICE} already exists"
+            echo
+            echo "Would you like to use the existing database ${CHOICE} ?"
+            echo "YES = Use existing database"
+            echo " NO = Choose a different database"
+            echo
 
-			if user_decide
-			then
-				CHOICE="true"
-				break ;
-			else
-				create_wwdb ;
-				break ;
-			fi
-		fi
-	done
+            if user_decide
+            then
+                CHOICE="true"
+                break ;
+            else
+                create_wwdb ;
+                break ;
+            fi
+        fi
+    done
 
-	# if no pre-existing warewulf user then make one and set perms
-	if [[ -z ${CHOICE} ]]
-	then
-		##################
-		echo "Create warewulf database ?"
-		if user_decide
-		then
-			mysqladmin -u root -p${rootpassword} create ${wwdatabase} ;
-		fi
+    # if no pre-existing warewulf user then make one and set perms
+    if [[ -z ${CHOICE} ]]
+    then
+        ##################
+        echo "Create warewulf database ?"
+        if user_decide
+        then
+            mysqladmin -u root -p${rootpassword} create ${wwdatabase} ;
+        fi
 
-		##################
-		echo
-		echo "##################"
-		echo "Edit the mysql permissions to give"
-		echo "${warewulfusr} user access to mysql and"
-		echo "set permissions for user ${warewulfusr} to"
-		echo "modify the warewulf database ?"
-		if user_decide
-		then
-			set_sql_userperms ;
-		fi
-	fi
+        ##################
+        echo
+        echo "##################"
+        echo "Edit the mysql permissions to give"
+        echo "${warewulfusr} user access to mysql and"
+        echo "set permissions for user ${warewulfusr} to"
+        echo "modify the warewulf database ?"
+        if user_decide
+        then
+            set_sql_userperms ;
+        fi
+    fi
 }
 
 
 delete_dir () {
-	# if old server path found
-	if [[ -d ${CHOICE} ]]
-	then
-		warn_msg remove_path ;
-		if user_decide
-		then
-			rm -fr ${CHOICE} ;
-		else
-			echo ' ---== Directory saved ==---'
-		fi
-	fi
+    # if old server path found
+    if [[ -d ${CHOICE} ]]
+    then
+        warn_msg remove_path ;
+        if user_decide
+        then
+            rm -fr ${CHOICE} ;
+        else
+            echo ' ---== Directory saved ==---'
+        fi
+    fi
 }
 
 
 enter_password () {
-	local one=""
-	local two=""
-	local isset=""
-	local stty_orig=""
-	CHOICE=""
+    local one=""
+    local two=""
+    local isset=""
+    local stty_orig=""
+    CHOICE=""
 
-	if [[ -z ${isset} ]]
-	then
-		# turn off echo to screen
-		# do not display password while typing	
-		isset="true"
-		stty_orig="$(stty -g)" ;
-		stty -echo ;
-	fi
-	# enter password first time
-	warn_msg enter_once ;
-	read  -p ">>> $ " one
-	# enter password second time
-	warn_msg enter_twice ;
-	read  -p ">>> $ " two
+    if [[ -z ${isset} ]]
+    then
+        # turn off echo to screen
+        # do not display password while typing
+        isset="true"
+        stty_orig="$(stty -g)" ;
+        stty -echo ;
+    fi
+    # enter password first time
+    warn_msg enter_once ;
+    read  -p ">>> $ " one
+    # enter password second time
+    warn_msg enter_twice ;
+    read  -p ">>> $ " two
 
-	if [[ "${one}" == "${two}" ]]
-	then
-		CHOICE="${two}"
-		stty ${stty_orig} ;
-	else
-		stty ${stty_orig} ;
-		echo "They do NOT match try again."
-		enter_password ;
-	fi
+    if [[ "${one}" == "${two}" ]]
+    then
+        CHOICE="${two}"
+        stty ${stty_orig} ;
+    else
+        stty ${stty_orig} ;
+        echo "They do NOT match try again."
+        enter_password ;
+    fi
+}
+
+
+get_undionly () {
+    # Now figure out where to put undionly
+    local tftpdir="" ;
+
+    if [[ -d /srv/tftp ]]
+    then
+        tftpdir="/srv/tftp/warewulf"
+
+    elif [[ -d /var/lib/tftpboot ]]
+    then
+        tftpdir="/var/lib/tftpboot/warewulf"
+    else
+        echo "ERROR: Cant find tftp directory skip getting undionly.kpxe"
+        return 1 ;
+    fi
+
+    if [[ ! -d ${tftpdir} ]]
+    then
+        mkdir -p ${tftpdir} ;
+    fi
+
+    wget -O ${tftpdir}/undionly.kpxe http://boot.ipxe.org/undionly.kpxe ;
 }
 
 
 set_sql_userperms () {
-	#set sql warewulf user permissions
-	mysql -u root -p${rootpassword} -Bse "use mysql;replace into user (host, user, password)\
-		values('localhost','${warewulfusr}',password('${warewulfpassword}')); \
-		replace into db (host,db,user,Select_priv, Insert_priv, Update_priv\
-		, Delete_priv, Create_priv, Drop_priv) values ('localhost','${wwdatabase}'\
-		,'${warewulfusr}','Y','Y','Y','Y','Y','Y');"
+    #set sql warewulf user permissions
+    mysql -u root -p${rootpassword} -Bse "use mysql;replace into user (host, user, password)\
+        values('localhost','${warewulfusr}',password('${warewulfpassword}')); \
+        replace into db (host,db,user,Select_priv, Insert_priv, Update_priv\
+        , Delete_priv, Create_priv, Drop_priv) values ('localhost','${wwdatabase}'\
+        ,'${warewulfusr}','Y','Y','Y','Y','Y','Y');"
 }
 
 
 sql_rootpw () {
-	# ask for sql root password
-	warn_msg choose_root ;
-	enter_password ;
+    # ask for sql root password
+    warn_msg choose_root ;
+    enter_password ;
 
-	SQLUSER="root"
+    SQLUSER="root"
 
-	if check_sqlpw
-	then
-		rootpassword="${CHOICE}"
-	else
-		echo
-		echo "ERROR: Not a valid mysql root password"
-		echo
-		echo "Try again with a different password ?"
-		echo "YES = Use a different password"
-		echo " NO = Skip mySQL setup and continue with warewulf system configuration ?"
+    if check_sqlpw
+    then
+        rootpassword="${CHOICE}"
+    else
+        echo
+        echo "ERROR: Not a valid mysql root password"
+        echo
+        echo "Try again with a different password ?"
+        echo "YES = Use a different password"
+        echo " NO = Skip mySQL setup and continue with warewulf system configuration ?"
 
-		if user_decide
-		then
-			sql_rootpw ;
-			break ;
-		else
-			warewulfusr=""
-			return 1 ;
-		fi
-	fi
-	return 0 ;
+        if user_decide
+        then
+            sql_rootpw ;
+            break ;
+        else
+            warewulfusr=""
+            return 1 ;
+        fi
+    fi
+    return 0 ;
 }
 
 
 user_decide () {
-	if [[ -n ${AUTO} ]]
-	then
-		return 0 ;
-	fi
+    if [[ -n ${AUTO} ]]
+    then
+        return 0 ;
+    fi
 
-	local answer=""
-	read -p "(yes/no): " answer
+    local answer=""
+    read -p "(yes/no): " answer
 
-	if [[ "${answer}" == "YES" ]] || [[ "${answer}" == "yes" ]]
-	then
-		return 0 ;
-
-	elif [[ "${answer}" == "NO" ]] || [[ "${answer}" == "no" ]]
-	then
-		return 1 ;
-
-	else
-		echo "Invalid Option"
-		user_decide ;
-	fi
+    if [[ "${answer}" == "YES" ]] || [[ "${answer}" == "yes" ]]
+    then
+        return 0 ;
+    elif [[ "${answer}" == "NO" ]] || [[ "${answer}" == "no" ]]
+    then
+        return 1 ;
+    else
+        echo "Invalid Option"
+        user_decide ;
+    fi
 }
 
 
 user_input () {
-	read -p ">>> $ " CHOICE
+    read -p ">>> $ " CHOICE
 
-	warn_msg chosen ;
-
-	if ! user_decide
-	then
-		echo "Try again"
-		user_input ;
-	fi
+    warn_msg chosen ;
+    if ! user_decide
+    then
+        echo "Try again"
+        user_input ;
+    fi
 }
 
 
 warn_msg () {
-	case "${1}" in
+    case "${1}" in
 
-		choose_root)
-			echo
-			echo "What is the root password for your mysql server?"
-			echo "Not the system root user, the the mysql root password."
-			echo "The one you may have just created."
-			;;
+        choose_root)
+            echo
+            echo "What is the root password for your mysql server?"
+            echo "Not the system root user, the the mysql root password."
+            echo "The one you may have just created."
+            ;;
 
-		chosen)
-			echo
-			echo "You have entered : ${CHOICE}"
-			echo "Is this correct..?"
-			;;
+        chosen)
+            echo
+            echo "You have entered : ${CHOICE}"
+            echo "Is this correct..?"
+            ;;
 
-		config_1)
-			echo "Automatic setup can help configure the following"
-			echo "You will be prompted at each stage to choose"
-			echo
-			echo " - Create warewulf database"
-			echo " - Give warewulf user database access"
-			echo " - Create warewulf user account"
-			echo " - Reload mysql when done"
-			echo
-			echo "Before we can automate this process you will need to"
-			echo "enter some information first"
-			;;
+        config_1)
+            echo "Automatic setup can help configure the following"
+            echo "You will be prompted at each stage to choose"
+            echo
+            echo " - Create warewulf database"
+            echo " - Give warewulf user database access"
+            echo " - Create warewulf user account"
+            echo " - Reload mysql when done"
+            echo
+            echo "Before we can automate this process you will need to"
+            echo "enter some information first"
+            ;;
 
-		config_mysql)
-			echo
-			echo "Would you like to configure mysql ?"
-			;;
+        config_mysql)
+            echo
+            echo "Would you like to configure mysql ?"
+            ;;
 
-		config_tftp)
-			echo
-			echo "Configuring the tftp server for warewulf"
-			;;
+        config_tftp)
+            echo
+            echo "Configuring the tftp server for warewulf"
+            ;;
 
-		enter_once)
-			echo
-			echo "Enter the password"
-			;;
+        enter_once)
+            echo
+            echo "Enter the password"
+            ;;
 
-		enter_twice)
-			echo
-			echo "Enter the password a again"
-			;;
+        enter_twice)
+            echo
+            echo "Enter the password a again"
+            ;;
 
-		enter_mismatch)
-			echo
-			echo "ERROR: They do not match try again"
-			;;
+        enter_mismatch)
+            echo
+            echo "ERROR: They do not match try again"
+            ;;
 
-		choose_dir)
-			echo
-			echo "Many Debian based tftp daemons have adopted"
-			echo "the path /srv/tftp as their default path"
-			echo "replacing the old path /var/lib/tftpboot"
-			echo
-			echo "Warewulf needs to know which path it should use."
-			echo "Should Warewulf use the new path /srv/tftp  or"
-			echo "use the default warewulf path /var/lib/tftpboot ?"
-			echo
-			echo "YES = Configure warewulf to use the path /srv/tftp"
-			echo " NO = Configure tftpd to use the path /var/lib/tftpboot"
-			;;
+        compiler_error)
+            echo
+            echo "ERROR: Warewulf source code failed to compile or install"
+            echo
+            ;;
 
-		finished)
-			echo
-			echo "============================================================================"
-			echo "Be sure to check the output in case of possible errors"
-			echo "otherwise all operations appear to have completed successfully"
-			echo "============================================================================"
-			echo
-			echo 'running "wwinit ALL" to finalize configuration.' 
-			;;
+        choose_dir)
+            echo
+            echo "Many Debian based tftp daemons have adopted"
+            echo "the path /srv/tftp as their default path"
+            echo "replacing the old path /var/lib/tftpboot"
+            echo
+            echo "Warewulf needs to know which path it should use."
+            echo "Should Warewulf use the new path /srv/tftp  or"
+            echo "use the default warewulf path /var/lib/tftpboot ?"
+            echo
+            echo "YES = Configure warewulf to use the path /srv/tftp"
+            echo " NO = Configure tftpd to use the path /var/lib/tftpboot"
+            ;;
 
-		intro)
-			echo
-			echo "Will check system for required dependencies, and can automatically"
-			echo "install the required packages. For example, would you like to execute"
-			echo "the following commands to install and setup the packages warewulf"
-			echo "needs to run ?"
-			echo
-			echo "aptidude update"
-			echo "apt-get install libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap"
-			echo
-			;;
+        finished)
+            echo
+            echo "============================================================================"
+            echo "Be sure to check the output in case of possible errors"
+            echo "otherwise all operations appear to have completed successfully"
+            echo "============================================================================"
+            echo
+            echo 'running "wwinit ALL" to finalize configuration.'
+            ;;
 
-		makecheck)
-			echo "WARNING: make command not found"
-			echo
-			echo "Warewulf will need to be compiled to run on .deb based distros"
-			echo "Would you like to add build-essential to the list of packages ?"
-			;;
+        intro)
+            echo
+            echo "Will check system for required dependencies, and can automatically"
+            echo "install the required packages. For example, would you like to execute"
+            echo "the following commands to install and setup the packages warewulf"
+            echo "needs to run ?"
+            echo
+            echo "aptidude update"
+            echo "${PACKAGELIST}"
+            echo
+            ;;
 
-		missing_sql)
-			echo
-			echo "Did not find mysql"
-			echo "Would you like to install mysql-server now ?"
-			;;
+        makecheck)
+            echo "WARNING: make command not found"
+            echo
+            echo "Warewulf will need to be compiled to run on .deb based distros"
+            echo "Would you like to add build-essential to the list of packages ?"
+            ;;
 
-		need_sql)
-			echo "Warewulf must have mysql-server installed"
-			echo "Are you sure you want to continue without it"
-			;;
+        missing_sql)
+            echo
+            echo "Did not find mysql."
+            echo "Would you like to install mysql-server also ?"
+            ;;
 
-		need_tftp)
-			echo "Warewulf must have tftpd server installed"
-			echo "Are you sure you want to continue without it"
-			;;
-			
-		no_tfpt)
-			echo
-			echo "tftp server not found"
-			echo "Would you like to install tftpd-hpa ?"
-			echo
-			;;
+        need_sql)
+            echo "Warewulf must have mysql-server installed"
+            echo "Are you sure you want to continue without it"
+            ;;
 
-		no_root)
-			echo
-			echo
-			echo "This script MUST be run as root"
-			echo
-			echo
-			;;
+        need_tftp)
+            echo "Warewulf must have tftpd server installed"
+            echo "Are you sure you want to continue without it"
+            ;;
 
-		pkgs_selected)
-			echo
-			echo "Current list of packages to be installed on this system."
-			echo "${packagelist}"
-			echo
-			echo "Proceed to download and install the current list of packages."
-			;;
+        no_tfpt)
+            echo
+            echo "tftp server not found"
+            echo "Would you like to install tftpd-hpa ?"
+            ;;
 
-		remove_path)
-			echo "Eliminate later confusion do you want to delete the"
-			echo "directory ${CHOICE} and every thing in it ?"
-			echo
-			echo "WARNING: Say NO if you want to keep this directory"
-			;;
+        no_root)
+            echo
+            echo
+            echo "This script MUST be run as root"
+            echo
+            echo
+            ;;
 
-		sql_root)
-			echo
-			echo "After mysql-server is installed you will be prompted"
-			echo "to create the root password for mysql."
-			echo
-			echo "NOTE: This is NOT your system root user"
-			echo "choose a password to secure mysql from"
-			echo "unwanted user access."
-			echo
-			echo "Do You Understand ?"
-			;;
+        pkgs_selected)
+            echo
+            echo "Current list of packages to be installed on this system."
+            echo "${PACKAGELIST}"
+            echo
+            echo "Proceed to download and install the current list of packages."
+            ;;
 
-		usage)
-			echo
-			echo "install-wwdebsystem -h	# Display this message"
-			echo
-			echo "To setup the system and install warewulf release version 3.4"
-			echo "with ./configure --prefix=/usr/local <--- NO trailing slash .! "
-			echo
-			echo "NOTE: if not given --prefix= the install path will default to / "
-			echo
-			echo "sudo install-wwdebsystem 3.4        - will istall to the default /usr/local"
-			echo
-			echo "sudo install-wwdebsystem 2013-10-19 /usr   - will install nightly build to /usr"
-			echo
-			;;
+        remove_path)
+            echo "Eliminate later confusion do you want to delete the"
+            echo "directory ${CHOICE} and every thing in it ?"
+            echo
+            echo "WARNING: Say NO if you want to keep this directory"
+            ;;
 
-		wwready)
-			echo
-			echo '================================================================='
-			echo "System should be ready to run Warewulf."
-			echo "Will now download, compile, and install Warewulf."
-			echo
-			echo "The warewulf version-${WWVERSION} will be downloaded"
-			echo "into the same directory this script is located."
-			echo
-			echo "NOTE: Source will be downloaded and compiled and installed as root"
-			echo
-			echo "Continue with installation...?"
-			;;
+        sql_root)
+            echo
+            echo "After mysql-server is installed you will be prompted"
+            echo "to create the root password for mysql."
+            echo
+            echo "NOTE: This is NOT your system root user"
+            echo "choose a password to secure mysql from"
+            echo "unwanted user access."
+            echo
+            echo "Do You Understand ?"
+            ;;
 
-	esac
+        usage)
+            echo
+            echo "install-wwdebsystem -h    # Display this message"
+            echo
+            echo "To setup the system and install warewulf release version 3.4"
+            echo "with ./configure --prefix=/usr/local <--- NO trailing slash .! "
+            echo
+            echo "NOTE: if not given --prefix= the install path will default to / "
+            echo
+            echo "sudo install-wwdebsystem 3.4        - will istall to the default /usr/local"
+            echo
+            echo "sudo install-wwdebsystem 2013-10-19 /usr   - will install nightly build to /usr"
+            echo
+            ;;
+
+        which_eth)
+            echo
+            echo "Which ethernet adapter will warewulf use to network nodes ?"
+            echo "The default is eth1"
+            ;;
+
+        wwready)
+            echo
+            echo '================================================================='
+            echo "System should be ready to run Warewulf."
+            echo "Will now download, compile, and install Warewulf."
+            echo
+            echo "The warewulf version-${WWVERSION} will be downloaded"
+            echo "into the same directory this script is located."
+            echo
+            echo "NOTE: Source will be downloaded and compiled and installed as root"
+            echo
+            echo "Continue with installation...?"
+            ;;
+
+    esac
+}
+
+
+which_nic () {
+    # prompt for which eth device
+    # to use for WW master node
+    warn_msg which_eth ;
+    user_input ;
+
+    # edit file in place
+    # set which eth for warewulf - provision.conf
+    echo "$( cat ${WWPREFIX}/etc/warewulf/provision.conf \
+            | sed "s/^.*network device.*=.*$/network device = ${CHOICE}/")" > ${WWPREFIX}/etc/warewulf/provision.conf ;
 }
 
 
@@ -644,207 +715,177 @@ INSTALATION_USER=$( /usr/bin/whoami )
 
 if [[ "${INSTALATION_USER}" != "root" ]]
 then
-	warn_msg no_root ;
+    warn_msg no_root ;
     exit 1
+fi
+
+#### Set Warewulf path for ./configure ####
+if [[ -z ${WWPREFIX} ]]
+then
+    WWPREFIX="/usr/local"
 fi
 
 # prompt to install needed packages ?
 warn_msg intro ;
 if user_decide
 then
-	# check for development tools
-	makecheck="$( which make )"
-	wgetcheck="$( which wget )"
+    # check for development tools
+    makecheck="$( which make )"
+    wgetcheck="$( which wget )"
 
-	packagelist="libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap"
+    if [[ -z ${wgetcheck} ]]
+    then
+        PACKAGELIST="${PACKAGELIST} wget"
+    fi
 
-	if [[ -z ${wgetcheck} ]]
-	then
-		packagelist="${packagelist} wget"
-	fi
+    if [[ -z ${makecheck} ]]
+    then
+        # WARNING: make command not found ask to install ?
+        warn_msg makecheck ;
+        if user_decide
+        then
+            PACKAGELIST="${PACKAGELIST} build-essential" ;
+        fi
+    fi
 
-	if [[ -z ${makecheck} ]]
-	then
-		# WARNING: make command not found ask to install ?
-		warn_msg makecheck ;
-		if user_decide
-		then
-			packagelist="${packagelist} build-essential" ;
-		fi
-	fi
+    # make sure mysql is installed
+    if [[ -z $(which mysql) ]]
+    then
+        # prompt mysql not found ask to install ?
+        warn_msg missing_sql ;
+        if user_decide
+        then
+            # prompt about diff in root users
+            warn_msg sql_root ;
+            if ! user_decide
+            then
+                echo "Continuing any way"
+            fi
+            PACKAGELIST="${PACKAGELIST} mysql-server" ;
+        else
+            # warn mysql needed ask to continue without it ?
+            warn_msg need_sql ;
+            if user_decide
+            then
+                echo
+                echo "Continuing without installing mysql"
+            fi
+        fi
+    fi
 
-	# make sure mysql is installed
-	if [[ -z $(which mysql) ]]
-	then
-		# prompt mysql not found ask to install ?
-		warn_msg missing_sql ;
-		if user_decide
-		then
-			# prompt about diff in root users
-			warn_msg sql_root ;
-			if ! user_decide
-			then
-				echo "Continuing any way"
-			fi
-			packagelist="${packagelist} mysql-server" ;
+    # most common server used is tftpd-hpa.
+    # we will check for this and install if not found.
+    if [[ ! $(dpkg -s tftpd-hpa | grep Status >/dev/null 2>&1) ]]
+    then
+        # WARNING tftp server not found ask to install ?
+        warn_msg no_tfpt ;
+        if user_decide
+        then
+            PACKAGELIST="${PACKAGELIST} tftpd-hpa" ;
+        else
+            # ask if want continue without installing tftp server
+            warn_msg need_tftp ;
+            if user_decide
+            then
+                echo
+                echo "Continuing without installing"
+            else
+                exit 1 ;
+            fi
+        fi
+    fi
 
-		else
-			# warn mysql needed ask to continue without it ?
-			warn_msg need_sql ;
-			if user_decide
-			then
-				echo
-				echo "Continuing without installing mysql"
-			fi
-		fi
-	fi
-
-	# most common server used is tftpd-hpa.
-	# we will check for this and install if not found.
-	if [[ ! $(dpkg -s tftpd-hpa | grep Status) ]]
-	then
-		# WARNING tftp server not found ask to install ?
-		warn_msg no_tfpt ;
-		if user_decide
-		then
-			packagelist="${packagelist} tftpd-hpa" ;
-		else
-			# ask if want continue without installing tftp server
-			warn_msg need_tftp ;
-			if user_decide
-			then
-				echo
-				echo "Continuing without installing"
-			else
-				exit 1 ;
-			fi
-		fi
-	fi
-
-	# Install all requested packages
-	warn_msg pkgs_selected ;
-	if user_decide
-	then
-		echo
-		aptitude update ;
-		apt-get install ${packagelist} ;
-	else
-		echo
-		echo "Do Your Homework Then Run This Again"
-		echo
-		exit 1 ;
-	fi
+    # Install all requested packages
+    warn_msg pkgs_selected ;
+    if user_decide
+    then
+        echo
+        aptitude update ;
+        apt-get install ${PACKAGELIST} ;
+    else
+        echo
+        echo "Do Your Homework Then Run This Again"
+        echo
+        exit 1 ;
+    fi
 fi
-
-
-# prompt ask if would like to configure mysql ?
-warn_msg config_mysql;
-if [[ -n $(which mysql) ]] && user_decide ;
-then
-	# prompt with setup info
-	warn_msg config_1 ;
-
-	echo
-	echo "	---== Walking though each step ==---"
-	echo
-	##################
-	# ask for and verify sql root password
-	if sql_rootpw
-	then
-		choose_wwuser ;
-		create_wwdb ;
-	fi
-else
-	echo
-	echo "Assuming mysql is already setup and configured"
-	echo "with warewulf or you will need do it by hand later."
-fi
-
-##################
-echo
-echo "##################"
-echo "Reload mysql ?"
-if user_decide
-then
-	echo "reloading mysql"
-	mysqladmin -u root -p${rootpassword} reload ;
-fi
-
 
 # prompt ready for warewulf ask to compile and install ?
 warn_msg wwready ;
 if user_decide
 then
+    compilelist="warewulf-common warewulf-provision warewulf-vnfs"
 
-	if echo "${WWVERSION}" | grep -i -o '^.\{4\}\-.\{2\}\-.\{2\}' > /dev/null ;
-	then
-		WWDOWNLOAD="http://warewulf.lbl.gov/downloads/nightly/${WWVERSION}"
+    if echo "${WWVERSION}" | grep -i -o '^.\{4\}\-.\{2\}\-.\{2\}' > /dev/null ;
+    then
+        WWDOWNLOAD="http://warewulf.lbl.gov/downloads/nightly/${WWVERSION}"
 
-		pkglist="$( wget -q ${WWDOWNLOAD} -O - | tr "\t\r\n'" '   "' | \
-			grep -i -o '<a[^>]\+href[ ]*=[ \t]*"warewulf\-\(com\|prov\|vnf\)[^"]\+"'| \
-			sed -e 's/^.*"\([^"]\+\)".*$/\1/g' ) " ;
+        pkglist="$( wget -q ${WWDOWNLOAD} -O - | tr "\t\r\n'" '   "' | \
+            grep -i -o '<a[^>]\+href[ ]*=[ \t]*"warewulf\-\(com\|prov\|vnf\)[^"]\+"'| \
+            sed -e 's/^.*"\([^"]\+\)".*$/\1/g' ) " ;
+    else
+        WWDOWNLOAD='http://warewulf.lbl.gov/downloads/releases'
+        for i in ${compilelist}
+        do
+            if [[ -z ${pkglist} ]]
+            then
+                pkglist="${i}/${i}-${WWVERSION}${FILETYPE}"
+            else
+                pkglist="${pkglist} ${i}/${i}-${WWVERSION}${FILETYPE}"
+            fi
+        done
+    fi
 
-	else
-		WWDOWNLOAD='http://warewulf.lbl.gov/downloads/releases'
+    for i in ${pkglist}
+    do
+        wget -N ${WWDOWNLOAD}/${i} || wget -N ${WWDOWNLOAD}/${i} || \
+            { echo "ERROR: $1 - Failed to download ${WWDOWNLOAD}/${i} source files" && exit 1; } ;
+    done
 
-		for i in 'warewulf-common' 'warewulf-provision' 'warewulf-vnfs'
-		do
-			if [[ -z ${pkglist} ]]
-			then
-				pkglist="${i}/${i}-${WWVERSION}${FILETYPE}"
-			else
-				pkglist="${pkglist} ${i}/${i}-${WWVERSION}${FILETYPE}"
-			fi
-		done
-	fi
+    # no nightly builds for cluster package so add it separately
+    #  only get this package from full releases
+    wget -N http://warewulf.lbl.gov/downloads/releases/warewulf-cluster/warewulf-cluster-${CLUSTERVER}${FILETYPE} ;
+    compilelist="${compilelist} warewulf-cluster"
 
-	for i in ${pkglist}
-	do
-		wget -N ${WWDOWNLOAD}/${i} || wget -N ${WWDOWNLOAD}/${i} || \
-			{ echo "ERROR: $1 - Failed to download ${WWDOWNLOAD}/${i} source files" && exit 1; } ;
-	done
+    for i in $( ls -A | grep '.tar.gz' )
+    do
+        echo
+        echo "Unpacking files"
+        tar -zxf ${i} && rm ${i} ;
+    done
 
-	if [[ -n ${WWPREFIX} ]]
-	then
-		newprefix="--prefix=${WWPREFIX}"
-	else
-		newprefix=""
-	fi
+    for i in ${compilelist}
+    do
+        cd ${i}* ;
+        ./configure ${WWPREFIX} ;
+        make || ( warn_msg compiler_error && exit 1 ) ;
+        make install || ( warn_msg compiler_error && exit 1 ) ;
+        cd ../ ;
+    done
 
-	for i in $( ls -A | grep '.tar.gz' )
-	do
-		echo
-		echo "Unpacking files"
-		tar -zxf ${i} ;
-	done
+    if [[ "${WWPREFIX}x" == "/x" ]]
+    then
+        WWPREFIX=""
+    fi
 
-	for i in $( ls -A | grep -v '.tar.gz' )
-	do
-		if [[ -d ${i} ]]
-		then			
-			cd ${i} ;
-			./configure ${newprefix} ;
-			make ;
-			make install ;
-			cd ../ ;
-		fi
-	done
 fi
 
+###-----------------------------------------
+# Configuring the ethernet for warewulf
+which_nic ;
 
 # Configuring the tftp server for warewulf
 config_tftpd ;
 
-# restart the tftp server
-echo "Restarting the tftp server"
-service tftpd-hpa restart  || echo "TFTP server failed to start check your configs and try manualy" ;
+# configure mysql and files
+config_wwsql ;
 
-if [[ -n ${warewulfusr} ]]
-then
-	echo
-	echo "Setting the warewulf config files for mysql access"
-	config_wwsql ;
-fi
+# download the current undionly version
+get_undionly ;
+
+# Patch paths for non standard installs at
+# least until they are properly handles by WW
+path_patch ;
 
 # inform all done looks good
 warn_msg finished ;
@@ -852,4 +893,11 @@ warn_msg finished ;
 # now initialize warewulf
 wwinit ALL ;
 
+# make sure all current configs are loaded
+wwsh dhcp update && wwsh dhcp restart ;
+wwsh pxe update ;
+
 exit 0 ;
+
+
+# vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
