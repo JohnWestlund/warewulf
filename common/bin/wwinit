@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# 
+#
 # Copyright (c) 2001-2003 Gregory M. Kurtzer
 #
 # Copyright (c) 2003-2012, The Regents of the University of California,
@@ -102,18 +102,18 @@ for arg in $@; do
             wwinit_files="$wwinit_files $i";
         fi
     done
-done 
+done
 
-# Eliminate duplicated files 
+# Eliminate duplicated files
 wwinit_files=$( find $wwinit_files | sort | uniq );
 
 for file in $wwinit_files; do
     test -n "$VERBOSE" && echo "VERBOSE:  Running module: $file"
     if [ -n "$DEBUG" ]; then
-        sh -x $file "$@"
+        $SHELL -x $file "$@"
         RETVAL=$?
     else
-        . $file $init "$@"
+        $SHELL $file $init "$@"
         RETVAL=$?
     fi
     if [ $RETVAL -eq 0 ]; then
