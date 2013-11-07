@@ -126,10 +126,10 @@ rm -rf $RPM_BUILD_ROOT
 %{perl_vendorlib}/Warewulf/Provision
 %{perl_vendorlib}/Warewulf/Event/DynamicHosts.pm
 %{perl_vendorlib}/Warewulf/Event/DefaultProvisionNode.pm
+%{perl_vendorlib}/Warewulf/Event/ProvisionFileDelete.pm
 %{perl_vendorlib}/Warewulf/Module/Cli/Bootstrap.pm
 %{perl_vendorlib}/Warewulf/Module/Cli/Provision.pm
 %{perl_vendorlib}/Warewulf/Module/Cli/Vnfs.pm
-
 
 %files server
 %defattr(-, root, root)
