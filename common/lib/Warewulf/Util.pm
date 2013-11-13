@@ -186,7 +186,9 @@ expand_bracket(@)
     my @ret;
 
     foreach my $range (@ranges) {
-        if ($range =~ /^(.*)\[([\d\-\,]+)\](.*)$/) {
+        if ($range =~ /^\/.+\/$/) {
+            push(@ret, $range);
+        } elsif ($range =~ /^(.*)\[([\d\-\,]+)\](.*)$/) {
             my $prefix = $1;
             my $range = $2;
             my $suffix = $3;
