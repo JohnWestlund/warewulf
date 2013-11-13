@@ -289,8 +289,6 @@ get_objects($$$@)
 
     dprint("$sql_query\n");
 
-    warn "SQL> $sql_query\n\n";
-
     $sth = $self->{"DBH"}->prepare($sql_query);
     $sth->execute();
 
