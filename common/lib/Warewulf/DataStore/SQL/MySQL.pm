@@ -240,11 +240,39 @@ get_objects($$$@)
             push(@query_opts, "datastore.id IN (". join(",", map { $self->{"DBH"}->quote($_) } @strings). ")");
             @strings = ();
         } else {
-            push(@query_opts, "(lookup.field = ". $self->{"DBH"}->quote(uc($field)) ."OR lookup.field = ". $self->{"DBH"}->quote(uc("_". $field)) .")");
+            push(@query_opts, "(lookup.field = ". $self->{"DBH"}->quote(uc($field)) ." OR lookup.field = ". $self->{"DBH"}->quote(uc("_". $field)) .")");
         }
     }
+
     if (@strings) {
-        push(@query_opts, "lookup.value IN (". join(",", map { $self->{"DBH"}->quote($_) } @strings). ")");
+        my @in_opts;
+        my @like_opts;
+        my @regexp_opts;
+        my @string_query;
+        foreach my $s (@strings) {
+            if ( $s =~ /^\/(.+)\/$/ ) {
+                push(@regexp_opts, $1);
+            } elsif ($s =~ /[\*\?]/) {
+                $s =~ s/\*/\%/g;
+                $s =~ s/\?/\_/g;
+                push(@like_opts, "lookup.value LIKE ". $self->{"DBH"}->quote($s));
+            } else {
+                push(@in_opts, $self->{"DBH"}->quote($s));
+            }
+        }
+        if (@in_opts) {
+            push(@string_query, "lookup.value IN (". join(",", @in_opts). ")");
+        }
+        if (@like_opts) {
+            push(@string_query, join(" OR ", @like_opts));
+        }
+        if (@regexp_opts) {
+            push(@string_query, "lookup.value REGEXP ". $self->{"DBH"}->quote("^(". join("|", @regexp_opts) ."\$)"));
+        }
+
+        if (@string_query) {
+            push(@query_opts, "(" . join(" OR ", @string_query) . ")");
+        }
     }
 
     $sql_query  = "SELECT ";
@@ -260,6 +288,9 @@ get_objects($$$@)
     $sql_query .= "GROUP BY datastore.id";
 
     dprint("$sql_query\n");
+
+    warn "SQL> $sql_query\n\n";
+
     $sth = $self->{"DBH"}->prepare($sql_query);
     $sth->execute();
 
