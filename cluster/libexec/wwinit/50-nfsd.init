@@ -25,6 +25,8 @@ if [ -x "/etc/rc.d/init.d/nfs" ]; then
     SERVICE_NAME="nfs"
 elif [ -x "/etc/rc.d/init.d/nfsd" ]; then
     SERVICE_NAME="nfsd"
+elif [ -x "/etc/init.d/nfs-kernel-server" ]; then
+    SERVICE_NAME="nfs-kernel-server"
 else
     wwprint "Is NFS installed and loaded properly?" error
     exit 255
@@ -79,8 +81,13 @@ if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/node.conf" ]; then
     fi
 fi
 
-wwrun chkconfig nfs on
-wwrun service nfs restart
+if [[ -z "$( which update-rc.d )" ]]; then
+    wwrun chkconfig $SERVICE_NAME on
+else
+    wwrun update-rc.d $SERVICE_NAME defaults 15 ;
+fi
+
+wwrun service $SERVICE_NAME restart
 wwrun exportfs -a || exit 255
 
 

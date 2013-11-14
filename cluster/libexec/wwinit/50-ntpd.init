@@ -20,6 +20,13 @@ fi
 
 wwreqroot
 
+if [ -x "/etc/rc.d/init.d/ntpd" ]; then
+    SERVICE_NAME="ntpd"
+elif [ -x "/etc/init.d/ntp" ]; then
+    SERVICE_NAME="ntp"
+fi
+
+
 RETVAL=1
 
 NETWORK=`perl -MWarewulf::Network -MWarewulf::Config -e 'print Warewulf::Network->new()->network(Warewulf::Config->new("provision.conf")->get("network device"));'`
@@ -78,7 +85,12 @@ EOF
 
 wwprint "Configured NTP services\n"
 
-wwrun chkconfig ntpd on
-wwrun service ntpd restart
+if [[ -z "$( which update-rc.d )" ]]; then
+    wwrun chkconfig $SERVICE_NAME on
+else
+    wwrun update-rc.d $SERVICE_NAME defaults 3 ;
+fi
+
+wwrun service $SERVICE_NAME restart
 
 exit $RETVAL

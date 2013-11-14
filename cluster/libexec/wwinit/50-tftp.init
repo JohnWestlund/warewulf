@@ -20,8 +20,19 @@ fi
 
 wwreqroot
 
-wwrun /sbin/chkconfig xinetd on || exit 1
-wwrun /sbin/chkconfig tftp on || exit 1
-wwrun /sbin/service xinetd restart || exit 1
+if [ -x "/etc/rc.d/init.d/tftp" ]; then
+    SERVICE_NAME="tftp"
+elif [ -x "/etc/init.d/tftpd-hpa" ]; then
+    SERVICE_NAME="tftpd-hpa"
+fi
+
+if [[ -z "$( which update-rc.d )" ]]; then
+    wwrun /sbin/chkconfig xinetd on || exit 1
+    wwrun /sbin/chkconfig $SERVICE_NAME on || exit 1
+    wwrun /sbin/service xinetd restart || exit 1
+else
+    wwrun update-rc.d $SERVICE_NAME defaults 3 ;
+    wwrun service $SERVICE_NAME restart || exit 1
+fi
 
 exit 0
