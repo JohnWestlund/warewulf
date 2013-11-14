@@ -223,7 +223,7 @@ exec()
     $command = shift(@ARGV);
 
     if (! $db) {
-        &eprint("Database object not avaialble!\n");
+        &eprint("Database object not available!\n");
         return undef;
     }
 
