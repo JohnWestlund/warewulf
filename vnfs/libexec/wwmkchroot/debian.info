@@ -99,25 +99,24 @@ cat <<EOF
 
           COMPONENTS="source1,source-2,source_3"    -    Change componets such as main contrib
 
-          PKGLIST="package1 package-2 package_3"    -    Replace the default package list with these
+          PKGLIST="package1,package-2,package_3"    -    Replace this default package list with these
 
-          EXCLUDEPKG="package1 package-2 package_3" -    Debootstrap will exclude these packages from the install
+          EXTRA=1 - The extra package list FULLINSTALL will be added to PKGLIST
+
+          FULLINSTALL="package1,package-2,package_3" -  Replace this default package list with these
+
+          EXCLUDEPKG="package1,package-2,package_3" -    Debootstrap will exclude these packages from the install
 
           OS_MIRROR="http://packages.linuxmint.com" -    Set a custom mirror for deboostrap to get its packages from.
 
-          EXCLUSIONS="/path_to/file /path_to/directory" - These are warewulf exclusions that will be omitted from the vnfs capsule
+          EXCLUSIONS="/path_to/file, /path_to/directory" - These will be omitted from the vnfs capsule
+          HYBRIDIZE="/path_to/directory, /path_to/directory" - These will be omitted from the vnfs capsule and symlinks created.
 
           Will auto mount iso's for inclusion in vnfs capsules sources.list file
           NOTE: debootstrap will NOT install from these. They will be added to the
           top of the sources.list available for future chroot apt package management.
 
           INSTALL_ISO="/path/to/iso-1.iso,/path/to/iso-2.iso,/path/to/iso-3.iso"
-    ______________________________________________________________________
-          Adding a custom list of packages to be installed along with the defaults will
-          require using 2 options together
-
-          EXTRA=1
-          FULLINSTALL="vim-tiny,cron,rsyslog,dracut,ntp"
 
 EOF
 

@@ -5,7 +5,6 @@ print_full_help () {
 
 
 cat <<EOF
-
     Support is built in to allow for all debian supported architectures to
     be built on any machine. However, this is experimental and mostly untested.
     Individule experiences could vary greatly. See Experimental architectures below.
@@ -34,26 +33,54 @@ cat <<EOF
 
     These are the debian defaults:
         Components  "main,contrib,non-free"
-        Packages    "openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,
+        PKGLIST  =  "openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,
                         nfs-common,nfs-kernel-server,ethtool,iproute,iputils-ping,
                         iputils-arping,net-tools,firmware-bnx2,ifupdown,rsync"
+
+        FULLINSTALL =  "libpcre3,less,libpopt0,tcpd,update-inetd,libpam-cracklib,
+                        iputils-tracepath,rsh-client,wamerican,vim-tiny,cron,gawk,
+                        mingetty,psmisc,rdate,rsh-redone-server,rsyslog,dracut"
+
 
     Examples recipe files:
         To create a 32 bit vnfs from the standard repository:
 
-        ARCH="i386"
-        DISTRO="debian"
-        CODENAME="wheezy"
+            . include-deb
 
-        To create an amd compatibla 64 bit debian vnfs from the standard
-        repository with a custom list of packages from a recipe file, and
-        automatically build and integrate the vnfs into warewulf
-        without promting for user input for an unattended install :
+            ARCH="i386"
+            DISTRO="debian"
+            CODENAME="wheezy"
 
-        ARCH="amd64"
-        DISTRO="debian"
-        CODENAME="wheezy"
-        AUTO=1
+
+        To create an AMD compatibla 64 bit debian vnfs from custom repository.
+        Installing only this list of packages from the recipe file.
+
+            . include-deb
+
+            ARCH="amd64"
+            DISTRO="debian"
+            CODENAME="wheezy"
+            PKGLIST="openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,nfs-common,\
+                    ethtool,iproute,iputils-ping,iputils-arping,net-tools,firmware-bnx2,\
+                    linux-image-2.6.32-5-amd64"
+
+
+        To create an AMD compatibla 64 bit debian vnfs from the standard
+        repository. Adding a custom list of packages from the recipe file
+        to the list of default packages. Hybrizing the vnfs with a default
+        hybridpath and creating symlinks to /home and /media . Automatically
+        build and integrate the vnfs into warewulf without promting for user
+        input for an unattended install :
+
+            . include-deb
+
+            ARCH="amd64"
+            DISTRO="debian"
+            CODENAME="wheezy"
+            HYBRIDIZE="/home, /media"
+            EXTRA=1
+            FULLINSTALL="lxde,chromium"
+            AUTO=1
 
 EOF
 

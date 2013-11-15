@@ -8,8 +8,7 @@
 #
 # There is no warranty of any kind implied or otherwise
 #
-#   Version: 0.3
-#   Date: 2013-11-04
+#   Date: 2013-11-14
 #########################################################
 
 WWDOWNLOAD=""
@@ -17,10 +16,13 @@ WWVERSION=""
 WWPREFIX=""
 SQLUSER=""
 CHOICE=""
+EDITOR=""
 CLUSTERVER="3.4"
 FILETYPE='.tar.gz'
 
-PACKAGELIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap isc-dhcp-server tcpdump openssh-client"
+PACKAGELIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap \
+isc-dhcp-server tcpdump openssh-client nfs-kernel-server nfs-common \
+portmap ntp"
 
 
 check_sqlpw () {
@@ -140,6 +142,24 @@ path_patch () {
     then
         ln -s $( which insserv ) $(dirname $(which wwsh ))/insserv ;
     fi
+
+    # make sure warewulf can find our text editor
+    # will edit environment variable for this user
+    if [[ -n "$( which ${EDITOR} )" ]]
+    then
+        if [[ -n "$( grep 'EDITOR' ~/.bashrc )" ]]
+        then
+            # edit file in place
+            # existing environment variable for editor found
+            echo "$( cat ~/.bashrc \
+                        | sed 's/^.*EDITOR.*=.*$/export EDITOR=\"\$\(which \$EDITOR\)\"/')" > ~/.bashrc ;
+        else
+            echo "export EDITOR=\"$( which ${EDITOR} )\"" >> ~/.bashrc ;
+        fi
+    else
+        echo
+        echo 'ERROR : No command line text editor found. Warewulf will not be able to offer file editing'
+    fi
 }
 
 
@@ -238,8 +258,8 @@ config_wwsql () {
 
         # edit file in place
         # populate /etc/warewulf/database-root.conf
-        echo "$( cat ${rootconf} | sed \
-                "s/^.*database password.*=.*$/database password   = ${rootpassword}/" )" > ${rootconf} ;
+        echo "$( cat ${rootconf} | sed "\
+                s/^.*database password.*=.*$/database password   = ${rootpassword}/" )" > ${rootconf} ;
 
         ##################
         echo
@@ -415,13 +435,8 @@ sql_rootpw () {
     then
         rootpassword="${CHOICE}"
     else
-        echo
-        echo "ERROR: Not a valid mysql root password"
-        echo
-        echo "Try again with a different password ?"
-        echo "YES = Use a different password"
-        echo " NO = Skip mySQL setup and continue with warewulf system configuration ?"
-
+        # wrong passwrd what to do now ?
+        warn_msg root_auth ;
         if user_decide
         then
             sql_rootpw ;
@@ -542,6 +557,14 @@ warn_msg () {
             echo " NO = Configure tftpd to use the path /var/lib/tftpboot"
             ;;
 
+        editor)
+            echo
+            echo "Which command line text editor would you like to use ?"
+            echo "nano should already be installed."
+            echo "YES = Configure nano as the default system editor for this user."
+            echo " NO = Install and set vi as default system editor for this user."
+            ;;
+
         finished)
             echo
             echo "============================================================================"
@@ -612,6 +635,15 @@ warn_msg () {
             echo "Delete the directory ${CHOICE} and every thing in it ?"
             echo
             echo "WARNING: Say NO if you want to keep this directory"
+            ;;
+
+        root_auth)
+            echo
+            echo "ERROR: Not a valid mysql root password"
+            echo
+            echo "Try again with a different password ?"
+            echo "YES = Use a different password"
+            echo " NO = Skip mySQL setup and continue with warewulf system configuration ?"
             ;;
 
         sql_root)
@@ -789,6 +821,16 @@ then
         fi
     fi
 
+    # which command line editor would you like to use nano or vi ?
+    warn_msg editor;
+    if user_decide
+    then
+        EDITOR="nano"
+    else
+        EDITOR="vi"
+        PACKAGELIST="${PACKAGELIST} vim"
+    fi
+
     # Install all requested packages
     warn_msg pkgs_selected ;
     if user_decide
@@ -889,6 +931,10 @@ wwinit ALL ;
 # make sure all current configs are loaded
 wwsh dhcp update && wwsh dhcp restart ;
 wwsh pxe update ;
+
+echo
+echo " You should logout and log back in to ensure proper function"
+echo
 
 exit 0 ;
 
