@@ -80,7 +80,7 @@ ifup() {
                 wwfailure
             fi
         fi
-	if [ -f "/sys/class/net/$NETDEV/address" ]; then
+    if [ -f "/sys/class/net/$NETDEV/address" ]; then
             HWADDR=`cat /sys/class/net/$NETDEV/address`
             if [ ${#HWADDR} -eq 59 ]; then
                 HWADDR=`expr substr $HWADDR 37 23`
@@ -100,6 +100,16 @@ ifup() {
                         wwfailure
                     fi
                 fi
+                echo "auto lo" > /tmp/interfaces
+                echo "iface lo inet loopback" >> /tmp/interfaces
+                echo '' >> /tmp/interfaces
+                echo "auto $DEVICE" >> /tmp/interfaces
+                echo "iface $DEVICE inet static" >> /tmp/interfaces
+                echo "    address $WWIPADDR" >> /tmp/interfaces
+                echo "    netmask $WWNETMASK" >> /tmp/interfaces
+                echo "    gateway $WWGATEWAY" >> /tmp/interfaces
+                echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
                 echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
                 echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
@@ -108,6 +118,7 @@ ifup() {
                 echo "GATEWAY=$WWGATEWAY" >> /tmp/ifcfg-$DEVICE
                 if [ -n "$WWMTU" ]; then
                     echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE
+                    echo "    mtu $WWMTU" >> /tmp/interfaces
                 fi
                 echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
                 COUNT=0
@@ -135,6 +146,16 @@ ifup() {
                 . /etc/network.conf
                 msg_gray "($IPADDR/$NETMASK)"
                 wwsuccess
+                echo "auto lo" > /tmp/interfaces
+                echo "iface lo inet loopback" >> /tmp/interfaces
+                echo '' >> /tmp/interfaces
+                echo "auto $DEVICE" >> /tmp/interfaces
+                echo "iface $DEVICE inet static" >> /tmp/interfaces
+                echo "    address $WWIPADDR" >> /tmp/interfaces
+                echo "    netmask $WWNETMASK" >> /tmp/interfaces
+                echo "    gateway $WWGATEWAY" >> /tmp/interfaces
+                echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
                 echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
                 echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
@@ -143,6 +164,7 @@ ifup() {
                 echo "GATEWAY=$GATEWAY" >> /tmp/ifcfg-$DEVICE
                 if [ -n "$WWMTU" ]; then
                     echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE
+                    echo "    mtu $WWMTU" >> /tmp/interfaces
                 fi
                 echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
                 return 0

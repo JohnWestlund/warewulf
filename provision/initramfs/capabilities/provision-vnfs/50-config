@@ -7,14 +7,20 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 
+if [ -d "$NEWROOT/etc/sysconfig" ]; then
+    cp /tmp/ifcfg-* $NEWROOT/etc/sysconfig/network-scripts/ 2>/dev/null
 
-cp /tmp/ifcfg-* $NEWROOT/etc/sysconfig/network-scripts/ 2>/dev/null
-
-if [ -n "$HOSTNAME" ]; then
-    grep -v "^HOSTNAME=" $NEWROOT/etc/sysconfig/network > /tmp/network_withouthostname
-    cat /tmp/network_withouthostname > $NEWROOT/etc/sysconfig/network
-    rm -f /tmp/network_withouthostname
-    echo "HOSTNAME=$HOSTNAME" >> $NEWROOT/etc/sysconfig/network
+    if [ -n "$HOSTNAME" ]; then
+        grep -v "^HOSTNAME=" $NEWROOT/etc/sysconfig/network > /tmp/network_withouthostname
+        cat /tmp/network_withouthostname > $NEWROOT/etc/sysconfig/network
+        rm -f /tmp/network_withouthostname
+        echo "HOSTNAME=$HOSTNAME" >> $NEWROOT/etc/sysconfig/network
+    fi
+else
+    if [ -n "$HOSTNAME" ]; then
+        echo "$HOSTNAME" > $NEWROOT/etc/hostname
+    fi
+    cp /tmp/interfaces $NEWROOT/etc/network/ 2>/dev/null
 fi
 
 if [ -z "$WWNOFSTABUPDATE" ]; then
