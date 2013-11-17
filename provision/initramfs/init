@@ -80,7 +80,7 @@ ifup() {
                 wwfailure
             fi
         fi
-    if [ -f "/sys/class/net/$NETDEV/address" ]; then
+        if [ -f "/sys/class/net/$NETDEV/address" ]; then
             HWADDR=`cat /sys/class/net/$NETDEV/address`
             if [ ${#HWADDR} -eq 59 ]; then
                 HWADDR=`expr substr $HWADDR 37 23`
