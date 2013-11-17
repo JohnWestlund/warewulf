@@ -410,7 +410,10 @@ get_undionly () {
         mkdir -p ${tftpdir} ;
     fi
 
-    wget -O ${tftpdir}/undionly.kpxe http://boot.ipxe.org/undionly.kpxe ;
+    if $( wget --spider http://boot.ipxe.org )
+    then
+        wget -O ${tftpdir}/undionly.kpxe http://boot.ipxe.org/undionly.kpxe ;
+    fi
 }
 
 
@@ -931,6 +934,7 @@ wwinit ALL ;
 # make sure all current configs are loaded
 wwsh dhcp update && wwsh dhcp restart ;
 wwsh pxe update ;
+service apache2 restart ;
 
 echo
 echo " You should logout and log back in to ensure proper function"
