@@ -97,6 +97,7 @@ help()
     $h .= "     -c, --cluster       Specify cluster name for this node\n";
     $h .= "     -d, --domain        Specify domain name for this node\n";
     $h .= "     -n, --name          Specify new name for this node\n";
+    $h .= "         --disable       Disable a node from being processed by Warewulf Events\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "     Warewulf> node new n0000 --netdev=eth0 --hwaddr=xx:xx:xx:xx:xx:xx\n";
@@ -107,6 +108,7 @@ help()
     $h .= "     Warewulf> node set xx:xx:xx:xx:xx:xx --lookup=hwaddr\n";
     $h .= "     Warewulf> node print --lookup=groups mygroup hello group123\n";
     $h .= "     Warewulf> node clone n0000 new0000\n";
+    $h .= "     Warewulf> node set --disable=true n0001\n";
     $h .= "\n";
 
     return ($h);
@@ -180,6 +182,7 @@ exec()
     my $opt_domain;
     my $opt_fqdn;
     my $opt_mtu;
+    my $opt_disable;
     my @opt_print;
     my @opt_groups;
     my @opt_groupadd;
@@ -217,6 +220,7 @@ exec()
         'm|mtu=s'       => \$opt_mtu,
         'd|domain=s'    => \$opt_domain,
         'l|lookup=s'    => \$opt_lookup,
+        'disable=s'     => \$opt_disable,
 
     );
 
@@ -310,6 +314,7 @@ exec()
             printf("%15s: %-16s = %s\n", $nodename, "NODENAME", ($o->nodename() || "UNDEF"));
             printf("%15s: %-16s = %s\n", $nodename, "CLUSTER", ($o->cluster() || "UNDEF"));
             printf("%15s: %-16s = %s\n", $nodename, "DOMAIN", ($o->domain() || "UNDEF"));
+            printf("%15s: %-16s = %s\n", $nodename, "DISABLE", ($o->disable() ? "True" : "False"));
             printf("%15s: %-16s = %s\n", $nodename, "GROUPS", join(",", $o->groups()) || "UNDEF");
             foreach my $devname (sort($o->netdevs_list())) {
                 printf("%15s: %-16s = %s\n", $nodename, "$devname.HWADDR", $o->hwaddr($devname) || "UNDEF");
@@ -617,6 +622,32 @@ exec()
                 push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "DOMAIN", $opt_domain));
             } else {
                 &eprint("Option 'domain' has invalid characters\n");
+            }
+        }
+
+        if ($opt_disable) {
+            if ($opt_disable =~ /^([0-1]|true|TRUE|false|FALSE|undef|UNDEF)$/) {
+                if (uc($opt_disable) eq "FALSE" || uc($opt_disable) eq "UNDEF" || $opt_disable eq "0") {
+                    $opt_disable = 0;
+                    foreach my $obj ($objSet->get_list()) {
+                        my $nodename = $obj->get("name") || "UNDEF";
+                        $obj->disable($opt_disable);
+                        &dprint("Undefining disable for node $nodename\n");
+                        $persist_count++;
+                    }
+                    push(@changes, sprintf("%8s: %-20s\n", "UNDEF", "DISABLE"));
+                } else {
+                    $opt_disable = 1;
+                    foreach my $obj ($objSet->get_list()) {
+                        my $nodename = $obj->get("name") || "UNDEF";
+                        $obj->disable($opt_disable);
+                        &dprint("Setting disable for node $nodename\n");
+                        $persist_count++;
+                    }
+                    push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "DISABLE", "TRUE"));
+                }
+            } else {
+                &eprint("Option 'disable' has invalid characters\n");
             }
         }
 

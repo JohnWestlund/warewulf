@@ -494,3 +494,18 @@ Validate addresses more carefully rather than just assuming they
 resolved successfully.  Noted by Matias Cabral
 <matias.a.cabral@intel.com>.
 ----------------------------------------------------------------------
+Mon Nov 18 10:52:20-0600 2013                       Jason Stover (jms)
+
+Add in Object->disable(). This allows a object to be disabled from
+normal Warewulf processing. Node handling added in currently.
+
+Example:
+  # wwsh node set -D eth0 --hwaddr=00:11:22:33:44:55 comp0001
+  # wwsh node set --disable=1 comp0001
+  # wwsh node set -D eth0 --hwaddr=00:11:22:33:44:55 newnode
+
+When disbled, the node is written into dynamic_hosts but a PXE file
+is not written out. Any existing PXE file is not deleted. Checks
+in the cgi-bin files have been modified to pull all nodes based on
+the supplied hwaddr, and skip nodes that are disabled.
+----------------------------------------------------------------------

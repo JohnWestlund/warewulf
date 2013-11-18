@@ -220,6 +220,10 @@ persist()
         my $hostname = $n->nodename() || "undef";
         my $nodename = $n->name() || "undef";
         my $db_id = $n->id();
+        if ($n->disable()) {
+            &dprint("Node $hostname disabled. Skipping.\n");
+            next;
+        }
         if (! $db_id) {
             &eprint("No DB ID associated with this node object object: $hostname/$nodename:$n\n");
             next;

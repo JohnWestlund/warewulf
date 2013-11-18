@@ -147,8 +147,6 @@ update()
         return undef;
     }
 
-
-
     &dprint("Updating PXE configuration files now\n");
 
     if (! $tftproot) {
@@ -172,6 +170,11 @@ update()
 
         if (! $db_id) {
             &eprint("No DB ID associated with this node object object: $hostname/$nodename:$n\n");
+            next;
+        }
+
+        if ($nodeobj->disable()) {
+            &dprint("Node $nodename disabled. Skipping.\n");
             next;
         }
 

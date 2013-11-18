@@ -496,7 +496,19 @@ clone()
     return $newobj;
 }
 
+=item disable()
 
+Disable, or Enable, an object from being processed.
+
+=cut
+
+sub
+disable()
+{
+    my $self = shift;
+
+    return $self->prop("disable", qr/^([0-1]|true|TRUE|false|FALSE|UNDEF)$/, @_);
+}
 
 =back
 

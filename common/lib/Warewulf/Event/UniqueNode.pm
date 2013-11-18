@@ -30,9 +30,15 @@ unique_node()
     foreach my $obj (@objects) {
         my @hwaddrs = $obj->hwaddr_list();
         &dprint("Evaluating for duplicate HWADDR(s): @hwaddrs\n");
+        if ($obj->disable()) {
+            next;
+        }
         if (scalar(@hwaddrs) > 0) {
             my $obj2 = $db->get_objects("node", "hwaddr", @hwaddrs)->get_object(0);
             if ($obj2) {
+                if ($obj2->disable()) {
+                    next;
+                }
                 my $nodename2 = $obj2->nodename() || "UNDEF";
                 my $hwaddrs2 = join(",", $obj2->hwaddr_list());
                 return &ret_failure(-1, "Existing HW address exists for $nodename2 ($hwaddrs2)");

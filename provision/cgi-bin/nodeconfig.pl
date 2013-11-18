@@ -34,8 +34,16 @@ if (! $db) {
 
 if ($hwaddr =~ /^([a-zA-Z0-9:]+)$/) {
     my $hwaddr = $1;
+    my $node;
     my $nodeSet = $db->get_objects("node", "_hwaddr", $hwaddr);
-    my $node = $nodeSet->get_object(0);
+
+    foreach my $tnode ($nodeSet->get_list()) {
+        if ($tnode->disable()) {
+            next;
+        }
+        $node = $tnode;
+    }
+
     my %nhash;
 
     if (! $node) {

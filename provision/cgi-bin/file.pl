@@ -40,7 +40,13 @@ if (! -d $tmpdir) {
 if ($hwaddr =~ /^([a-zA-Z0-9:]+)$/) {
     $hwaddr = $1;
 
-    $node = $db->get_objects("node", "_hwaddr", $hwaddr)->get_object(0);
+    my $oSet = $db->get_objects("node", "_hwaddr", $hwaddr);
+    foreach my $tnode ($oSet->get_list()) {
+        if ($tnode->disable()) {
+            next;
+        }
+        $node = $tnode;
+    }
 
     if ($node) {
         my $nodeName = $node->name();
