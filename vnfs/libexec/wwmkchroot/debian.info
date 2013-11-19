@@ -85,8 +85,6 @@ cat <<EOF
           AUTO=1    -   The default behavior is to prompt the user to validate the steps taken
                         This option will not prompt and force the default action for all questions.
 
-          NO_GPG=1  -   Skip signature validation for secure mirrors.
-
           MEMLOCK="8388608"
 
           VARIANT="minbase"
@@ -103,6 +101,8 @@ cat <<EOF
 
           EXTRA=1 - The extra package list FULLINSTALL will be added to PKGLIST
 
+          SKIPBUILD=1    -  Don't download packages and skip building chroot. Use existing chroot.
+
           FULLINSTALL="package1,package-2,package_3" -  Replace this default package list with these
 
           EXCLUDEPKG="package1,package-2,package_3" -    Debootstrap will exclude these packages from the install
@@ -115,6 +115,7 @@ cat <<EOF
           Will auto mount iso's for inclusion in vnfs capsules sources.list file
           NOTE: debootstrap will NOT install from these. They will be added to the
           top of the sources.list available for future chroot apt package management.
+          Later versions may allow debootstrap to utilize iso's for initial install.
 
           INSTALL_ISO="/path/to/iso-1.iso,/path/to/iso-2.iso,/path/to/iso-3.iso"
 

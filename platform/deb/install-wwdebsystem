@@ -413,6 +413,8 @@ get_undionly () {
     if $( wget --spider http://boot.ipxe.org )
     then
         wget -O ${tftpdir}/undionly.kpxe http://boot.ipxe.org/undionly.kpxe ;
+    else
+        echo "Destination Unreachable - check network connection"
     fi
 }
 
@@ -857,11 +859,16 @@ then
 
     if echo "${WWVERSION}" | grep -i -o '^.\{4\}\-.\{2\}\-.\{2\}' > /dev/null ;
     then
-        WWDOWNLOAD="http://warewulf.lbl.gov/downloads/nightly/${WWVERSION}"
+        if $( wget --spider http://warewulf.lbl.gov )
+        then
+            WWDOWNLOAD="http://warewulf.lbl.gov/downloads/nightly/${WWVERSION}"
 
-        pkglist="$( wget -q ${WWDOWNLOAD} -O - | tr "\t\r\n'" '   "' | \
-            grep -i -o '<a[^>]\+href[ ]*=[ \t]*"warewulf\-\(com\|prov\|vnf\)[^"]\+"'| \
-            sed -e 's/^.*"\([^"]\+\)".*$/\1/g' ) " ;
+            pkglist="$( wget -q ${WWDOWNLOAD} -O - | tr "\t\r\n'" '   "' | \
+                grep -i -o '<a[^>]\+href[ ]*=[ \t]*"warewulf\-\(com\|prov\|vnf\)[^"]\+"'| \
+                sed -e 's/^.*"\([^"]\+\)".*$/\1/g' ) " ;
+        else
+            echo "Destination Unreachable - check network connection"
+        fi
     else
         WWDOWNLOAD='http://warewulf.lbl.gov/downloads/releases'
         for i in ${compilelist}
@@ -875,15 +882,23 @@ then
         done
     fi
 
-    for i in ${pkglist}
-    do
-        wget -N ${WWDOWNLOAD}/${i} || wget -N ${WWDOWNLOAD}/${i} || \
-            { echo "ERROR: $1 - Failed to download ${WWDOWNLOAD}/${i} source files" && exit 1; } ;
-    done
+    if $( wget --spider http://warewulf.lbl.gov )
+    then
+        for i in ${pkglist}
+        do
+            wget -N ${WWDOWNLOAD}/${i} || wget -N ${WWDOWNLOAD}/${i} || \
+                { echo "ERROR: $1 - Failed to download ${WWDOWNLOAD}/${i} source files" && exit 1; } ;
+        done
+    else
+        echo "Destination Unreachable - check network connection"
+    fi
 
     # no nightly builds for cluster package so add it separately
     #  only get this package from full releases
-    wget -N http://warewulf.lbl.gov/downloads/releases/warewulf-cluster/warewulf-cluster-${CLUSTERVER}${FILETYPE} ;
+    pkglist="http://warewulf.lbl.gov/downloads/releases/warewulf-cluster/warewulf-cluster-${CLUSTERVER}${FILETYPE}"
+    wget -N ${pkglist} || wget -N ${pkglist} || \
+                { echo "ERROR: $1 - Failed to download ${pkglist}" && exit 1; } ;
+
     compilelist="${compilelist} warewulf-cluster"
 
     for i in $( ls -A | grep '.tar.gz' )
