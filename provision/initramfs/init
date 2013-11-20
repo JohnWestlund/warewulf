@@ -100,6 +100,8 @@ ifup() {
                         wwfailure
                     fi
                 fi
+
+                # Debian based /etc/network/interfaces
                 echo "auto lo" > /tmp/interfaces
                 echo "iface lo inet loopback" >> /tmp/interfaces
                 echo '' >> /tmp/interfaces
@@ -110,17 +112,20 @@ ifup() {
                 echo "    gateway $WWGATEWAY" >> /tmp/interfaces
                 echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
 
+                # RHEL based ifcfg
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
                 echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
                 echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
                 echo "IPADDR=$WWIPADDR" >> /tmp/ifcfg-$DEVICE
                 echo "NETMASK=$WWNETMASK" >> /tmp/ifcfg-$DEVICE
                 echo "GATEWAY=$WWGATEWAY" >> /tmp/ifcfg-$DEVICE
-                if [ -n "$WWMTU" ]; then
-                    echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE
-                    echo "    mtu $WWMTU" >> /tmp/interfaces
-                fi
                 echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
+
+                if [ -n "$WWMTU" ]; then
+                    echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE  # RHEL
+                    echo "    mtu $WWMTU" >> /tmp/interfaces # DEB
+                fi
+
                 COUNT=0
                 msg_white  "Trying to reach the master node at $WWMASTER "
                 while [ $COUNT -le $WWNETRETRY ]; do
@@ -146,6 +151,8 @@ ifup() {
                 . /etc/network.conf
                 msg_gray "($IPADDR/$NETMASK)"
                 wwsuccess
+
+                # DEB
                 echo "auto lo" > /tmp/interfaces
                 echo "iface lo inet loopback" >> /tmp/interfaces
                 echo '' >> /tmp/interfaces
@@ -156,17 +163,19 @@ ifup() {
                 echo "    gateway $WWGATEWAY" >> /tmp/interfaces
                 echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
 
+                # RHEL
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
                 echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
                 echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
                 echo "IPADDR=$IPADDR" >> /tmp/ifcfg-$DEVICE
                 echo "NETMASK=$NETMASK" >> /tmp/ifcfg-$DEVICE
                 echo "GATEWAY=$GATEWAY" >> /tmp/ifcfg-$DEVICE
-                if [ -n "$WWMTU" ]; then
-                    echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE
-                    echo "    mtu $WWMTU" >> /tmp/interfaces
-                fi
                 echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
+
+                if [ -n "$WWMTU" ]; then
+                    echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE  # RHEL
+                    echo "    mtu $WWMTU" >> /tmp/interfaces # DEB
+                fi
                 return 0
             fi
             msg_white "."
