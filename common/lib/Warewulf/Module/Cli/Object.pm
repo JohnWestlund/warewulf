@@ -158,13 +158,13 @@ exec()
 
     Getopt::Long::Configure("bundling", "nopassthrough");
     GetOptions(
-        't|type=s'      => \$opt_type,
-        'p|print=s'     => \@opt_print,
-        's|set=s'       => \@opt_set,
-        'a|add=s'       => \@opt_add,
-        'd|del=s'       => \@opt_del,
-        'l|lookup=s'    => \$opt_lookup,
-        'h|help'        => \$opt_help
+        't|type=s'        => \$opt_type,
+        'p|print=s'       => \@opt_print,
+        's|set=s'         => \@opt_set,
+        'a|add=s'         => \@opt_add,
+        'D|delete|del=s'  => \@opt_del,
+        'l|lookup=s'      => \$opt_lookup,
+        'h|help'          => \$opt_help
     );
 
     $command = shift(@ARGV);
