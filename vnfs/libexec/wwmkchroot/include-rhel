@@ -21,6 +21,10 @@ sanity_check() {
 
 prechroot() {
 
+    if [ -n "$OS_MIRROR" ]; then
+        YUM_MIRROR="$OS_MIRROR"
+    fi
+
     if [[ -z "$YUM_MIRROR" && -z "$INSTALL_ISO" ]]; then
         echo "ERROR: You must define the \$YUM_MIRROR variable in the template"
         cleanup
@@ -79,10 +83,6 @@ prechroot() {
         echo "gpgcheck=0" >> $CHROOTDIR/$YUM_CONF
 
         YUM_MIRROR=$INSTALLDIRS
-    fi
-
-    if [ -n "$OS_MIRROR" ]; then
-        YUM_MIRROR="$OS_MIRROR"
     fi
 
 }
