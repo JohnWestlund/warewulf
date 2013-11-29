@@ -105,6 +105,7 @@ help()
     $h .= "                         nodes are given, this IP address will be incremented for\n";
     $h .= "                         each node given\n";
     $h .= "         --netmask       The netmask defined for this node\n";
+    $h .= "         --uid           The IPMI ID to use for the user on this node\n";
     $h .= "         --username      Define the IPMI username for this node\n";
     $h .= "         --password      Define the IPMI password for this node\n";
     $h .= "         --proto         Define the IPMI protocol for this node (defaults to lan)\n";
