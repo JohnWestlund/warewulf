@@ -107,10 +107,19 @@ ipmi_password()
     return $self->prop("ipmi_password", qr/^([a-zA-Z0-9]+)$/, @_);
 }
 
+=item ipmi_uid($string)
 
+Set or return the IPMI UID of this object.
 
+=cut
 
+sub
+ipmi_uid()
+{
+    my $self = shift;
 
+    return $self->prop("ipmi_uid", qr/^([0-9]+)$/, @_);
+}
 
 =item ipmi_proto($string)
 

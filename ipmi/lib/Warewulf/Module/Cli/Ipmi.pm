@@ -181,6 +181,7 @@ exec()
     my $opt_lookup = "name";
     my $opt_ipaddr;
     my $opt_netmask;
+    my $opt_uid;
     my $opt_username;
     my $opt_password;
     my $opt_proto;
@@ -201,6 +202,7 @@ exec()
     GetOptions(
         'ipaddr=s'      => \$opt_ipaddr,
         'netmask=s'     => \$opt_netmask,
+        'uid=s'         => \$opt_uid,
         'username=s'    => \$opt_username,
         'password=s'    => \$opt_password,
         'proto=s'       => \$opt_proto,
@@ -258,6 +260,21 @@ exec()
                     $o->ipmi_netmask($opt_netmask);
                 }
                 push(@changes, sprintf("     SET: %-20s = %s\n", "IPMI_NETMASK", $opt_netmask));
+                $persist_bool = 1;
+            }
+        }
+        if ($opt_uid) {
+            if (uc($opt_uid) eq "UNDEF") {
+                foreach my $o ($objSet->get_list()) {
+                    $o->ipmi_uid(undef);
+                }
+                push(@changes, sprintf("    UNDEF: %-20s\n", "IPMI_UID"));
+                $persist_bool = 1;
+            } else {
+                foreach my $o ($objSet->get_list()) {
+                    $o->ipmi_uid($opt_uid);
+                }
+                push(@changes, sprintf("     SET: %-20s\n", "IPMI_UID", $opt_uid));
                 $persist_bool = 1;
             }
         }
