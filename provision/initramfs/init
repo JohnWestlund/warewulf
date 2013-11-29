@@ -80,8 +80,8 @@ ifup() {
                 wwfailure
             fi
         fi
-        if [ -f "/sys/class/net/$NETDEV/address" ]; then
-            HWADDR=`cat /sys/class/net/$NETDEV/address`
+        if [ -f "/sys/class/net/$DEVICE/address" ]; then
+            HWADDR=`cat /sys/class/net/$DEVICE/address`
             if [ ${#HWADDR} -eq 59 ]; then
                 HWADDR=`expr substr $HWADDR 37 23`
             fi
@@ -109,8 +109,12 @@ ifup() {
                 echo "iface $DEVICE inet static" >> /tmp/interfaces
                 echo "    address $WWIPADDR" >> /tmp/interfaces
                 echo "    netmask $WWNETMASK" >> /tmp/interfaces
-                echo "    gateway $WWGATEWAY" >> /tmp/interfaces
-                echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+                if [ -n "$WWGATEWAY" ]; then
+                    echo "    gateway $WWGATEWAY" >> /tmp/interfaces
+                fi
+                if [ -n "$HWADDR" ]; then
+                    echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+                fi
 
                 # RHEL based ifcfg
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
@@ -160,8 +164,12 @@ ifup() {
                 echo "iface $DEVICE inet static" >> /tmp/interfaces
                 echo "    address $WWIPADDR" >> /tmp/interfaces
                 echo "    netmask $WWNETMASK" >> /tmp/interfaces
-                echo "    gateway $WWGATEWAY" >> /tmp/interfaces
-                echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+                if [ -n "$WWGATEWAY" ]; then
+                    echo "    gateway $WWGATEWAY" >> /tmp/interfaces
+                fi
+                if [ -n "$HWADDR" ]; then
+                    echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+                fi
 
                 # RHEL
                 echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
