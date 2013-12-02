@@ -107,7 +107,8 @@ skip_vnfs=0;
 # Figure out if we even have an 'InfiniBand' device showing up.
 # Set OFEDFORCE to continue, even if nothing shows up from lspci
 if [ -z $OFEDFORCE ];then 
-    if ! lspci | grep -i 'InfiniBand' &>/dev/null ]]; then
+    # Some Mellanox* ConectX* cards are not shown as InfiniBand
+    if ! lspci | grep -i -e 'InfiniBand' -e 'Mellanox.*ConnectX' &>/dev/null ; then
         wwprint "WARNING: No InfiniBand device seen from lspci. Exiting OFED setup.\n" warn;
         exit 255;
     fi
@@ -117,6 +118,13 @@ fi
 # against version of OFED found.
 if [ -z $OFEDPKG ]; then
     OFEDPKG=$(/bin/ls -1 $HOME/OFED-*.tgz 2>/dev/null | sort -V | tail -1);
+    # Detect early if the package file is not available
+    if [[ -z "$OFEDPKG" || ! -f "$OFEDPKG" ]]; then
+        wwprint " ! OFED Package not found." error;
+        reply_error;
+        return 255;
+    fi
+
     OFEDVER=$(basename ${OFEDPKG} | rev | cut -f2- -d '.' | rev);
 fi
 
