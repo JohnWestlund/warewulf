@@ -382,7 +382,7 @@ inst_clck(){
     if [ -z "$lic_file" ]; then
         for file in $(/bin/ls -1 $HOME/*.lic); do
             # look for the specific tag of Intel(R) Cluster Checker licenses
-            if grep 'SN=IClsValL' $file &>/dev/null;then  
+            if grep 'IClsValL' $file &>/dev/null;then  
                 lic_file=$file;
                 break;
             fi
@@ -412,7 +412,7 @@ inst_clck(){
     # Our full path to the uncompressed folder
     clck_dir="${tmpdir}/${CLCK_version}";
 
-    clck_rpm="$(ls -1 ${clck_dir}/rpm/intel-clck-*.rpm)";
+    clck_rpm="$(ls -1 ${clck_dir}/rpm/intel-clck-*.rpm|grep -v pset)";
     rpm_name=$(basename $clck_rpm .rpm )	
     if  /bin/rpm -q $rpm_name &>/dev/null; then
 	    wwprint " + Intel(R) Cluster Checker already installed";
@@ -450,9 +450,18 @@ inst_clck(){
 
     # Full path to the silent install file 
     clck_silent="${clck_dir}/silent.cfg";
-   
-    /bin/sed -i -e "s/\(ACTIVATION=\).*/\1license_file/" $clck_silent &>/dev/null;    
-    echo "PSET_LICENSE_FILE=$lic_file" >> $clck_silent;
+  
+    # CLCK 2.0 and older 
+    if grep 'ACTIVATION=' $clck_silent &>/dev/null;then
+        /bin/sed -i -e "s/\(ACTIVATION=\).*/\1license_file/" $clck_silent &>/dev/null;    
+    	echo "PSET_LICENSE_FILE=$lic_file" >> $clck_silent;
+    else
+        # CLCK 2.1 and newer
+        /bin/sed -i -e "s/\(ACTIVATION_TYPE=\).*/\1license_file/" $clck_silent &>/dev/null;    
+        echo "ACTIVATION_LICENSE_FILE=$lic_file" >> $clck_silent;
+    fi
+
+    # EULA was accepted by the user, so mark it 
     /bin/sed -i -e "s/\(ACCEPT_EULA=\).*/\1accept/" $clck_silent &>/dev/null;    
 
     if ! $(${clck_dir}/install.sh -s $clck_silent &>/dev/null) ;then
