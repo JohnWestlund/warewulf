@@ -416,9 +416,9 @@ chroot_install() {
     wwprint " + Installing OFED RPMS into CHROOT\n";
     # Force install because of clashing files between packages.
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/*.rpm;
-    # OFED 1.5.4.x requre kernel-ib rpms to be re installed.
+    # OFED 1.5.4.x requires kernel-ib rpms to be re installed.
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/kernel-ib*.rpm;
-    # OFED 3.5.x requiere compat-rdma rpms to be re installed to gerenrte the 
+    # OFED 3.5.x requires compat-rdma rpms to be re installed to generate the 
     # /etc/init/* scripts. 
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/compat-rdma*.rpm;
 
