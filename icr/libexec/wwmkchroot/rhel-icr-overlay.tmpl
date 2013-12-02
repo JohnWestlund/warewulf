@@ -84,10 +84,13 @@ export FUNCTIONS="sanity_check
 
 FIX=""
 EXT32="i686"
-INSTVER=`cat $CHROOTDIR/etc/redhat-release | rev | cut -f 2 -d ' ' | rev`
+INSTVER=`cat $CHROOTDIR/etc/redhat-release | rev | cut -f 2 -d ' ' | rev |  cut -f 1 -d .`
+UPDATE=`cat $CHROOTDIR/etc/redhat-release | rev | cut -f 2 -d ' ' | rev |  cut -f 2 -d .`
+
 #INSTVER=`rpm --root=$CHROOTDIR -qf /etc/redhat-release --qf '%{VERSION}'`
 
-if echo $INSTVER | grep -q ^5; then
+#RH 5.x series
+if [[ ${INSTVER} -eq 5 ]]; then
     EXT32="i386"
     FIX="glibc.i686 openssl097a.i386 openssl097a.x86_64 openssl.i686 \
     openssl-devel.i386 ncurses.i386 ncurses-devel.x86_64 ncurses-devel.i386 \
@@ -96,8 +99,8 @@ fi
 
 LIBJPEG="libjpeg.x86_64 libjpeg.${EXT32}"
 
-if [[ "x6.4" = "x${INSTVER}" ]]; then
-    # We're 6.4. libjpeg rename
+if [[ ${INSTVER} -eq 6 && ${UPDATE} -ge 4 ]]; then
+    # We're 6.4 (or newer) libjpeg rename
     LIBJPEG="libjpeg-turbo.x86_64 libjpeg-turbo.${EXT32}"
 fi
 
