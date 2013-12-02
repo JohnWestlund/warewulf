@@ -122,8 +122,9 @@ if [ -z $OFEDPKG ]; then
     if [[ -z "$OFEDPKG" || ! -f "$OFEDPKG" ]]; then
         wwprint " ! OFED Package not found." error;
         reply_error;
-        return 255;
+        exit 255;
     fi
+    wwprint " + Package $(msg_green $OFEDPKG) found\n";
 
     OFEDVER=$(basename ${OFEDPKG} | rev | cut -f2- -d '.' | rev);
 fi

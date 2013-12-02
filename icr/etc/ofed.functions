@@ -191,7 +191,7 @@ build_pkg() {
     wwprint " + Building OFED Packages ... This will take a while." warn;
     echo;
     ${ofed_cmd} -c ${ofed_source}/${ofed_conf};
-    return 0;
+    return $?;
 }
 
 # Extract the OFED package and set the build flags. Package is passed
@@ -206,14 +206,6 @@ config_pkg() {
         pkg_file=$(/bin/ls -1 $HOME/OFED-*.tgz 2>/dev/null | sort -V | tail -1);
     fi
 
-    if [[ -z $pkg_file || ! -f $pkg_file ]]; then
-        wwprint " ! OFED Package not found." error
-        reply_error;
-        exit 255;
-    fi
-
-    wwprint "Package $(msg_green $pkg_file) found.";
-    reply_success;
     tmpdir=$(mktemp -d /tmp/OFED_ICR-XXXXXXXXXX);
     OFED_basename=$(basename $pkg_file | rev | cut -f2- -d '.' | rev);
     # Break apart what version of OFED we're building
