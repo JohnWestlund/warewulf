@@ -465,7 +465,7 @@ inst_clck(){
     /bin/sed -i -e "s/\(ACCEPT_EULA=\).*/\1accept/" $clck_silent &>/dev/null;    
 
     if ! $(${clck_dir}/install.sh -s $clck_silent &>/dev/null) ;then
-	    wwprint "  ! ERROR: Failure when installing Intel(R) Cluster checker." error;
+	    wwprint "  ! ERROR: Failure when installing Intel(R) Cluster Checker." error;
 	    /bin/rm -rf $tmpdir;
 	    reply_error;
 	    return 255;
