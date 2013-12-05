@@ -18,6 +18,8 @@ use Warewulf::RetVal;
 use Warewulf::Logger;
 
 my $event = Warewulf::EventHandler->new();
+my $conf = Warewulf::Config->new("defaults/node.conf");
+my $run_hwaddr = $config->get("unique hwaddrs") || "yes";
 
 sub
 unique_node()
@@ -49,6 +51,8 @@ unique_node()
 }
 
 
-$event->register("node.new", \&unique_node);
+if ($run_hwaddr eq "yes") {
+    $event->register("node.new", \&unique_node);
+}
 
 1;
