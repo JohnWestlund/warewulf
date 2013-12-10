@@ -95,7 +95,7 @@ help()
     $h .= "     -m, --mtu           Set MTU of given netdev\n";
     $h .= "     -p, --hwprefix      Specify a prefix for hardware/MAC address of a given netdev\n";
     $h .= "     -c, --cluster       Specify cluster name for this node\n";
-    $h .= "     -d, --domain        Specify domain name for this node\n";
+    $h .= "         --domain        Specify domain name for this node\n";
     $h .= "     -n, --name          Specify new name for this node\n";
     $h .= "         --disable       Disable a node from being processed by Warewulf Events\n";
     $h .= "\n";
