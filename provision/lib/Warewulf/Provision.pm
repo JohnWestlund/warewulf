@@ -302,7 +302,6 @@ bootlocal()
     return $self->get("bootlocal");
 }
 
-
 =back
 
 =head1 SEE ALSO

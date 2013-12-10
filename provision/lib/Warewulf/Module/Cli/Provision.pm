@@ -217,7 +217,6 @@ exec()
         return();
     }
 
-
     if (! $command) {
         &eprint("You must provide a command!\n\n");
         print $self->help();

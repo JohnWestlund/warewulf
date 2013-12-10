@@ -640,6 +640,28 @@ mtu()
                                        qr/^([0-9]+)$/);
 }
 
+=item enabled([$value])
+
+Whether this node object is enabled
+
+=cut
+
+sub
+enabled()
+{
+    my $self = shift;
+
+    my $ret = $self->prop("enabled", qr/^([0-1]|true|false|UNDEF)$/i, @_);
+
+    # This is really... bad. None of my other attempted checks worked because it
+    # would end up *always* returning 1. It just had to be 'enabled' didn't it... :/
+    if (! defined($ret) || $ret == 1) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 =back
 
 =head1 SEE ALSO

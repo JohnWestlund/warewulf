@@ -56,7 +56,7 @@ if ($q->param('hwaddr')) {
         my $nodeSet = $db->get_objects("node", "_hwaddr", $hwaddr);
 
         foreach my $tnode ($nodeSet->get_list()) {
-            if ($tnode->disable()) {
+            if (! $tnode->enabled()) {
                 next;
             }
             $node = $tnode;

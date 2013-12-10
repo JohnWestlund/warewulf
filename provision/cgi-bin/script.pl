@@ -29,7 +29,7 @@ if ($type =~ /^([a-zA-Z0-9\-\._]+)$/) {
         my $node; 
         my $nodeSet = $db->get_objects("node", "_hwaddr", $hwaddr);
         foreach my $tnode ($nodeSet->get_list()) {
-            if ($tnode->disable()) {
+            if (! $tnode->enabled()) {
                 next;
             }
             $node = $tnode;

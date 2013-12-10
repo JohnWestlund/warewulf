@@ -455,7 +455,6 @@ debug_string()
     return sprintf("{ $self:  %s }", join(", ", map { "\"$_\" => \"$self->{$_}\"" } sort(keys(%{$self}))));
 }
 
-
 =item canonicalize()
 
 Check and update the object format if necessary. Should return the number of
@@ -468,7 +467,6 @@ canonicalize()
 {
     return(0);
 }
-
 
 =item clone([ I<set_arg1>, ...])
 
@@ -496,20 +494,6 @@ clone()
     return $newobj;
 }
 
-=item disable()
-
-Disable, or Enable, an object from being processed.
-
-=cut
-
-sub
-disable()
-{
-    my $self = shift;
-
-    return $self->prop("disable", qr/^([0-1]|true|TRUE|false|FALSE|UNDEF)$/, @_);
-}
-
 =back
 
 =head1 SEE ALSO
@@ -525,6 +509,5 @@ through Lawrence Berkeley National Laboratory (subject to receipt of any
 required approvals from the U.S. Dept. of Energy).  All rights reserved.
 
 =cut
-
 
 1;

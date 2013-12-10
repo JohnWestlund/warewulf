@@ -509,3 +509,24 @@ is not written out. Any existing PXE file is not deleted. Checks
 in the cgi-bin files have been modified to pull all nodes based on
 the supplied hwaddr, and skip nodes that are disabled.
 ----------------------------------------------------------------------
+Tue Dec 10 16:20:24-0600 2013                       Jason Stover (jms)
+
+Move Warewulf::Object->disable() to Warewulf::Node->enabled()
+
+Example:
+  # wwsh node set --enabled=false n0000
+
+Warewulf::Node->enabled() defaults to returning 1 (true). So... a
+quick code example would be:
+
+  use Warewulf::Node;
+  my $n = Warewulf::Node->new();
+  $n->nodename("testnode");
+  $n->enabled("false");
+
+  if($n->enabled()) {
+    print "Node is enabled";
+  } else {
+    print "Node is disabled";
+  }
+----------------------------------------------------------------------

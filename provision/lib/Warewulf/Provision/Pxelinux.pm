@@ -173,7 +173,7 @@ update()
             next;
         }
 
-        if ($nodeobj->disable()) {
+        if (! $nodeobj->enabled()) {
             &dprint("Node $nodename disabled. Skipping.\n");
             next;
         }

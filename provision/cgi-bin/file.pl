@@ -42,7 +42,7 @@ if ($hwaddr =~ /^([a-zA-Z0-9:]+)$/) {
 
     my $oSet = $db->get_objects("node", "_hwaddr", $hwaddr);
     foreach my $tnode ($oSet->get_list()) {
-        if ($tnode->disable()) {
+        if (! $tnode->enabled()) {
             next;
         }
         $node = $tnode;
