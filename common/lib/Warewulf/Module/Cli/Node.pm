@@ -105,7 +105,7 @@ help()
     $h .= "     Warewulf> node set n0000 --netdev=eth0 --netmask=255.255.255.0\n";
     $h .= "     Warewulf> node set --groupadd=mygroup,hello,bye --cluster=mycluster n0000\n";
     $h .= "     Warewulf> node set --groupdel=bye --set=vnfs=sl6.vnfs\n";
-    $h .= "     Warewulf> node set xx:xx:xx:xx:xx:xx --lookup=hwaddr\n";
+    $h .= "     Warewulf> node list xx:xx:xx:xx:xx:xx --lookup=hwaddr\n";
     $h .= "     Warewulf> node print --lookup=groups mygroup hello group123\n";
     $h .= "     Warewulf> node clone n0000 new0000\n";
     $h .= "     Warewulf> node set --disable=true n0001\n";
