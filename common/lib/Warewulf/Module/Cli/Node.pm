@@ -658,7 +658,7 @@ exec()
             push(@changes, sprintf("%8s: %-20s = %s\n", "DEL", "GROUPS", join(",", @opt_groupdel)));
         }
 
-        if ($opt_enabled) {
+        if (defined($opt_enabled)) {
             if ($opt_enabled =~ /^([0-1]|true|TRUE|false|FALSE|undef|UNDEF)$/) {
                 if (uc($opt_enabled) eq "FALSE" || $opt_enabled eq "0") {
                     $opt_enabled = 0;
