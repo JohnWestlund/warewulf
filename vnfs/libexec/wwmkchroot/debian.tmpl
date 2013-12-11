@@ -4,9 +4,12 @@
 # some basic variables specific to each chroot type to be defined.
 . include-deb
 
-DEB_MIRROR="http://http.us.debian.org/debian/"
+# 64 bit 6.0 squeeze
+ARCH="amd64"
+DISTRO="debian"
+CODENAME="squeeze"
 
-# Install additional packages with debootstrap
+# Replace the default packages with this package list
 PKGLIST="openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,nfs-common,\
 ethtool,iproute,iputils-ping,iputils-arping,net-tools,firmware-bnx2,linux-image-2.6.32-5-amd64"
 
