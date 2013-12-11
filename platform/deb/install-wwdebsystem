@@ -297,9 +297,9 @@ create_wwdb () {
         if [[ "${i}" == "${wwdatabase}" ]]
         then
             echo
-            echo "The database ${CHOICE} already exists"
+            echo "The database ${i} already exists"
             echo
-            echo "Would you like to use the existing database ${CHOICE} ?"
+            echo "Would you like to use the existing database ${i} ?"
             echo "YES = Use existing database"
             echo " NO = Choose a different database"
             echo
@@ -445,7 +445,7 @@ sql_rootpw () {
         if user_decide
         then
             sql_rootpw ;
-            break ;
+            return 0 ;
         else
             warewulfusr=""
             return 1 ;
