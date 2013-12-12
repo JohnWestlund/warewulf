@@ -70,7 +70,7 @@ help()
     $h .= "     -p, --print     Specify which fields are printed (\":all\" for all)\n";
     $h .= "     -s, --set       Set a member variable (or \"field\")\n";
     $h .= "     -a, --add       Add value(s) to specified member array variable\n";
-    $h .= "     -d, --del       Delete value(s) from specified member variable\n";
+    $h .= "     -D, --del       Delete value(s) from specified member variable\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "     Warewulf> object print -p :all\n";
@@ -247,10 +247,10 @@ exec()
             }
             @vals = &quotewords(',', 0, $val);
             $val = sprintf("\"%s\"", join("\", \"", @vals));
-            push(@changes, sprintf("%8s: %-20s = %s -> %s\n", "SET", $var,
-                                   $obj->get($var) || "UNDEF", $val || "UNDEF"));
             foreach my $obj (@objList) {
                 $obj->set($var, ((scalar(@vals)) ? (@vals) : (undef)));
+                push(@changes, sprintf("%8s: %-20s = %s -> %s\n", "SET", $var,
+                                       $obj->get($var) || "UNDEF", $val || "UNDEF"));
             }
         }
         foreach my $chg (@opt_add) {
