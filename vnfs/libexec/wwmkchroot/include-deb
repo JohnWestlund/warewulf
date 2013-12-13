@@ -1136,22 +1136,21 @@ configure_fstab() {
             echo "Adding nfs file systems to fstab"
             echo "" >> ${VNFSROOT}/${NAME}/etc/fstab
 
+            if [[ -n ${HYBRIDPATH} ]]
+            then
+                tempname="/mnt/$(basename ${HYBRIDPATH})"
+                echo "${THISIP}:${CHROOTDIR} $tempname nfs defaults 0 0" >> ${VNFSROOT}/${NAME}/etc/fstab
+            fi
+
             for i in $( echo ${MASTEREXPORTS} | sed -e 's/,/ /g' )
             do
-                # make sure we have the correct path for hybrids
-                if [[ "$(basename ${i})" == "${NAME}" ]]
-                then
-                    tempname="/mnt/$(basename ${HYBRIDPATH})"
-                else
-                    tempname="${i}"
-                fi
-
                 # then prune path and mount at /mnt
                 if [[ "${i#/mnt}" != "${i}" ]]
                 then
                     tempname="/mnt/$(basename ${i})"
+                else
+                    tempname="${i}"
                 fi
-
                 echo "${THISIP}:${i#/mnt} ${tempname} nfs defaults 0 0" >> ${VNFSROOT}/${NAME}/etc/fstab
             done
         else
