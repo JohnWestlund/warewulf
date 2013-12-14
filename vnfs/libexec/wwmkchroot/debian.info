@@ -119,6 +119,9 @@ cat <<EOF
 
           INSTALL_ISO="/path/to/iso-1.iso,/path/to/iso-2.iso,/path/to/iso-3.iso"
 
+          DEFAULTSOURCE=1   -   Revert to the default sources.list created by debootstrap.
+                                This will also override any iso sources.
+
 EOF
 
 # vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

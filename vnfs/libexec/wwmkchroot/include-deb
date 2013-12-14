@@ -37,6 +37,7 @@ VALIDDEBARCH='armel kfreebsd-i386 kfreebsd-amd64 ia64 mips mipsel powerpc sparc'
 
 ##############################
 KERNELVERSION=""
+DEFAULTSOURCE=""
 QEMUFILENAME=""
 NEWHOSTNAME=""
 COMPONENTS=""
@@ -410,32 +411,20 @@ match_host_hw () {
 
 
 setup_sources () {
-    # debootstrap does not currently use this
-    # to create the chroot.
-    # support may be coded for it in future
-    #
     # Generate /chroot/etc/atp/sources.list
-    #
-    # specifically for use with ISO's, debootstrap
-    # deletes the default sources.list so we will
-    # park the new list till debootstrap ready for it
-
+    # replace the default list debootstrap with a more complete list
     if [[ ! -d ${SRC_CONF} ]]
     then
         mkdir -p ${SRC_CONF} ;
     fi
 
     SRC_CONF="${SRC_CONF}/sources.list"
-
     > ${SRC_CONF}
 
-    if [ -z "$INSTALL_ISO" ]
-    then
-        echo "deb ${OS_MIRROR}/ ${CODENAME} main contrib non-free" >> ${SRC_CONF}
-        echo "deb-src ${OS_MIRROR}/ ${CODENAME} main contrib non-free" >> ${SRC_CONF}
-        echo ""
-
-    elif [ -n "$INSTALL_ISO" ]
+    # debootstrap deletes the default sources.list so we will park the new
+    # list till debootstrap ready for it. debootstrap does not currently use
+    # this to create the chroot. support may be coded for it in future
+    if [ -n "$INSTALL_ISO" ]
     then
         local count=0
         for i in $( echo $INSTALL_ISO | sed -e 's/,/ /g' )
@@ -462,35 +451,39 @@ setup_sources () {
                 exit 1
             fi
         done
+    fi
 
-##------------------------------------------------------------##
-## This was in hopes of debootstrap including ISO in original
-## vnfs creation this does not work for such and will require
-## digging deeper into the debootstrap code to find a solution
+    ##------------------------------------------------------------##
+    ## This was in hopes of debootstrap including ISO in original
+    ## vnfs creation. This Does Not Work for such and will require
+    ## digging deeper into the debootstrap code to find a solution
+    ## debootstrap is designed to pull from a true full repos not .iso
+
+    ## NOTE: Though the original chroot wont be created from the iso,
+    ##       the sources.list file will be correctly configured to
+    ##       use iso if mounted for later package management
+    if [[ -n ${DEBOOTOVERRIDE} ]]
+    then
         if [[ -e ${DEBOOTSCRIPTS}/${SCRIPTTEMPLATE} ]]
         then
             cp ${DEBOOTSCRIPTS}/${SCRIPTTEMPLATE} ${DEBOOTOVERRIDE} ;
         fi
 
-    # in order to use ISO packages we must override
-    # debootstraps builtin sources.list generator
-cat <<'EOF' >>${DEBOOTOVERRIDE}
-
-setup_apt_sources () {
-    mkdir -p "${TARGET}/etc/apt"
-    cp ${TARGET}/tmp/sources.list ${TARGET}/etc/apt/ ;
-}
-EOF
+        # override debootstraps builtin sources.list generator
+        echo 'setup_apt_sources () {' >>${DEBOOTOVERRIDE}
+        echo '    mkdir -p "${TARGET}/etc/apt"' >>${DEBOOTOVERRIDE}
+        echo 'cp ${TARGET}/tmp/sources.list ${TARGET}/etc/apt/ ;' >>${DEBOOTOVERRIDE}
+        echo '}' >>${DEBOOTOVERRIDE}
         ###chmod 744 ${DEBOOTOVERRIDE} ;
-##------------------------------------------------------------##
+        ##------------------------------------------------------------##
 
+        echo "deb ${OS_MIRROR}/ ${CODENAME} main contrib non-free" >> ${SRC_CONF}
+        echo "deb-src ${OS_MIRROR}/ ${CODENAME} main contrib non-free" >> ${SRC_CONF}
+        echo "" >> ${SRC_CONF}
+        echo "deb http://security.debian.org/ ${CODENAME}/updates main contrib non-free" >> ${SRC_CONF}
+        echo "deb-src http://security.debian.org/ ${CODENAME}/updates main contrib non-free" >> ${SRC_CONF}
+        echo "" >> ${SRC_CONF}
     fi
-# _/^^\_ I know its hard to see with the above EOF block
-
-    echo "# For updates" >> ${SRC_CONF}
-    echo "deb ${OS_MIRROR}/ ${CODENAME} updates main contrib" >> ${SRC_CONF}
-    echo "deb-src ${OS_MIRROR}/ ${CODENAME} updates main contrib" >> ${SRC_CONF}
-    echo "" >> ${SRC_CONF}
 }
 
 
@@ -574,7 +567,7 @@ warn_msg () {
 
         completed)
             echo
-            echo "============================================================================"
+            echo "========================================================="
             echo "The requested chroot environment has been created at"
             echo
             echo "${VNFSROOT}/${NAME}"
@@ -823,7 +816,7 @@ warn_msg () {
             ;;
 
         stage2)
-            echo " Stage 1 debootstrap"
+            echo " Stage 1 debootstrap complete"
             echo
             echo " Stage 2 debootstrap"
             echo
@@ -1001,7 +994,7 @@ prechroot() {
         BOOTSTRAPINCLUDES="--include=${BOOTSTRAPINCLUDES}"
     fi
 
-    if [[ -z ${INSTALL_ISO} ]]
+    if [[ -n ${DEFAULTSOURCE} ]]
     then
         DEBOOTOVERRIDE=""
     fi
@@ -1011,8 +1004,8 @@ prechroot() {
         EXCLUDEPKG="--exclude=${EXCLUDEPKG}"
     fi
 
-    ### disable this till support is fixed
-    # setup_sources ;
+    # generate sources.list
+    setup_sources ;
 
     return 0
 }

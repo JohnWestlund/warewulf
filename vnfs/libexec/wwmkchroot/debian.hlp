@@ -35,11 +35,11 @@ cat <<EOF
         Components  "main,contrib,non-free"
         PKGLIST  =  "openssh-server,openssh-client,isc-dhcp-client,
                      strace,nfs-common,ethtool,iproute,iputils-ping,
-                     iputils-arping,net-tools,firmware-bnx2,pciutils"
+                     iputils-arping,net-tools,firmware-bnx2,pciutils,rsync"
 
         FULLINSTALL =  "libpcre3,less,libpopt0,tcpd,update-inetd,libpam-cracklib,ntp,
                         iputils-tracepath,rsh-client,wamerican,vim-tiny,cron,gawk,
-                        mingetty,psmisc,rdate,rsh-redone-server,rsyslog,dracut,rsync"
+                        mingetty,psmisc,rdate,rsh-redone-server,rsyslog,dracut"
 
 
     Examples recipe files:
