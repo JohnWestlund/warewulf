@@ -41,9 +41,10 @@ WWVNFS=$(which wwvnfs)
 
     # setup our environment
 #___________________________________________
-
+YUM_CONF="/root/yum-ww.conf"
 DIRNAME=$(dirname $0)
 REMOVECMD="remove"
+
 
 ROOTEDSCRIPT=""
 OPTIONSFILE=""
@@ -52,6 +53,7 @@ DONESHELL=""
 MOREPACKS=""
 OLDCONFIG=""
 INSTALLS=""
+DOSHELL=""
 REMOVES=""
 HYBRID=""
 SAYYES=""
@@ -292,8 +294,10 @@ abort_install () {
 
 chroot_script () {
     # create the script to run inside our chroot environment
-    # script will do remove/install work for packages then be
+    # script will do remove/install work deb packages then be
     # deleted upon completion after returning back to here
+
+    # can also be used to run templated tasks from within the chroot
 
     ROOTEDSCRIPT="${CHROOTDIR}/wwmngchroot-scriptlet.sh"
 
@@ -317,40 +321,47 @@ cat <<'EOF' >>${ROOTEDSCRIPT}
 do_scriptlet () {
     if [[ -n ${REMOVES} ]]
     then
-        echo
-        echo "removing requested packages"
-        echo
-        if { [[ -f "/etc/debian_version" ]] && ! ( apt-get ${SAYYES} ${REMOVECMD} ${REMOVES} ) } || \
-           { [[ -f "/etc/redhat-release" ]] && ! ( yum ${SAYYES} remove ${REMOVES} ) }
+        if [[ -f "/etc/debian_version" ]]
         then
             echo
-            echo "failed to remove packages. Dropping into shell"
-            echo
-            exit 1
+            echo "removing requested packages"
+
+            if ! apt-get ${SAYYES} ${REMOVECMD} ${REMOVES}
+            then
+                echo
+                echo "failed to remove packages. Dropping into shell"
+                echo
+                exit 1
+            fi
         fi
     fi
     if [[ -n ${INSTALLS} ]]
     then
-        echo
-        echo "  running apt-get update"
-        echo
-        if [[ -f "/etc/debian_version" ]] && ! apt-get ${SAYYES} update
+        if [[ -f "/etc/debian_version" ]]
         then
             echo
-            echo "failed to update package lists. Dropping into shell"
-            echo
-            exit 1
+            echo "  running apt-get update"
+
+            if ! apt-get ${SAYYES} update
+            then
+                echo
+                echo "failed to update package lists. Dropping into shell"
+                echo
+                exit 1
+            fi
         fi
-        echo
-        echo "  installing requested packages"
-        echo
-        if { [[ -f "/etc/debian_version" ]] && ! ( apt-get ${SAYYES} ${INSTALL} ${INSTALLS} ) } || \
-           { [[ -f "/etc/redhat-release" ]] && ! ( yum ${SAYYES} install ${INSTALLS} ) }
+        if [[ -f "/etc/debian_version" ]]
         then
             echo
-            echo "failed to install requested packages. Dropping into shell"
-            echo
-            exit 1
+            echo "  installing requested packages"
+
+            if ! apt-get ${SAYYES} ${INSTALL} ${INSTALLS}
+            then
+                echo
+                echo "failed to install requested packages. Dropping into shell"
+                echo
+                exit 1
+            fi
         fi
     fi
 }
@@ -367,6 +378,8 @@ EOF
 clean_up () {
     rm -f ${ROOTEDSCRIPT} ;
     umount ${CHROOTDIR}/proc 2>/dev/null
+    umount ${CHROOTDIR}/sys 2>/dev/null
+    umount ${CHROOTDIR}/dev 2>/dev/null
 
     if grep -q "${CHROOTDIR} " /proc/mounts
     then
@@ -376,6 +389,8 @@ clean_up () {
         if user_decide
         then
             umount -l ${CHROOTDIR}/proc 2>/dev/null
+            umount -l ${CHROOTDIR}/sys 2>/dev/null
+            umount -l ${CHROOTDIR}/dev 2>/dev/null
         else
             echo "ERROR: Host system left in an odd state .. exiting .."
             exit 1
@@ -767,8 +782,44 @@ do_main () {
     # check to see if the chroot directory exists
     if [[ -d ${CHROOTDIR} ]]
     then
+        local yum_cmd="yum -c ${CHROOTDIR}/${YUM_CONF} --tolerant --installroot ${CHROOTDIR}"
+
+        # handle RPM based package management
+        # from outside of chroot
+        if [[ -n ${REMOVES} ]] && [[ -f "${CHROOTDIR}/etc/redhat-release"  || \
+                                     -f "${CHROOTDIR}/etc/centos-release" ]]
+        then
+            echo
+            echo "removing requested packages"
+
+            if ! ${yum_cmd} ${SAYYES} remove ${REMOVES}
+            then
+                echo
+                echo "failed to remove packages. Dropping into shell"
+                echo
+                DOSHELL="true"
+            fi
+        fi
+
+        if [[ -n ${INSTALLS} ]] && [[ -f "${CHROOTDIR}/etc/redhat-release"  || \
+                                     -f "${CHROOTDIR}/etc/centos-release" ]]
+        then
+            echo
+            echo "  installing requested packages"
+
+            if ! ${yum_cmd} ${SAYYES} install ${INSTALLS}
+            then
+                echo
+                echo "failed to install requested packages. Dropping into shell"
+                echo
+                DOSHELL="true"
+            fi
+        fi
+
         # prepare to chroot
-        if mount -t proc none ${CHROOTDIR}/proc
+        if mount -o bind /proc ${CHROOTDIR}/proc/ && \
+           mount -o bind /dev ${CHROOTDIR}/dev/ && \
+           mount -o bind /sys ${CHROOTDIR}/sys
         then
             # create our chrooted script
             chroot_script ;
@@ -792,17 +843,21 @@ do_main () {
 
         # now that we are in chroot do work
     #___________________________________________
-
     # make it so
     if ! ${CHROOT} ${CHROOTDIR} ./wwmngchroot-scriptlet.sh
     then
         warn_msg noscript ;
-        do_shell ;
+        DOSHELL="true"
     fi
 
     if [[ -z ${DONESHELL} ]] && [[ "${MOREPACKS}" == "true" ]]
     then
         warn_msg morepacks ;
+        DOSHELL="true"
+    fi
+
+    if [[ -n ${DOSHELL} ]]
+    then
         do_shell ;
     fi
 
@@ -820,8 +875,6 @@ do_main () {
     # if we got this far all must have finished correctly
     warn_msg finalize ;
 }
-
-
 
 ##---------
 
