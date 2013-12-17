@@ -85,10 +85,6 @@ vnfs()
     my $vnfsid = $self->vnfsid();
     my $vnfs = $db->get_objects("vnfs", "_id", $vnfsid)->get_object(0);
 
-    use Data::Dumper;
-    print "\n ---- \$vnfsid ---- \n" . "  \$vnfsid = $vnfsid" . "\n -------- \n";
-    print "\n ---- vnfs ---- \n" . Dumper($vnfs) . "\n -------- \n";
-
     # Can't do $vnfs->name() || "UNDEF" ... because if it fails on pulling an
     # object, then the name() sub doesn't exist.
     if ($vnfs) {
