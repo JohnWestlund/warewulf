@@ -248,9 +248,9 @@ exec()
             @vals = &quotewords(',', 0, $val);
             $val = sprintf("\"%s\"", join("\", \"", @vals));
             foreach my $obj (@objList) {
-                $obj->set($var, ((scalar(@vals)) ? (@vals) : (undef)));
                 push(@changes, sprintf("%8s: %-20s = %s -> %s\n", "SET", $var,
                                        $obj->get($var) || "UNDEF", $val || "UNDEF"));
+                $obj->set($var, ((scalar(@vals)) ? (@vals) : (undef)));
             }
         }
         foreach my $chg (@opt_add) {
