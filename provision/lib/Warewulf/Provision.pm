@@ -55,6 +55,29 @@ bootstrapid()
     return $self->prop("bootstrapid", qr/^([0-9]+)$/, @_);
 }
 
+=item bootstrap()
+
+Return the name of the Warewulf Bootstrap this node is configured to use
+
+=cut
+
+sub
+bootstrap()
+{
+    my $self = shift;
+    my $db = Warewulf::DataStore->new();
+
+    my $bsid = $self->bootstrapid();
+    my $bs = $db->get_objects("bootstrap", "_id", $bsid)->get_object(0);
+
+    # Can't do $bs->name() || "UNDEF" ... because if it fails on pulling an
+    # object, then the name() sub doesn't exist.
+    if ($bs) {
+        return $bs->name();
+    } else {
+        return "UNDEF";
+    }
+}
 
 =item vnfsid($string)
 
@@ -70,7 +93,7 @@ vnfsid()
     return $self->prop("vnfsid", qr/^([0-9]+)$/, @_);
 }
 
-=item vnfs($string)
+=item vnfs()
 
 Return the name of the VNFS this node is configured to use
 
