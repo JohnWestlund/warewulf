@@ -20,10 +20,8 @@ cat <<EOF
             Chose to allow ( wwbootstrap  and/or wwvnfs ) to automatically import the
             created vnfs into warewulf.
 
-        After vnfs creation, it is easy to add additional packages in the chroot environment
-        by using the included package manager for .deb based systems.
-
-            wwmkchroot -h deb-pkgmanager
+        After vnfs creation, it is easy to manage packages in the chroot environment
+        by using the included package manager wwmngchroot.
 
     TROUBLESHOOTING:
 
@@ -33,7 +31,7 @@ cat <<EOF
 
           There are times when building a vnfs for a distro different from the host machine, the
           host system will fail to find the correct debootsrap build file. Many times the files
-          in question only need be a link to some standard file. For instance, when trying to
+          in question only need be a link to a more standard file. For instance, when trying to
           build an Ubuntu vnfs on a Debian host system, you may encounter an error as such :
               No such script: /usr/share/debootstrap/scripts/oneiric
 
@@ -77,50 +75,52 @@ cat <<EOF
           COMPONENTS="${COMPONENTS},source1,source-2,source_3"
     ______________________________________________________________________
 
-          This format will override and replace the defaults, and only these values will
-          be used. Usefull for when needing specific package versions such as kernel's
-          or excluding files and/or directories from being imported into warewulf etc ..
-    ______________________________________________________________________
-
           AUTO=1    -   The default behavior is to prompt the user to validate the steps taken
                         This option will not prompt and force the default action for all questions.
 
-          MEMLOCK="8388608"
-
-          VARIANT="minbase"
-
-          QEMUFILENAME="qemu-arm-static"
-
-          NEWHOSTNAME="Deb-Nodes"     -     Set a default host name for the nodes
-
-          THISKERNEL="linux-image-123-x.y.z"        -    Override defailt with specific kernel
-
           COMPONENTS="source1,source-2,source_3"    -    Change componets such as main contrib
-
-          PKGLIST="package1,package-2,package_3"    -    Replace this default package list with these
-
-          EXTRA=1 - The extra package list FULLINSTALL will be added to PKGLIST
-
-          SKIPBUILD=1    -  Don't download packages and skip building chroot. Use existing chroot.
-
-          FULLINSTALL="package1,package-2,package_3" -  Replace this default package list with these
-
-          EXCLUDEPKG="package1,package-2,package_3" -    Debootstrap will exclude these packages from the install
-
-          OS_MIRROR="http://packages.linuxmint.com" -    Set a custom mirror for deboostrap to get its packages from.
-
-          EXCLUSIONS="/path_to/file, /path_to/directory" - These will be omitted from the vnfs capsule
-          HYBRIDIZE="/path_to/directory, /path_to/directory" - These will be omitted from the vnfs capsule and symlinks created.
-
-          Will auto mount iso's for inclusion in vnfs capsules sources.list file
-          NOTE: debootstrap will NOT install from these. They will be added to the
-          top of the sources.list available for future chroot apt package management.
-          Later versions may allow debootstrap to utilize iso's for initial install.
-
-          INSTALL_ISO="/path/to/iso-1.iso,/path/to/iso-2.iso,/path/to/iso-3.iso"
 
           DEFAULTSOURCE=1   -   Revert to the default sources.list created by debootstrap.
                                 This will also override any iso sources.
+
+          EXCLUDEPKG="package1,package-2,package_3" -    Debootstrap will exclude these packages from the install
+
+          EXCLUSIONS="/path_to/file, /path_to/directory" - These will be omitted from the vnfs capsule
+
+          EXTRA=1 - The extra package list FULLINSTALL will be added to PKGLIST
+
+          FULLINSTALL="package1,package-2,package_3" -  Replace this default package list with these
+
+          HYBRIDIZE="/path_to/directory, /path_to/directory" - These will be omitted from the vnfs capsule and symlinks created.
+
+          HYBRIDPATH="/mnt/vnfs"    -   The default hybridpath is /mnt/vnfs but can be changed to /mnt/anyname
+
+          INSTALL_ISO="/path/to/iso-1.iso,/path/to/iso-2.iso,/path/to/iso-3.iso"
+                  Will auto mount iso's for inclusion in vnfs capsules sources.list file
+                  NOTE: debootstrap will NOT install from these. They will be added to the
+                  top of the sources.list available for future chroot apt package management.
+                  Later versions may allow debootstrap to utilize iso's for initial install.
+
+          MASTEREXPORTS="/home:(default), /media:(ro,no_root_squash)" - Comma separated list.
+                   Add these exports to the master nodes /etc/export file and fstab of all
+                   the other nodes. NOTE: /home is hard coded to the exports file. Mount
+                   options for it are ignored so default is used to maintain option syntax.
+
+          MEMLOCK="8388608"
+
+          NEWHOSTNAME="Deb-Nodes"     -     Set a default host name for the nodes
+
+          OS_MIRROR="http://packages.linuxmint.com" -    Set a custom mirror for deboostrap to get its packages from.
+
+          PKGLIST="package1,package-2,package_3"    -    Replace this default package list with these
+
+          QEMUFILENAME="qemu-arm-static"    -   Full path when debootstrap can't find a build file
+
+          SKIPBUILD=1    -  Don't download packages and skip building chroot. Use existing chroot.
+
+          THISKERNEL="linux-image-123-x.y.z"        -    Override defailt with specific kernel
+
+          VARIANT="minbase"
 
 EOF
 
