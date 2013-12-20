@@ -497,6 +497,9 @@ $( basename ${CHROOTDIR} )\[\033[0;37m\]]\342\224\200[\[\033[0;32m\]type exit wh
 EOF
 
     ${CHROOT} ${CHROOTDIR} ;
+
+    # restore default prompt after leaving chroot
+    cp ${CHROOTDIR}/root/.wwbashrc ${CHROOTDIR}/root/.bashrc ;
     close_shell ;
 }
 
