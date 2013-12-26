@@ -332,7 +332,7 @@ exec()
         &dprint("Entered 'set' codeblock\n");
 
         if ($opt_netdev) {
-            if ($opt_netdev =~ /^([a-z]+\d*)$/) {
+            if ($opt_netdev =~ /^([a-z][a-z0-9]*)$/) {
                 $opt_netdev = $1;
             } else {
                 &eprint("Option 'netdev' has invalid characters\n");
