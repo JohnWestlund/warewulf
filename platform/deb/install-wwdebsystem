@@ -11,7 +11,9 @@
 #   Date: 2013-11-14
 #########################################################
 
+PACKAGELIST=""
 WWDOWNLOAD=""
+CROSSARCH=""
 WWVERSION=""
 WWPREFIX=""
 SQLUSER=""
@@ -19,10 +21,11 @@ CHOICE=""
 EDITOR=""
 CLUSTERVER="3.4"
 FILETYPE='.tar.gz'
+SOURCEDIR="$( pwd )"
 
-PACKAGELIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap \
+TEMPLIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap \
 isc-dhcp-server tcpdump openssh-client nfs-kernel-server nfs-common \
-portmap ntp"
+rpcbind ntp wget mysql-server build-essential mysql-server"
 
 
 check_sqlpw () {
@@ -340,6 +343,29 @@ create_wwdb () {
 }
 
 
+cross_arch () {
+    # display current request list and prompt to add more
+    # prompt to enter the nxt arch
+    warn_msg which_arch ;
+    user_input ;
+
+    if [[ "${CHOICE}" != "done" ]]
+    then
+        if [[ "${CROSSARCH}" == "true" ]]
+        then
+            CROSSARCH="${CHOICE}"
+        else
+            CROSSARCH="${CROSSARCH} ${CHOICE}"
+        fi
+        echo
+        echo "The current list of additional architectures requested."
+        echo "Current List:  ${CROSSARCH}"
+
+        cross_arch ;
+    fi
+}
+
+
 delete_dir () {
     # if old server path found
     if [[ -d ${CHOICE} ]]
@@ -418,6 +444,17 @@ get_undionly () {
     fi
 }
 
+scan_packages () {
+    echo "Checking: $1"
+    if dpkg -s $1 2>&1 | grep Status | grep -v deinstall
+    then
+        return 0 ;
+    else
+        echo "   $1 : not installed"
+        echo
+        return 1 ;
+    fi
+}
 
 set_sql_userperms () {
     #set sql warewulf user permissions
@@ -537,7 +574,7 @@ warn_msg () {
 
         enter_twice)
             echo
-            echo "Enter the password a again"
+            echo "Enter the password again"
             ;;
 
         enter_mismatch)
@@ -562,6 +599,15 @@ warn_msg () {
             echo " NO = Configure tftpd to use the path /var/lib/tftpboot"
             ;;
 
+        crossarch)
+            echo
+            echo "Additional support can be added if you need to create"
+            echo "cross architecture bootstraps. Such as creating 32 bit"
+            echo "bootstrap on a 64 bit machine."
+            echo
+            echo "Would you like to include cross architecture support ?"
+            ;;
+
         editor)
             echo
             echo "Which command line text editor would you like to use ?"
@@ -582,11 +628,12 @@ warn_msg () {
 
         intro)
             echo
-            echo "Scan system for required dependencies, and automatically install"
-            echo "the required packages. The following are some of the required"
-            echo "packages warewulf needs to run ?"
+            echo "The following are some of the required packages warewulf needs."
+            echo "${TEMPLIST}"
             echo
-            echo "${PACKAGELIST}"
+            echo "Scan system for required dependencies, and automatically install"
+            echo "the required packages."
+
             echo
             ;;
 
@@ -613,6 +660,14 @@ warn_msg () {
             echo "Are you sure you want to continue without it"
             ;;
 
+        no_arch_support)
+            echo
+            echo "ERROR: The requested architecture ${thisarch} is NOT currently supported"
+            echo '       Add the correct compiler flags to this script or: Since all sources'
+            echo '       are in place, you can set the appropriate flags and run make manually.'
+            echo
+            ;;
+
         no_tfpt)
             echo
             echo "tftp server not found"
@@ -630,6 +685,7 @@ warn_msg () {
         pkgs_selected)
             echo
             echo "Current list of packages to be installed on this system."
+            echo '________________________________________________________'
             echo "${PACKAGELIST}"
             echo
             echo "Download and install the current list of packages."
@@ -654,7 +710,7 @@ warn_msg () {
         sql_root)
             echo
             echo '----------------------------------------------------'
-            echo "After mysql-server is installed you will be prompted"
+            echo "If mysql-server is installed you will be prompted"
             echo "to create the root password for mysql."
             echo
             echo "NOTE: This is NOT your system root user"
@@ -678,6 +734,14 @@ warn_msg () {
             echo
             ;;
 
+        which_arch)
+            echo
+            echo "Enter the additional architecture you would like to support."
+            echo "Input the next architecture to be supported then hit enter."
+            echo "If no more required enter:  done"
+            echo "Example:  i386"
+            ;;
+
         which_eth)
             echo
             echo "Which ethernet adapter will warewulf use to network nodes ?"
@@ -687,7 +751,8 @@ warn_msg () {
         wwready)
             echo
             echo '================================================================='
-            echo "System should be ready to run Warewulf."
+            echo
+            echo "System should now be ready to run Warewulf."
             echo "Will now download, compile, and install Warewulf."
             echo
             echo "The warewulf version-${WWVERSION} will be downloaded"
@@ -756,75 +821,39 @@ then
     WWPREFIX="/usr/local"
 fi
 
-# prompt to install needed packages ?
-warn_msg intro ;
+# prompt about diff in root users
+warn_msg sql_root ;
+if ! user_decide
+then
+    echo "Continuing any way"
+fi
+
+# prompt for cross architecture support
+warn_msg crossarch;
 if user_decide
 then
-    # check for development tools
-    makecheck="$( which make )"
-    wgetcheck="$( which wget )"
+    TEMPLIST="${TEMPLIST} gcc-multilib" ;
+    CROSSARCH="true"
+fi
 
-    if [[ -z ${wgetcheck} ]]
-    then
-        PACKAGELIST="${PACKAGELIST} wget"
-    fi
+# prompt to install needed packages ?
+warn_msg intro ;
+if [[ "${CROSSARCH}" == "true" ]] || user_decide
+then
 
-    if [[ -z ${makecheck} ]]
-    then
-        # WARNING: make command not found ask to install ?
-        warn_msg makecheck ;
-        if user_decide
+    # scan system for required packages
+    for i in ${TEMPLIST}
+    do
+        if ! scan_packages ${i}
         then
-            PACKAGELIST="${PACKAGELIST} build-essential" ;
-        fi
-    fi
-
-    # make sure mysql is installed
-    if [[ -z $(which mysql) ]]
-    then
-        # prompt mysql not found ask to install ?
-        warn_msg missing_sql ;
-        if user_decide
-        then
-            # prompt about diff in root users
-            warn_msg sql_root ;
-            if ! user_decide
+            if [[ -n ${PACKAGELIST} ]]
             then
-                echo "Continuing any way"
-            fi
-            PACKAGELIST="${PACKAGELIST} mysql-server" ;
-        else
-            # warn mysql needed ask to continue without it ?
-            warn_msg need_sql ;
-            if user_decide
-            then
-                echo
-                echo "Continuing without installing mysql"
-            fi
-        fi
-    fi
-
-    # most common server used is tftpd-hpa.
-    # we will check for this and install if not found.
-    if [[ ! $(dpkg -s tftpd-hpa 2>&1 | grep Status ) ]]
-    then
-        # WARNING tftp server not found ask to install ?
-        warn_msg no_tfpt ;
-        if user_decide
-        then
-            PACKAGELIST="${PACKAGELIST} tftpd-hpa" ;
-        else
-            # ask if want continue without installing tftp server
-            warn_msg need_tftp ;
-            if user_decide
-            then
-                echo
-                echo "Continuing without installing"
+                PACKAGELIST="${PACKAGELIST} ${i}"
             else
-                exit 1 ;
+                PACKAGELIST="${i}"
             fi
         fi
-    fi
+    done
 
     # which command line editor would you like to use nano or vi ?
     warn_msg editor;
@@ -836,18 +865,21 @@ then
         PACKAGELIST="${PACKAGELIST} vim"
     fi
 
-    # Install all requested packages
-    warn_msg pkgs_selected ;
-    if user_decide
+    if [[ -n ${PACKAGELIST} ]]
     then
-        echo
-        aptitude update ;
-        apt-get install ${PACKAGELIST} ;
-    else
-        echo
-        echo "Do Your Homework Then Run This Again"
-        echo
-        exit 1 ;
+        # Install all requested packages
+        warn_msg pkgs_selected ;
+        if user_decide
+        then
+            echo
+            aptitude update ;
+            apt-get install ${PACKAGELIST} ;
+        else
+            echo
+            echo "Do Your Homework Then Run This Again"
+            echo
+            exit 1 ;
+        fi
     fi
 fi
 
@@ -908,14 +940,75 @@ then
         tar -zxf ${i} && rm ${i} ;
     done
 
+    # select extra architectures
+    cross_arch ;
+    crosscompilelist=""
+
+    # configure all sources
     for i in ${compilelist}
     do
         cd ${i}* ;
         ./configure --prefix=${WWPREFIX} ;
+
+        if [[ "${i}" =~ ^.*warewulf-provision ]] && [[ -n ${CROSSARCH} ]]
+        then
+            for x in ${CROSSARCH}
+            do
+                ### to each cross arch dir
+                mkdir -p ${SOURCEDIR}/crossarch/${x} ;
+                cp -rp ./* ${SOURCEDIR}/crossarch/${x}/ ;
+
+                # edit crossarch Makefile in place so will
+                # install 'base' to an arch specific file name
+                echo "$( cat ${SOURCEDIR}/crossarch/${x}/initramfs/Makefile\
+                            | sed -e s!initramfs/base!initramfs/${x}base! \
+                            )" > ${SOURCEDIR}/crossarch/${x}/initramfs/Makefile ;
+
+                if [[ -n "${crosscompilelist}" ]]
+                then
+                    crosscompilelist="${crosscompilelist} crossarch/${x}"
+                else
+                    crosscompilelist="crossarch/${x}"
+                fi
+            done
+        fi
+
+        cd ${SOURCEDIR} ;
+    done
+
+    # compile and install
+    for i in ${compilelist}
+    do
+        cd ${i}* ;
         make || ( warn_msg compiler_error && exit 1 ) ;
         make install || ( warn_msg compiler_error && exit 1 ) ;
-        cd ../ ;
+        cd ${SOURCEDIR} ;
     done
+
+    # cross compile and install
+    # just provision base
+    if [[ -n ${crosscompilelist} ]]
+    then
+        for i in ${crosscompilelist}
+        do
+            thisarch="$(basename ${i})" ;
+            if [[ "${thisarch}" == "i386" ]]
+            then
+                CFLAGS=-m32
+                LDFLAGS=-m32
+                export CFLAGS
+                export LDFLAGS
+
+                cd ${SOURCEDIR}/${i}/initramfs ;
+                make || ( warn_msg compiler_error && exit 1 ) ;
+                make install || ( warn_msg compiler_error && exit 1 ) ;
+                cd ${SOURCEDIR} ;
+            else
+                # inform of invalid arch and offer solution
+                warn_msg no_arch_support ;
+            fi
+        done
+    fi
 
     if [[ "${WWPREFIX}x" == "/x" ]]
     then
@@ -937,7 +1030,7 @@ config_wwsql ;
 get_undionly ;
 
 # Patch paths for non standard installs at
-# least until they are properly handles by WW
+# least until they are properly handled by WW
 path_patch ;
 
 # inform all done looks good

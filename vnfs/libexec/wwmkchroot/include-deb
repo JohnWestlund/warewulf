@@ -1036,6 +1036,9 @@ buildchroot() {
                 warn_msg stage2 ;
                 cp ${FOREIGN} ${VNFSROOT}/${NAME}/usr/bin/
                 ${CHROOT} ${VNFSROOT}/${NAME} /debootstrap/debootstrap --second-stage || abort_install;
+
+                # make sure wwboostrap can later id this chroot arch
+                echo '1' > ${VNFSROOT}/${NAME}/${ARCH}.crossarch ;
             else
                 warn_msg missing_qemu ;
                 finalize ;
