@@ -918,7 +918,7 @@ then
     then
         for i in ${pkglist}
         do
-            wget -N ${WWDOWNLOAD}/${i} || wget -N ${WWDOWNLOAD}/${i} || \
+            wget -nc ${WWDOWNLOAD}/${i} || wget -nc ${WWDOWNLOAD}/${i} || \
                 { echo "ERROR: $1 - Failed to download ${WWDOWNLOAD}/${i} source files" && exit 1; } ;
         done
     else
@@ -928,7 +928,7 @@ then
     # no nightly builds for cluster package so add it separately
     #  only get this package from full releases
     pkglist="http://warewulf.lbl.gov/downloads/releases/warewulf-cluster/warewulf-cluster-${CLUSTERVER}${FILETYPE}"
-    wget -N ${pkglist} || wget -N ${pkglist} || \
+    wget -nc ${pkglist} || wget -nc ${pkglist} || \
                 { echo "ERROR: $1 - Failed to download ${pkglist}" && exit 1; } ;
 
     compilelist="${compilelist} warewulf-cluster"
@@ -949,6 +949,13 @@ then
     do
         cd ${i}* ;
         ./configure --prefix=${WWPREFIX} ;
+
+        # need compile and install common before all else
+        if [[ "${i}" =~ ^.*warewulf-common ]]
+        then
+            make || ( warn_msg compiler_error && exit 1 ) ;
+            make install || ( warn_msg compiler_error && exit 1 ) ;
+        fi
 
         if [[ "${i}" =~ ^.*warewulf-provision ]] && [[ -n ${CROSSARCH} ]]
         then
@@ -973,15 +980,13 @@ then
             done
         fi
 
-        cd ${SOURCEDIR} ;
-    done
+        # compile and install all else after
+        if ! [[ "${i}" =~ ^.*warewulf-common ]]
+        then
+            make || ( warn_msg compiler_error && exit 1 ) ;
+            make install || ( warn_msg compiler_error && exit 1 ) ;
+        fi
 
-    # compile and install
-    for i in ${compilelist}
-    do
-        cd ${i}* ;
-        make || ( warn_msg compiler_error && exit 1 ) ;
-        make install || ( warn_msg compiler_error && exit 1 ) ;
         cd ${SOURCEDIR} ;
     done
 
