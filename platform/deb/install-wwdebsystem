@@ -16,7 +16,6 @@ WWDOWNLOAD=""
 CROSSARCH=""
 WWVERSION=""
 WWPREFIX=""
-SQLUSER=""
 CHOICE=""
 EDITOR=""
 CLUSTERVER="3.4"
@@ -29,7 +28,7 @@ rpcbind ntp wget mysql-server build-essential mysql-server"
 
 
 check_sqlpw () {
-    if $( echo "quit" | mysql -u ${SQLUSER} -p${CHOICE} >/dev/null 2>&1 )
+    if $( echo "quit" | mysql -u $1 -p${CHOICE} >/dev/null 2>&1 )
     then
         return 0 ;
     else
@@ -38,87 +37,112 @@ check_sqlpw () {
 }
 
 
-choose_wwpw () {
-    # in case sql user already exists
-    local isolduser="${1}"
+check_sqlusr () {
+    local newuser="$1"
 
-    echo
-    echo '-------------------------------------------------'
-    echo "What mysql password set for user ${warewulfusr} ?"
-    enter_password ;
-
-    if [[ "${isolduser}" == "true" ]]
-    then
-        SQLUSER="${warewulfusr}"
-
-        if check_sqlpw
+    for i in $(echo "use mysql; select user from db" | mysql -u root -p${rootpassword} )
+    do
+        if [[ "${i}" == "${newuser}" ]]
         then
-            warewulfpassword="${CHOICE}"
-        else
-            echo
-            echo "ERROR: Not a valid mysql password for ${warewulfusr}"
-            choose_wwpw ${isolduser} ;
+            # flag existing user
+            newuser="false"
         fi
-    else
-        warewulfpassword="${CHOICE}"
-    fi
+    done
+    echo "${newuser}" ;
 }
 
 
 choose_wwuser () {
     # check if exists and create sql warewulf user
-    local isolduser=""
+    local isolduser="false"
+    local warewulfusr=""
 
-    echo
-    echo '-----------------------------------------------------'
-    echo "What is the mysql user name you want set for warewulf"
-    echo 'If unsure, just set it to "warewulf"'
-    user_input ;
-
-    for i in $(echo "use mysql; select user from db" | mysql -u root -p${rootpassword} )
+    # Chose mysql username
+    while [[ "${isolduser}" == "false" ]]
     do
-        if [[ "${i}" == "${CHOICE}" ]]
+        echo
+        echo '-----------------------------------------------------'
+        echo "What is the mysql user name you want set for warewulf"
+        echo 'If unsure, just set it to "warewulf"'
+        # choose user name
+        user_input ;
+        warewulfusr=$(check_sqlusr ${CHOICE}) ;
+
+        # if they both equal "false" we have existing user
+        if [[ "${isolduser}" == "${warewulfusr}" ]]
         then
             echo
             echo "User ${CHOICE} currently exists in MySQL"
             echo "YES = Accept this user for use in warewulf."
             echo " NO = View more options."
             echo
-            # flag existing user
-            isolduser="true"
 
             if user_decide
             then
                 warewulfusr="${CHOICE}"
-                # choose a valid password for mysql warewulf user
-                choose_wwpw ${isolduser} ;
+                isolduser="true"
             else
+                echo "Warewulf requires valid mysql user credentials to run"
+                echo
                 echo "Try again with a different user name ?"
-                echo "YES = Choose another name"
-                echo " NO = Skip mysql user creation"
-
-                if user_decide
+                echo " YES = Choose another name"
+                echo "  NO = exit the installer"
+                if ! user_decide
                 then
-                    choose_wwuser ;
-                    break ;
-                else
-                    warewulfusr=""
-                    break ;
+                    exit 1 ;
                 fi
             fi
         else
             warewulfusr="${CHOICE}"
+            isolduser=""
         fi
     done
 
-    if [[ -z ${isolduser} ]]
-    then
-        # choose a valid password for mysql warewulf user
-        choose_wwpw ${isolduser} ;
+    # Chose mysql password
+    while [[ -z ${isolduser} ]] || [[ "${isolduser}" == "true" ]]
+    do
+        echo
+        echo '-------------------------------------------------'
+        if [[ "${isolduser}" == "true" ]]
+        then
+            echo "Configuring Warewulf to use the existing user ${warewulfusr}"
+        fi
+        echo "What mysql password set for user ${warewulfusr} ?"
+        enter_password ;
 
+        if [[ "${isolduser}" == "true" ]]
+        then
+            if check_sqlpw ${warewulfusr}
+            then
+                echo
+                echo "User verified"
+                echo "Configuring Warewulf to use this user"
+                isolduser="done"
+            else
+                echo
+                echo "ERROR: Not a valid mysql password for ${warewulfusr}"
+                echo "Warewulf requires valid mysql user credentials to run"
+                echo
+                echo "YES = try another password"
+                echo " NO = exit the installer"
+                if ! user_decide
+                then
+                    exit 1 ;
+                fi
+            fi
+        else
+            isolduser="none"
+        fi
+
+        warewulfpassword="${CHOICE}"
+    done
+
+    # create mysql user
+    if [[ "${isolduser}" == "none" ]]
+    then
         echo
         echo '--------------------------------'
-        echo "Create mysql warewulf user ?"
+        echo "Create mysql warewulf user ${warewulfusr} ?"
         if user_decide
         then
             mysql -u root -p${rootpassword} -Bse "use mysql;replace into user (host, user, password) \
@@ -444,6 +468,7 @@ get_undionly () {
     fi
 }
 
+
 scan_packages () {
     echo "Checking: $1"
     if dpkg -s $1 2>&1 | grep Status | grep -v deinstall
@@ -451,10 +476,10 @@ scan_packages () {
         return 0 ;
     else
         echo "   $1 : not installed"
-        echo
         return 1 ;
     fi
 }
+
 
 set_sql_userperms () {
     #set sql warewulf user permissions
@@ -467,13 +492,13 @@ set_sql_userperms () {
 
 
 sql_rootpw () {
+    local sqlroot="root"
+
     # ask for sql root password
     warn_msg choose_root ;
     enter_password ;
 
-    SQLUSER="root"
-
-    if check_sqlpw
+    if check_sqlpw ${sqlroot}
     then
         rootpassword="${CHOICE}"
     else
