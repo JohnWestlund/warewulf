@@ -145,7 +145,7 @@ load()
 
     foreach my $filename (@args) {
         $self->add("__FILENAME", $filename);
-        if ( -f $filename and $filename =~ /^(\/[a-zA-Z0-9\-_\/\.]+)$/ ) {
+        if ($filename =~ /^(\/[a-zA-Z0-9\-_\/\.]+)$/ and -f $filename) {
             $self->set("__FILE", $filename);
             if (defined($self->parse())) {
                 $rc++;
