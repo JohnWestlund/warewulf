@@ -44,7 +44,7 @@
 #STATUS: primary
 
 # MICPATH should be set to a unic path in each node 
-MICPATH=${MICPATH:-/var/intel/mic/filesystem}; 
+MICPATH=${MICPATH:-/var/mpss}; 
 MICCTRL="/usr/sbin/micctrl";
 _CWD=`pwd`;
 
@@ -89,6 +89,7 @@ else
     success; echo;
 fi
 
+# Ensure the MPSS service is not active
 service mpss stop &>/dev/null;
 
 # Create the destination directory if it does not exist
@@ -99,12 +100,20 @@ fi
 msg_status;
 msg_white "Initializing Configuration";
 
-# Build our base structures
+# Clean old structure if anything exists
+if [ -d $MICPATH/mic0 ]; then
+    cd $MICPATH;
+    /bin/rm -rf ./mic[0-9]* &>/dev/null;
+    cd $_CWD;
+fi
+
+# Build the base structures
 ${MICCTRL} --initdefaults &>/dev/null;
 
 # MIC configuration files
-DEFAULT_CONF=/etc/sysconfig/mic/default.conf
-MIC0_CONF=/etc/sysconfig/mic/mic0.conf
+MPSS_CONFIG_DIR="/etc/mpss";
+DEFAULT_CONF="$MPSS_CONFIG_DIR/default.conf";
+MIC0_CONF="$MPSS_CONFIG_DIR/mic0.conf"
 
 # Sanity check... 
 # At least one MIC card is expected
@@ -119,43 +128,14 @@ else
     success; echo;
 fi
 
-# Replace '/opt/intel/mic/filesystem' with value of $MICPATH, which very well may
-# be the same thing. The images must reside in a location that is unique to each
-# host. 
-msg_status;
-msg_white "Setting MIC cards file system to $MICPATH";
-
+# Enable verbose startup
 sed -i.back\
-    -e "/^CommonDir/ { s@/opt/intel/mic/filesystem@$MICPATH@g }" $DEFAULT_CONF;
-
-sed -i.back\
-    -e "/^MicDir/ { s@/opt/intel/mic/filesystem@$MICPATH@g }"\
-    -e "/^RootDevice/ { s@/opt/intel/mic/filesystem@$MICPATH@g }"\
     -e "s/^\(VerboseLogging\).*/\1 Enabled/"\
-    /etc/sysconfig/mic/mic*.conf;
+    $MPSS_CONFIG_DIR/mic*.conf;
 
 # Disable power management
 sed  -i.back -e s'/PowerManagement.*/PowerManagement \"cpufreq_on;corec6_off;pc3_off;pc6_off\"/'\
-    /etc/sysconfig/mic/mic*.conf;
-
-# Clean old structure if anything exists
-if [ -d $MICPATH/mic0 ]; then
-    cd $MICPATH;
-    /bin/rm -rf ./mic[0-9]*;
-    cd $_CWD;
-fi
-
-# Initialize with the new data
-${MICCTRL} --initdefaults &>/dev/null; 
-
-if [ $? -ne 0 ]; then
-    failure; echo;
-    logger 99_michost "Error setting MIC cards file system to $MICPATH";
-    logger 99_michost "${MICCTRL} --initdefaults";
-    return 1;
-else
-    success; echo;
-fi
+    $MPSS_CONFIG_DIR/mic*.conf;
 
 msg_status;
 msg_white "Configuring MIC bridge";
@@ -189,8 +169,8 @@ for netdev in $NETDEVLIST; do
         continue;
     fi
 
-    ${MICCTRL} --network=static --bridge=br0 --hosts=yes\
-     --ip=$nip $ndev &>/dev/null;
+    ${MICCTRL} --network=static --bridge=br0 --modhost=yes --modcard=yes\
+    --ip=$nip $ndev &>/dev/null;
 
     if [ $? -ne 0 ]; then
         echo;
@@ -200,8 +180,6 @@ for netdev in $NETDEVLIST; do
              --ip=$nip $ndev";
         FAIL_MIC=1;
     else
-        # Workaround for MTU config
-        echo "MTUsize $MTU" >> /etc/sysconfig/mic/${ndev}.conf;
         SUCCESS_MIC=1;
     fi
 done 
@@ -225,14 +203,12 @@ msg_status;
 msg_white "Setting NFS mounts from master node";
 
 stat=0
-${MICCTRL} --addnfs=/home --server=$MASTERIP --dir=/home\
-&>/dev/null;
-stat="$?"
-${MICCTRL} --addnfs=/opt --server=$MASTERIP --dir=/opt\
-&>/dev/null;
-stat="$?"
+${MICCTRL} --addnfs="$MASTERIP:/home" --dir=/home &>/dev/null;
+stat1="$?"
+${MICCTRL} --addnfs="$MASTERIP:/opt" --dir=/opt &>/dev/null;
+stat2="$?"
 
-if [ "$stat" -ne 0 ]; then
+if [[ "$stat1" -ne 0 || "$stat2" -ne 0 ]]; then
     failure; echo;
     logger 99_michost "Error setting NFS mounts from master node.";
     logger 99_michost "${MICCTRL} --addnfs=/home --server=$MASTERIP --dir=/home";
@@ -242,6 +218,25 @@ else
     success; echo;
 fi
 
+# Workaround for problem in NFS IP address
+sed -i -e "s/$NODEIP/$MASTERIP/" $MICPATH/mic*/etc/fstab
+
+# Have extra RPMS to be installed during the card booting.
+# wwinit MIC should leave the RPMs in $MICPATH
+msg_status;
+msg_white "Setting overlay for extra rpms";
+${MICCTRL} --overlay=rpm --state=on --source=$MICPATH &>/dev/null;
+
+if [ $? -ne 0 ]; then
+    failure; echo;
+    logger 99_michost "Error Setting overlay for extra rpms";
+    logger 99_michost "${MICCTRL} --resetconfig";
+    return 1;
+else
+    success; echo;
+fi
+
+
 msg_status;
 msg_white "Propagating configurations"
 
@@ -249,10 +244,59 @@ ${MICCTRL} --resetconfig &>/dev/null;
 
 if [ $? -ne 0 ]; then
     failure; echo;
-    logger 99_michost "Propagating configurations";
+    logger 99_michost "Error Propagating configurations";
     logger 99_michost "${MICCTRL} --resetconfig";
     return 1;
 else
+    success; echo;
+fi
+
+# Workaround: the ofed-mic service looks for `hostname`-mic<x> 
+# ignoring the domain in the hostname. 
+# Note: this must be done after executing micctrl --resetconfig because
+# it regenerates /etc/hosts on the mic filesystem 
+hostname=$(hostname);
+for netdev in $NETDEVLIST; do
+    nip=`echo $netdev | cut -f 1 -d ':'`;
+    ndev=`echo $netdev | cut -f 2 -d ':'`;
+
+    # This works to match 'mic0', 'mic1', etc...
+    tmp=`echo $ndev | tr -d '[0-9]'`;
+    if [ "x${tmp}" != "xmic" ]; then
+        continue;
+    fi
+
+    sed -i -e "s/\($nip.*\)/\1 $hostname-$ndev/" /etc/hosts
+
+done
+
+# Have the MIC cards to resolve all cluster nodes
+# Note: this must be done after executing micctrl --resetconfig because
+# it regenerates /etc/hosts on the mic filesystem 
+msg_status;
+msg_white "Setting names resolution on the cards";
+ERR=0;
+for netdev in $NETDEVLIST; do
+    ndev=`echo $netdev | cut -f 2 -d ':'`;
+
+    # This works to match 'mic0', 'mic1', etc...
+    tmp=`echo $ndev | tr -d '[0-9]'`;
+    if [ "x${tmp}" != "xmic" ]; then
+        continue;
+    fi
+
+    /bin/cp -f /etc/hosts $MICPATH/$ndev/etc/hosts
+
+    if [ $? -ne 0 ]; then
+        echo;
+        msg_yellow "Error copying /etc/hosts for $ndev";
+        logger 99_michost "Error copying /etc/hosts for $ndev";
+        logger 99_michost "/bin/cp -f /etc/hosts $MICPATH/$ndev/etc/hosts";
+        failure; echo;
+        ERR=1;
+    fi
+done
+if [ $ERR -eq 0 ];then 
     success; echo;
 fi
 

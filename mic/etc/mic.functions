@@ -36,14 +36,37 @@
 #########################}
 ##
 
+# Force to install rpm even if it is already installed
+rpm_reinstall(){
+    # Use the first parameter as a flag to define where to install:
+    # locally or in a chroot
+    local CHROOT_FLAG=$1;
+    local yumopt="";
+    local rpmopt="";
+
+    if [ "x$CHROOT_FLAG" == 'xCHROOT_FLAG' ];then
+        shift;
+        yumopt="--config=${CHROOTDIR}/root/yum-ww.conf --installroot=${CHROOTDIR}";
+    fi
+
+    local rpms_in=$@;
+
+    /usr/bin/yum -y -q --disableexcludes=all --tolerant $yumopt reinstall $rpms_in &>/dev/null;
+    if [ "$?" -ne 0 ];then
+        return 255;
+    fi
+
+    return 0;
+}
+
 # Useful function to install RPM files of packages
 rpm_install() {
 
     # Use the first parameter as a flag to define where to install:
     # locally or in a chroot
-    CHROOT_FLAG=$1;
-    yumopt="";
-    rpmopt="";
+    local CHROOT_FLAG=$1;
+    local yumopt="";
+    local rpmopt="";
 
     if [ "x$CHROOT_FLAG" == 'xCHROOT_FLAG' ];then
         shift;
@@ -51,16 +74,16 @@ rpm_install() {
         rpmopt="--root=${CHROOTDIR}";
     fi
 
-    rpms_in=$@;
+    local rpms_in=$@;
 
     # Collect all rpms that are missing
-    rpm_to_install='';
+    local rpm_to_install='';
     for rpm_file in $rpms_in; do
         # If the input is not a file, assume it is a package name 
         if [ ! -f $rpm_file ];then
             pkg_name=$rpm_file
         else
-            pkg_name=$(rpm -qip $rpm_file |grep Name|awk {'print $3'} );
+            pkg_name=$(basename $rpm_file |sed 's/\(.*\)\.rpm/\1/');
         fi
 
         # Check if already installed
@@ -76,7 +99,7 @@ rpm_install() {
         return 0;
     fi
 
-    /usr/bin/yum -y -q --tolerant $yumopt install $rpm_to_install &>/dev/nul;
+    /usr/bin/yum -y -q --disableexcludes=all --tolerant $yumopt install $rpm_to_install &>/dev/null;
     if [ "$?" -ne 0 ];then
         return 255;
     fi
@@ -89,9 +112,9 @@ uninst_pkg(){
 
     # Use the first parameter as a flag to define where to install:
     # locally or in a chroot
-    CHROOT_FLAG=$1;
-    yumopt="";
-    rpmopt="";
+    local CHROOT_FLAG=$1;
+    local yumopt="";
+    local rpmopt="";
 
     if [ "x$CHROOT_FLAG" == 'xCHROOT_FLAG' ];then
         shift;
@@ -99,8 +122,8 @@ uninst_pkg(){
         rpmopt="--root=${CHROOTDIR}";
     fi
 
-    pkgs_to_remove=$@;
-    RETVAL=0;
+    local pkgs_to_remove=$@;
+    local RETVAL=0;
     for pkg in $pkgs_to_remove; do
         if rpm -q $pkg $rpmopt &>/dev/null; then
             /usr/bin/yum --tolerant --quiet $yumopt -y remove $pkg &>/dev/null;
@@ -131,7 +154,7 @@ inst_mpss() {
 
     # Look for the package if not passed
     if [ -z "$pkg_file" ]; then
-        pkg_file=$(/bin/ls -1 $HOME/KNC_*_*.tar $HOME/mpss_*.tar 2>/dev/null | sort -V | tail -1);
+        pkg_file=$(/bin/ls -1 $HOME/KNC_*_*.tar $HOME/mpss*.tar 2>/dev/null | sort -V | tail -1);
     fi
 
     if [[ -z "$pkg_file" || ! -f "$pkg_file" ]]; then
@@ -141,6 +164,32 @@ inst_mpss() {
     fi
 
     wwprint " + Package $(msg_green $pkg_file) found\n";
+
+    # Warn if the version found is not supported
+    mpss_version=$(echo $pkg_file | sed 's/[^0-9.]*\([0-9.]*\).*/\1/');
+    mpss_major=$(echo $mpss_version|  cut -f 1 -d '.');
+    mpss_minor=$(echo $mpss_version|  cut -f 2 -d '.');
+    mpss_update=$(echo $mpss_version|  cut -f 3 -d '.');
+  
+    if [ -z $mpss_update ];then
+       mpss_update=0;
+    fi 
+
+    supported_version="3.1.0"
+    supported_major=$(echo $supported_version|  cut -f 1 -d '.');
+    supported_minor=$(echo $supported_version|  cut -f 2 -d '.');
+    supported_update=$(echo $supported_version|  cut -f 3 -d '.');
+
+    if [ "$mpss_major" -lt "$supported_major" ];then
+        wwprint "   WARNING: supported vesion >= $supported_version " warn;
+        reply_warn;
+    elif [ "$mpss_minor" -lt "$supported_minor" ];then
+        wwprint "   WARNING: supported vesion >= $supported_version " warn;
+        reply_warn;
+    elif [ "$mpss_update" -lt "$supported_update" ];then
+        wwprint "   WARNING: supported vesion >= $supported_version " warn;
+        reply_warn;
+    fi    
 
     tmpdir=$(mktemp -d /tmp/MPSS_-XXXXXXXXXX);
 
@@ -171,7 +220,7 @@ inst_mpss() {
     # If InfinBand is set, Install the OFED components
     if [[ ! -z "$OFED_FLAG" &&  "$OFED_FLAG" -ne 0 ]]; then
         # romove conflicting OFED pakcages 
-        wwprint " + Removing conflicting OFED packages.";
+        wwprint " + Removing conflicting OFED packages";
         uninst_pkg $conflict_OFED_pkgs;
         if [ "$?" -ne 0 ]; then
             reply_error;
@@ -215,6 +264,38 @@ inst_mpss() {
         fi
         reply_ok;
 
+        # Include coreutils in the nodes image. It is expected that the
+        # wwfirstboot module for mic will configure MPSS to install these
+        # rpms in the card during the node boot. 
+        wwprint " + Copying Intel(R) MPSS coreutils package in the chroot";
+
+        # Look for ${MPSS_path}/k1om/coreutils-<version>.k10m.rpm and 
+        #libgmp10-<version>.k1om.rpm
+        coreutils_rpms=$(find ${MPSS_path}/k1om/ |grep -E 'coreutils-[0-9]|libgmp');
+
+        # The wwfirstboot package must be installed but check it.
+        if [ -f $CHROOTDIR/etc/sysconfig/wwfirstboot.conf ]; then
+            . $CHROOTDIR/etc/sysconfig/wwfirstboot.conf;
+        else
+            MICPATH=/var/mpss;
+        fi
+        
+        local CHROOT_MICPATH="$CHROOTDIR$MICPATH";
+
+        # Create the destination directory if it does not exist
+        if [ ! -d $CHROOT_MICPATH ]; then
+                mkdir -p $CHROOT_MICPATH;
+        fi
+
+        /bin/cp $coreutils_rpms $CHROOT_MICPATH;
+
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+
         # If InfinBand is set, Install the OFED components
         if [[ ! -z "$OFED_FLAG" && "$OFED_FLAG" -ne 0 ]]; then
             wwprint " + Removing conflicting OFED packages in the chroot";
@@ -234,6 +315,10 @@ inst_mpss() {
                 exit 255;
             fi
             reply_ok;
+
+            # Need to reinstall the driver rpm to generate the init in the chroot
+            MPSS_OFED_driver_rpms=$(/bin/ls -1 -r ${MPSS_OFED_path}*.rpm| grep -e "ofed-driver-[0-9]");
+            rpm_reinstall 'CHROOT_FLAG' $MPSS_OFED_driver_rpms;
         fi
     fi
 

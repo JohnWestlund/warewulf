@@ -148,7 +148,7 @@ inst_build_dep() {
     wwprint " + Installing required build packages on $(msg_blue $(hostname -s))";
 
     yum --tolerant --quiet install -y \
-        bison e2fsprogs-devel flex gcc gcc-c++ gcc-gfortran glibc-devel \
+        bison e2fsprogs-devel flex gcc gcc-c++ gcc-gfortran glib2-devel glibc-devel \
         kernel-devel krb5-devel krb5-libs libevent libevent-devel libstdc++-devel \
         libsysfs libtool nfs-utils-lib-devel openldap-devel rpm-build tcl tcl-devel \
         tk zlib-devel tcsh libgfortran libgomp perl &>/dev/null
@@ -213,6 +213,11 @@ config_pkg() {
     ofed_ver_maj=${ofed_ver%%.*};
     ofed_ver_min=${ofed_ver##*.};
 
+    # Get OS version
+    RH_ver=$(cat /etc/redhat-release | awk '{print $3}');
+    RH_ver_maj=${RH_ver%%.*};
+    RH_ver_min=${RH_ver##*.};
+
     wwprint " + OFED Version: $OFED_basename\n";
     # Uncompress OFED
     tar -xzf $pkg_file -C $tmpdir;
@@ -243,8 +248,14 @@ config_pkg() {
         exit 255;
     fi
 
-    # Remove debug entries
-    grep -v debuginfo ${ofed_source}/${ofed_all_conf} > ${ofed_source}/${ofed_conf};
+    # Some components of OFED 1.5.x have conflicts with RHEL 6.4 or newer. However,
+    # adding MPSS OFED components makes it work. 
+    if [[ "$ofed_ver" =~ "1.5" && $RH_ver_maj -eq 6 && $RH_ver_min -ge 4 ]]; then
+        grep -v -E "debuginfo|dapl|kernel-ib" ${ofed_source}/${ofed_all_conf} > ${ofed_source}/${ofed_conf};
+        wwprint " WARNING: dapl components will not be installed.\n" warn;
+    else 
+        grep -v debuginfo ${ofed_source}/${ofed_all_conf} > ${ofed_source}/${ofed_conf};
+    fi  
 
     return 0;
 }
@@ -528,9 +539,8 @@ dat_conf(){
     fi
 
     if [ ! -f $chroot_path/etc/dat.conf ]; then
-        wwprint " ! ERROR: dat.conf file not present" error;
+        wwprint " WARNING: dat.conf file not present\n" warn;
         return 255
-        echo 
     fi
     
     sed -i "1i#Edited by wwinit OFED module" $chroot_path/etc/dat.conf;

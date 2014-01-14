@@ -683,6 +683,8 @@ wwfirstboot(){
         return 255;
     fi
 
+    wwprint " + Package $(msg_green $pkg_file) found\n";
+
     # Define options for installing packages in the chroot 
     chrootyumopt="--config=${CHROOTDIR}/root/yum-ww.conf --installroot=${CHROOTDIR}";
     

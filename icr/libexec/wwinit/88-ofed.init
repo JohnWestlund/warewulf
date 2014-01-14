@@ -114,6 +114,7 @@ if [ -z $OFEDFORCE ];then
     fi
 fi
 
+wwprint "OFED Configuration starting.\n";
 # Check for existence/usage of ofed_info on host and chroot root... Verify 
 # against version of OFED found.
 if [ -z $OFEDPKG ]; then
@@ -168,7 +169,6 @@ fi
 # We *truly* only skip the full thing if both skip_master and skip_vnfs are 
 # set to 1.
 if [ $skip_master -ne 1 ]; then
-    wwprint "OFED Configuration starting. This will take a while...\n";
     # Remove any base OS Packages that may conflict
     wwprint " + Removing conflicting OS packages from Head Node";
     if ! wwaction uninst_os_ib; then
@@ -186,8 +186,8 @@ if [ $skip_master -ne 1 ]; then
     fi
 
     # Configure OFED Package
-    wwprint " + Configuring OFED Package";
-    if ! wwaction config_pkg; then
+    wwprint " + Configuring OFED Package\n";
+    if ! config_pkg; then
         wwprint "\nERROR: Failed to configure OFED package" error;
         reply_error;
         exit 255;
@@ -242,9 +242,9 @@ if [ $skip_master -ne 1 ]; then
     fi
 
     # Configure SSHD in the CHROOTDIR
-    wwprint " + Configuring dat.conf";
-    if ! wwaction dat_conf ; then
-        wwprint "\nWARNING: Failed to edit dat.donf" warn;
+    wwprint " + Configuring dat.conf\n";
+    if ! dat_conf ; then
+        wwprint " WARNING: Failed to edit cat.conf" warn;
         reply_warn;
         RETVAL=1;
     fi
@@ -280,9 +280,9 @@ if [ $skip_master -ne 1 ]; then
         fi
 
         # Configure SSHD in the CHROOTDIR
-        wwprint " + Configuring dat.conf in the chroot";
-        if ! wwaction dat_conf "${CHROOTDIR}"; then
-            wwprint "\nWARNING: Failed to edit dat.donf in the chroot" warn;
+        wwprint " + Configuring dat.conf in the chroot\n";
+        if ! dat_conf "${CHROOTDIR}"; then
+            wwprint " WARNING: Failed to edit dat.conf in the chroot" warn;
             reply_warn;
             RETVAL=1;
         fi
