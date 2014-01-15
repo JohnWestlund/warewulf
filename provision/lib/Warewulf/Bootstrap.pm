@@ -15,7 +15,6 @@ use Warewulf::Logger;
 use Warewulf::DataStore;
 use Warewulf::Util;
 use Warewulf::Provision::Tftp;
-use Warewulf::CrossArch;
 use File::Basename;
 use File::Path;
 use Digest::MD5 qw(md5_hex);
@@ -339,21 +338,8 @@ build_local_bootstrap()
                     system("cd $tmpdir/initramfs; cpio -i -u --quiet < $file");
                 }
             }
-
-            # check for crosshardware support
-            my $base = "base" ;
-            my $arch = Warewulf::CrossArch::archsearch($tmpdir) ;
-            if ( defined $arch ) {
-                # untaint this var
-                my ($arch) = $arch =~ /^([A-Za-z0-9]+)$/ ;
-
-                # remove flag file to not bloat bootstrap
-                unlink "$tmpdir/$arch.crossarch" or &nprint("Could not unlink $base: ") ;
-                # use base for the correct architecture
-                $base = "$arch" . "$base" ;
-            }
-            if (-f "$initramfsdir/$base") {
-                system("cd $tmpdir/initramfs; cpio -i -u --quiet < $initramfsdir/$base");
+            if (-f "$initramfsdir/base") {
+                system("cd $tmpdir/initramfs; cpio -i -u --quiet < $initramfsdir/base");
             } else {
                 &eprint("Could not locate the Warewulf bootstrap 'base' capability\n");
             }

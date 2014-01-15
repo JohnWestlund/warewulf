@@ -11,7 +11,6 @@
 use Warewulf::Config;
 use Warewulf::Logger;
 use Warewulf::Util;
-use Warewulf::CrossArch;
 use Getopt::Long;
 use File::Path;
 use File::Basename;
@@ -284,18 +283,6 @@ if ($config->get("modprobe")) {
 
 
 copy("$opt_chroot/boot/vmlinuz-$opt_kversion", "$tmpdir/kernel");
-
-# set crossarch flag
-my $arch = Warewulf::CrossArch::archsearch($opt_chroot) ;
-if ( defined $arch ) {
-    # untaint this var
-    my ($archflag) = $arch =~ /^([A-Za-z0-9]+)$/ ;
-
-    if ( -f "$opt_chroot/$archflag.crossarch" ) {
-        # send a flag with it so bootstap.pm will know what base file to use
-        copy("$opt_chroot/$archflag.crossarch", "$tmpdir/$archflag.crossarch") ;
-    }
-}
 
 &nprint("Building and compressing bootstrap\n");
 system("(cd $tmpdir; find . | cpio -o --quiet -H newc ) | gzip -c9 > $output");
