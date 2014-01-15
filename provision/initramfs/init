@@ -244,17 +244,17 @@ fi
 NETDEV=`cat /tmp/wwdev`
 msg_white "Probing for HW Address: "
 if [ -f "/sys/class/net/$NETDEV/address" ]; then
-    HWADDR=`cat /sys/class/net/$NETDEV/address`
-    if [ ${#HWADDR} -eq 59 ]; then
-        HWADDR=`expr substr $HWADDR 37 23`
+    WWINIT_HWADDR=`cat /sys/class/net/$NETDEV/address`
+    if [ ${#WWINIT_HWADDR} -eq 59 ]; then
+        WWINIT_HWADDR=`expr substr $HWADDR 37 23`
     fi
-    msg_gray "($HWADDR)"
+    msg_gray "($WWINIT_HWADDR)"
     wwsuccess
 else
     wwfailure
     wwreboot
 fi
-export HWADDR
+export WWINIT_HWADDR
 
 mkdir -p /var/log/
 msg_white "Starting syslogd: "

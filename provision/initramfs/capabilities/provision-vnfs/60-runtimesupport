@@ -39,8 +39,8 @@ if [ -z "$WWNORUNTIMESERVICES" ]; then
     ln -s ../transports/$WWTRANSPORT/wwgetvnfs $NEWROOT/warewulf/bin/wwgetvnfs
     ln -s ../transports/$WWTRANSPORT/wwgetnodeconfig $NEWROOT/warewulf/bin/wwgetnodeconfig
 
-    echo "HWADDR=$HWADDR" >> $NEWROOT/warewulf/config
-    echo "export HWADDR" >> $NEWROOT/warewulf/config
+    echo "WWINIT_HWADDR=$WWINIT_HWADDR" >> $NEWROOT/warewulf/config
+    echo "export WWINIT_HWADDR" >> $NEWROOT/warewulf/config
 
     echo "WWMASTER=$WWMASTER" >> $NEWROOT/warewulf/config
     echo "export WWMASTER" >> $NEWROOT/warewulf/config

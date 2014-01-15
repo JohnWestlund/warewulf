@@ -35,13 +35,13 @@ fi
 while true; do
     for master in `echo $WWMASTER | sed -e 's/,/ /g'`; do
         TMPFILE=`mktemp`
-        if wget -q -O $TMPFILE "http://$master/WW/file?hwaddr=$HWADDR&timestamp=$TIMESTAMP" 2>/dev/null; then
+        if wget -q -O $TMPFILE "http://$master/WW/file?hwaddr=$WWINIT_HWADDR&timestamp=$TIMESTAMP" 2>/dev/null; then
             cat $TMPFILE | while read id name uid gid mode timestamp path; do
                 basedir=`dirname $path`
                 if [ ! -d "$NEWROOT/$basedir" ]; then
                     mkdir -p $NEWROOT/$basedir
                 fi
-                if wget -q -O $NEWROOT/$path.ww$timestamp "http://$master/WW/file?hwaddr=$HWADDR&fileid=$id"; then
+                if wget -q -O $NEWROOT/$path.ww$timestamp "http://$master/WW/file?hwaddr=$WWINIT_HWADDR&fileid=$id"; then
                     chown $uid $NEWROOT/$path.ww$timestamp
                     chgrp $gid $NEWROOT/$path.ww$timestamp
                     chmod $mode $NEWROOT/$path.ww$timestamp
