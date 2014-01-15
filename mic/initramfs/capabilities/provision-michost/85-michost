@@ -101,7 +101,7 @@ fi
 # Configure the bridge with the data available for the provisioning 
 # interface
 NODEIP=$WWIPADDR;
-PREFIX=`ipcalc -p $WWNETMASK | cut -f 2 -d '='`;
+PREFIX=`ipcalc -p $NODEIP $WWNETMASK | cut -f 2 -d '='`;
 MASTERIP=$WWMASTER;
 
 #If MTU was defined, use it. Otherwise default to 1500
