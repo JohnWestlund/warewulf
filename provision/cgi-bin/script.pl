@@ -12,6 +12,11 @@ use CGI;
 use Warewulf::DataStore;
 use Warewulf::Node;
 use Warewulf::File;
+use Warewulf::Daemon;
+use Warewulf::Logger;
+
+&daemonized(1);
+&set_log_level("WARNING");
 
 my $q = CGI->new();
 my $db = Warewulf::DataStore->new();
