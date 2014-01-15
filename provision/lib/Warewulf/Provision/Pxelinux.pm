@@ -82,36 +82,18 @@ setup()
     my $self = shift;
     my $datadir = &Warewulf::ACVars::get("datadir");
     my $tftpdir = Warewulf::Provision::Tftp->new()->tftpdir();
+    my @tftpfiles = ("pxelinux.0", "lpxelinux.0", "ldlinux.c32", "chain.c32", "libcom32.c32", "libutil.c32");
 
     if ($tftpdir) {
-        if (! -f "$tftpdir/warewulf/pxelinux.0") {
-            if (-f "$datadir/warewulf/pxelinux.0" && -f "$datadir/warewulf/ldlinux.c32") {
-                &iprint("Copying pxelinux.0 to the appropriate directory\n");
-                mkpath("$tftpdir/warewulf/");
-                system("cp $datadir/warewulf/pxelinux.0 $tftpdir/warewulf/pxelinux.0");
-                system("cp $datadir/warewulf/ldlinux.c32 $tftpdir/warewulf/ldlinux.c32");
-            } else {
-                &eprint("Could not locate Warewulf's internal pxelinux.0! Go find one!\n");
-            }
-        }
-        if (! -f "$tftpdir/warewulf/undionly.kpxe") {
-            if (-f "$datadir/warewulf/undionly.kpxe" ) {
-                &iprint("Copying undionly.kpxe to the appropriate directory\n");
-                mkpath("$tftpdir/warewulf/");
-                system("cp $datadir/warewulf/undionly.kpxe $tftpdir/warewulf/undionly.kpxe");
-            } else {
-                &eprint("Could not locate Warewulf's internal undionly.kpxe! Go find one!\n");
-            }
-        }
-        if (! -f "$tftpdir/warewulf/chain.c32") {
-            if (-f "$datadir/warewulf/chain.c32" && -f "$datadir/warewulf/libcom32.c32" && -f "$datadir/warewulf/libutil.c32" ) {
-                &iprint("Copying chain.c32 to the appropriate directory\n");
-                mkpath("$tftpdir/warewulf/");
-                system("cp $datadir/warewulf/chain.c32 $tftpdir/warewulf/chain.c32");
-                system("cp $datadir/warewulf/libcom32.c32 $tftpdir/warewulf/libcom32.c32");
-                system("cp $datadir/warewulf/libutil.c32 $tftpdir/warewulf/libutil.c32");
-            } else {
-                &eprint("Could not locate Warewulf's internal chain.c32! Go find one!\n");
+        foreach my $f (@tftpfiles) {
+            if (! -f "$tftpdir/warewulf/$f") {
+                if (-f "$datadir/warewulf/$f") {
+                    &iprint("Copying $f to the tftp root\n");
+                    mkpath("$tftpdir/warewulf/");
+                    system("cp $datadir/warewulf/$f $tftpdir/warewulf/$f");
+                } else {
+                    &eprint("Could not locate Warewulf's internal $f! Things might be broken!\n");
+                }
             }
         }
     } else {
@@ -164,7 +146,8 @@ update()
         my $nodename = $nodeobj->nodename() || "undef";
         my $bootstrapid = $nodeobj->get("bootstrapid");
         my $db_id = $nodeobj->id();
-        my @kargs = $nodeobj->get("kargs");
+        my $console = $nodeobj->console();
+        my @kargs = $nodeobj->kargs();
         my @masters = $nodeobj->get("master");
         my $bootstrapname;
 
@@ -260,6 +243,9 @@ update()
                 print PXELINUX "SAY Now booting $hostname with Warewulf bootstrap ($bootstrapname)\n";
                 print PXELINUX "KERNEL bootstrap/$bootstrapid/kernel\n";
                 print PXELINUX "APPEND ro initrd=bootstrap/$bootstrapid/initfs.gz wwhostname=$hostname ";
+                if ($console) {
+                    print PXELINUX "console=$console ";
+                }
                 if (@kargs) {
                     print PXELINUX join(" ", @kargs) . " ";
                 } else {

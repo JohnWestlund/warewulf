@@ -7,9 +7,7 @@
 ## required approvals from the U.S. Dept. of Energy).  All rights reserved.
 ##
 
-#INIT: ALL
-#INIT: MASTER
-#INIT: PROVISION
+#INIT: IPXE
 
 UNDIONLYURL="http://boot.ipxe.org/undionly.kpxe"
 

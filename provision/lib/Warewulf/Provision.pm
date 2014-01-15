@@ -117,6 +117,7 @@ vnfs()
     }
 }
 
+
 =item fileids(@fileids)
 
 Set or return the list of file ID's to be provisioned for this node
@@ -144,6 +145,20 @@ fileids()
     }
 
     return($self->get($key));
+}
+
+=item console($string)
+
+Set or return the console string to use for the kernel command line
+
+=cut
+
+sub
+console()
+{
+    my $self = shift;
+
+    return $self->prop("console", qr/^([a-zA-Z0-9\,]+)$/, @_);
 }
 
 =item kargs()

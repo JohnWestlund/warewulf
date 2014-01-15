@@ -94,6 +94,7 @@ help()
     $h .= "         --preshell      Start a shell on the node before provisioning (boolean)\n";
     $h .= "         --postshell     Start a shell on the node after provisioning (boolean)\n";
     $h .= "         --bootlocal     Boot the node from the local disk (do not provision)\n";
+    $h .= "         --console       Set a specific console for the kernel command line\n";
     $h .= "         --kargs         Define the kernel arguments (assumes \"quiet\" if UNDEF)\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
@@ -102,7 +103,7 @@ help()
     $h .= "     Warewulf> provision set n00[00-99] --fileadd=ifcfg-eth0\n";
     $h .= "     Warewulf> provision set -l=cluster mycluster --vnfs=rhel-6.0\n";
     $h .= "     Warewulf> provision set -l=group mygroup hello group123\n";
-    $h .= "     Warewulf> provision set n00[0-4] --kargs=\"console=ttyS0,57600 quiet\"\n";
+    $h .= "     Warewulf> provision set n00[0-4] --console=ttyS1,57600 --kargs=\"noacpi\"\n";
     $h .= "     Warewulf> provision list n00[00-99]\n";
     $h .= "\n";
 
@@ -532,6 +533,7 @@ exec()
             printf("%15s: %-16s = %s\n", $name, "FILES", join(",", @files));
             printf("%15s: %-16s = %s\n", $name, "PRESHELL", $o->preshell() ? "TRUE" : "FALSE");
             printf("%15s: %-16s = %s\n", $name, "POSTSHELL", $o->postshell() ? "TRUE" : "FALSE");
+            printf("%15s: %-16s = %s\n", $name, "CONSOLE", $o->console() || "UNDEF");
             printf("%15s: %-16s = \"%s\"\n", $name, "KARGS", $kargs);
             if ($o->get("filesystems")) {
                 printf("%15s: %-16s = %s\n", $name, "FILESYSTEMS", join(",", $o->get("filesystems")));
