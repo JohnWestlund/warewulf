@@ -24,7 +24,7 @@ SOURCEDIR="$( pwd )"
 
 TEMPLIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap \
 isc-dhcp-server tcpdump openssh-client nfs-kernel-server nfs-common \
-rpcbind ntp wget mysql-server build-essential mysql-server"
+rpcbind ntp wget build-essential"
 
 
 check_sqlpw () {
@@ -55,7 +55,7 @@ check_sqlusr () {
 choose_wwuser () {
     # check if exists and create sql warewulf user
     local isolduser="false"
-    local warewulfusr=""
+    warewulfusr=""
 
     # Chose mysql username
     while [[ "${isolduser}" == "false" ]]
@@ -337,6 +337,7 @@ create_wwdb () {
                 break ;
             else
                 create_wwdb ;
+                CHOICE="true"
                 break ;
             fi
         fi
@@ -353,8 +354,8 @@ create_wwdb () {
         fi
 
         ##################
-    echo
-    echo '----------------------------------------------'
+        echo
+        echo '----------------------------------------------'
         echo "Edit the mysql permissions to give"
         echo "${warewulfusr} user access to mysql and"
         echo "set permissions for user ${warewulfusr} to"
@@ -363,29 +364,6 @@ create_wwdb () {
         then
             set_sql_userperms ;
         fi
-    fi
-}
-
-
-cross_arch () {
-    # display current request list and prompt to add more
-    # prompt to enter the nxt arch
-    warn_msg which_arch ;
-    user_input ;
-
-    if [[ "${CHOICE}" != "done" ]]
-    then
-        if [[ "${CROSSARCH}" == "true" ]]
-        then
-            CROSSARCH="${CHOICE}"
-        else
-            CROSSARCH="${CROSSARCH} ${CHOICE}"
-        fi
-        echo
-        echo "The current list of additional architectures requested."
-        echo "Current List:  ${CROSSARCH}"
-
-        cross_arch ;
     fi
 }
 
@@ -493,27 +471,34 @@ set_sql_userperms () {
 
 sql_rootpw () {
     local sqlroot="root"
+    rootpassword=""
 
-    # ask for sql root password
-    warn_msg choose_root ;
-    enter_password ;
+    while [[ -z ${rootpassword} ]]
+    do
+        # ask for sql root password
+        warn_msg choose_root ;
+        enter_password ;
 
-    if check_sqlpw ${sqlroot}
-    then
-        rootpassword="${CHOICE}"
-    else
-        # wrong passwrd what to do now ?
-        warn_msg root_auth ;
-        if user_decide
+        if check_sqlpw ${sqlroot}
         then
-            sql_rootpw ;
-            return 0 ;
+            rootpassword="${CHOICE}"
         else
-            warewulfusr=""
-            return 1 ;
+            # wrong passwrd what to do now ?
+            warn_msg root_auth ;
+            if ! user_decide
+            then
+                warewulfusr=""
+                break ;
+            fi
         fi
+    done
+
+    if [[ -z ${rootpassword} ]]
+    then
+        return 1 ;
+    else
+        return 0 ;
     fi
-    return 0 ;
 }
 
 
@@ -685,14 +670,6 @@ warn_msg () {
             echo "Are you sure you want to continue without it"
             ;;
 
-        no_arch_support)
-            echo
-            echo "ERROR: The requested architecture ${thisarch} is NOT currently supported"
-            echo '       Add the correct compiler flags to this script or: Since all sources'
-            echo '       are in place, you can set the appropriate flags and run make manually.'
-            echo
-            ;;
-
         no_tfpt)
             echo
             echo "tftp server not found"
@@ -757,14 +734,6 @@ warn_msg () {
             echo
             echo "sudo install-wwdebsystem 2013-10-19 /usr  - will install nightly build to /usr"
             echo
-            ;;
-
-        which_arch)
-            echo
-            echo "Enter the additional architecture you would like to support."
-            echo "Input the next architecture to be supported then hit enter."
-            echo "If no more required enter:  done"
-            echo "Example:  i386"
             ;;
 
         which_eth)
@@ -865,7 +834,6 @@ fi
 warn_msg intro ;
 if [[ "${CROSSARCH}" == "true" ]] || user_decide
 then
-
     # scan system for required packages
     for i in ${TEMPLIST}
     do
@@ -956,8 +924,6 @@ then
     wget -nc ${pkglist} || wget -nc ${pkglist} || \
                 { echo "ERROR: $1 - Failed to download ${pkglist}" && exit 1; } ;
 
-    compilelist="${compilelist} warewulf-cluster"
-
     for i in $( ls -A | grep '.tar.gz' )
     do
         echo
@@ -965,80 +931,28 @@ then
         tar -zxf ${i} && rm ${i} ;
     done
 
-    # select extra architectures
-    cross_arch ;
-    crosscompilelist=""
+    # make sure 'warewulf-provision' is at end of list so that
+    # crosscompile flags only need be set and forget
+    compilelist="warewulf-common warewulf-cluster warewulf-vnfs warewulf-provision"
 
-    # configure all sources
+    # configure and compile all sources
     for i in ${compilelist}
     do
         cd ${i}* ;
         ./configure --prefix=${WWPREFIX} ;
 
-        # need compile and install common before all else
-        if [[ "${i}" =~ ^.*warewulf-common ]]
-        then
-            make || ( warn_msg compiler_error && exit 1 ) ;
-            make install || ( warn_msg compiler_error && exit 1 ) ;
-        fi
-
         if [[ "${i}" =~ ^.*warewulf-provision ]] && [[ -n ${CROSSARCH} ]]
         then
-            for x in ${CROSSARCH}
-            do
-                ### to each cross arch dir
-                mkdir -p ${SOURCEDIR}/crossarch/${x} ;
-                cp -rp ./* ${SOURCEDIR}/crossarch/${x}/ ;
-
-                # edit crossarch Makefile in place so will
-                # install 'base' to an arch specific file name
-                echo "$( cat ${SOURCEDIR}/crossarch/${x}/initramfs/Makefile\
-                            | sed -e s!initramfs/base!initramfs/${x}base! \
-                            )" > ${SOURCEDIR}/crossarch/${x}/initramfs/Makefile ;
-
-                if [[ -n "${crosscompilelist}" ]]
-                then
-                    crosscompilelist="${crosscompilelist} crossarch/${x}"
-                else
-                    crosscompilelist="crossarch/${x}"
-                fi
-            done
+            CFLAGS=-m32
+            LDFLAGS=-m32
+            export CFLAGS
+            export LDFLAGS
         fi
 
-        # compile and install all else after
-        if ! [[ "${i}" =~ ^.*warewulf-common ]]
-        then
-            make || ( warn_msg compiler_error && exit 1 ) ;
-            make install || ( warn_msg compiler_error && exit 1 ) ;
-        fi
-
+        make || ( warn_msg compiler_error && exit 1 ) ;
+        make install || ( warn_msg compiler_error && exit 1 ) ;
         cd ${SOURCEDIR} ;
     done
-
-    # cross compile and install
-    # just provision base
-    if [[ -n ${crosscompilelist} ]]
-    then
-        for i in ${crosscompilelist}
-        do
-            thisarch="$(basename ${i})" ;
-            if [[ "${thisarch}" == "i386" ]]
-            then
-                CFLAGS=-m32
-                LDFLAGS=-m32
-                export CFLAGS
-                export LDFLAGS
-
-                cd ${SOURCEDIR}/${i}/initramfs ;
-                make || ( warn_msg compiler_error && exit 1 ) ;
-                make install || ( warn_msg compiler_error && exit 1 ) ;
-                cd ${SOURCEDIR} ;
-            else
-                # inform of invalid arch and offer solution
-                warn_msg no_arch_support ;
-            fi
-        done
-    fi
 
     if [[ "${WWPREFIX}x" == "/x" ]]
     then
