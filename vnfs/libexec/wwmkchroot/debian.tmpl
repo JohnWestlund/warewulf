@@ -1,15 +1,14 @@
-#DESC: A base Debian chroot to match this build host
+#DESC: A base 64 bit Debian squeeze chroot
 
 # The general Deb include has all of the necessary functions, but requires
 # some basic variables specific to each chroot type to be defined.
 . include-deb
 
-# 64 bit 6.0 squeeze
-ARCH="amd64"
-DISTRO="debian"
-CODENAME="squeeze"
+# With only a package list given, the defaults
+# are a 64 bit 6.0 squeeze chroot
+DEB_MIRROR="http://http.us.debian.org/debian/"
 
-# Replace the default packages with this package list
+# Install additional packages with debootstrap
 PKGLIST="openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,nfs-common,\
 ethtool,iproute,iputils-ping,iputils-arping,net-tools,firmware-bnx2,linux-image-2.6.32-5-amd64"
 

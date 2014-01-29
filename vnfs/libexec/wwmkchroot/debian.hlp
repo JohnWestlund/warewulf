@@ -1,89 +1,43 @@
 # Prints to screen complete help
 print_full_help () {
-
-    . debian.info ;
-
-
 cat <<EOF
-    Support is built in to allow for all debian supported architectures to
-    be built on any machine. However, this is experimental and mostly untested.
-    Individule experiences could vary greatly. See Experimental architectures below.
 
-        Valid architectures are:
-            x86_64 (defaults to amd64)
-            amd64
-            i386
+    Debian chroot recipe file options:
 
-        Experimental architectures are:
-            armel
-            kfreebsd-i386
-            kfreebsd-amd64
-            ia64 mips
-            mipsel
-            powerpc
-            sparc
+    Debian Mirrors:
+        DEB_MIRROR="http://ftp.us.debian.org/debian/"
+        DEB_MIRROR="http://http.us.debian.org/debian/"
+
+    Valid architectures are:
+        ARCH="i386"
+        ARCH="amd64"
 
     To date these are the current releases.
-    Future releases not listed below should also be supported.
+    Future releases should also be supported.
 
-    Debian:
-    RELEASE NUMBERS-CODE NAMES:
+    Release code names:
+        SUITE="lenny"
+        SUITE="squeeze"
+        SUITE="wheezy"
+        SUITE="sid"
 
-        5.0-lenny , 6.0-squeeze , 7.0-wheezy , sid
+    Standard components:
+        COMPONENTS="main,contrib,non-free"
 
-    These are the debian defaults:
-        Components  "main,contrib,non-free"
-        PKGLIST  =  "openssh-server,openssh-client,isc-dhcp-client,
-                     strace,nfs-common,ethtool,iproute,iputils-ping,
-                     iputils-arping,net-tools,firmware-bnx2,pciutils,rsync"
+    Alternate package lists:
+    32 Bit:
+    PKGLIST="openssh-server,openssh-client,isc-dhcp-client, \
+                    pciutils,strace,nfs-common,ethtool,iproute, \
+                    iputils-ping,iputils-arping,net-tools,rsync, \
+                    firmware-bnx2, linux-image-686"
 
-        FULLINSTALL =  "libpcre3,less,libpopt0,tcpd,update-inetd,libpam-cracklib,ntp,
-                        iputils-tracepath,rsh-client,wamerican,vim-tiny,cron,gawk,
-                        mingetty,psmisc,rdate,rsh-redone-server,rsyslog,dracut"
-
-
-    Examples recipe files:
-        To create a 32 bit vnfs from the standard repository:
-
-            . include-deb
-
-            ARCH="i386"
-            DISTRO="debian"
-            CODENAME="wheezy"
-
-
-        To create an AMD compatibla 64 bit debian vnfs from custom repository.
-        Installing only this list of packages from the recipe file.
-
-            . include-deb
-
-            ARCH="amd64"
-            DISTRO="debian"
-            CODENAME="wheezy"
-            PKGLIST="openssh-server,openssh-client,isc-dhcp-client,pciutils,strace,nfs-common,\
-                    ethtool,iproute,iputils-ping,iputils-arping,net-tools,firmware-bnx2,\
-                    linux-image-2.6.32-5-amd64"
-
-
-        To create an AMD compatibla 64 bit debian vnfs from the standard
-        repository. Adding a custom list of packages from the recipe file
-        to the list of default packages. Hybrizing the vnfs with a default
-        hybridpath and creating symlinks to /home and /media . Automatically
-        build and integrate the vnfs into warewulf without promting for user
-        input for an unattended install :
-
-            . include-deb
-
-            ARCH="amd64"
-            DISTRO="debian"
-            CODENAME="wheezy"
-            HYBRIDIZE="/home, /media"
-            EXTRA=1
-            FULLINSTALL="lxde,chromium"
-            AUTO=1
+    64 Bit:
+    PKGLIST="openssh-server,openssh-client,isc-dhcp-client, \
+                    pciutils,strace,nfs-common,ethtool,iproute, \
+                    iputils-ping,iputils-arping,net-tools,rsync, \
+                    firmware-bnx2, linux-image-amd64"
 
 EOF
-
 }
 
 # vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
