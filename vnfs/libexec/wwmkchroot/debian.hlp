@@ -1,6 +1,6 @@
 # Prints to screen complete help
 print_full_help () {
-cat <<EOF
+cat <<'EOF'
 
     Debian chroot recipe file options:
 
