@@ -1,5 +1,5 @@
 
-dist_bin_SCRIPTS = wwvnfs wwbootstrap wwmkchroot wwmngchroot
+dist_bin_SCRIPTS = wwvnfs wwbootstrap wwmkchroot
 
 MAINTAINERCLEANFILES = Makefile.in
 
