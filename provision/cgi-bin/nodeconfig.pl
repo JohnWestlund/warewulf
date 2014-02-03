@@ -78,6 +78,24 @@ if ($hwaddr =~ /^([a-zA-Z0-9:]+)$/) {
             $val = "";
         }
         print "WW$uc_key=\"$val\"\nexport WW$uc_key\n";
+
+        # This section is for derived keys which should not overlap with object
+        # member names, thus should have the prefix "WW__"
+        if ($uc_key eq "NETDEVS") {
+            my $val;
+            if (ref($nhash{"$key"}) eq "Warewulf::ObjectSet") {
+                my @entries;
+                foreach my $o ($nhash{"$key"}->get_list()) {
+                    if ($o->get("name") and $o->get("ipaddr")) {
+                        push(@entries, $o->get("name") ."=". $o->get("ipaddr"));
+                    }
+                }
+                $val = join(",", @entries);
+                print "WW__NETDEVLIST=\"$val\"\nexport WW__NETDEVLIST\n";
+            }
+        }
+
+
     }
 }
 
