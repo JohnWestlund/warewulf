@@ -23,8 +23,9 @@ eval `wwconfig -sea`
 
 WWINITDIR="$WAREWULF_LIBEXECDIR/warewulf/wwinit"
 WWFUNCTIONS="$WAREWULF_SYSCONFDIR/warewulf/functions"
+WWTMPDIR=`mktemp -d -t wwinit.XXXXXXXXX`
 
-export WWINITDIR WWFUNCTIONS
+export WWINITDIR WWFUNCTIONS WWTMPDIR
 
 if [ ! -d "$WWINITDIR" ]; then
     echo "ERROR: $WWINITDIR is not found"
@@ -126,4 +127,5 @@ for file in $wwinit_files; do
     fi
 done
 
+rm -rf $WWTMPDIR
 exit $RETVAL
