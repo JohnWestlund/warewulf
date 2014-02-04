@@ -24,13 +24,6 @@ export FUNCTIONS="sanity_check
 
 
 
-if [ -z "$CHROOTDIR" ]; then
-    echo "ERROR: PATH not defined!"
-    echo
-    usage
-    exit 1
-fi
-
 sanity_check() {
     if [ ! -x $WAREWULF_PREFIX/bin/cluster-env ]; then
         echo "warewulf-cluster package is recommended on nodes you are building VNFS images on.";
@@ -227,6 +220,13 @@ cleanup() {
 finalize() {
     return 0
 }
+
+
+# Default print_help function incase the module does not offer one
+print_help() {
+    echo "This module does not contain any additional help information"
+}
+
 
 
 # vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

@@ -127,5 +127,45 @@ postchroot() {
     return 0
 }
 
+print_help () {
+cat <<'EOF'
 
-# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
+    Debian chroot recipe file options:
+
+    Debian Mirrors:
+        DEB_MIRROR="http://ftp.us.debian.org/debian/"
+        DEB_MIRROR="http://http.us.debian.org/debian/"
+
+    Valid architectures are:
+        ARCH="i386"
+        ARCH="amd64"
+
+    To date these are the current releases.
+    Future releases should also be supported.
+
+    Release code names:
+        SUITE="lenny"
+        SUITE="squeeze"
+        SUITE="wheezy"
+        SUITE="sid"
+
+    Standard components:
+        COMPONENTS="main,contrib,non-free"
+
+    Alternate package lists:
+    32 Bit:
+    PKGLIST="openssh-server,openssh-client,isc-dhcp-client, \
+                    pciutils,strace,nfs-common,ethtool,iproute, \
+                    iputils-ping,iputils-arping,net-tools,rsync, \
+                    firmware-bnx2, linux-image-686"
+
+    64 Bit:
+    PKGLIST="openssh-server,openssh-client,isc-dhcp-client, \
+                    pciutils,strace,nfs-common,ethtool,iproute, \
+                    iputils-ping,iputils-arping,net-tools,rsync, \
+                    firmware-bnx2, linux-image-amd64"
+
+EOF
+}
+
+# vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

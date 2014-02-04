@@ -13,49 +13,14 @@ prefix="@prefix@"
 exec_prefix="@exec_prefix@"
 libexecdir="@libexecdir@"
 
-# add support for a more diverse context based help
-print_help () {
-
-    if [[ -z $HELPFILE ]]
-    then
-        usage ;
-    else
-        #### Loading help files
-        if [ -d "$libexecdir/warewulf/wwmkchroot" ]; then
-            pushd $libexecdir/warewulf/wwmkchroot >/dev/null
-            if [ -f "$HELPFILE.hlp" ]; then
-                . "$HELPFILE.hlp" ;
-
-            # create function ->  print_full_help(){ Help info; } <- inside new help files
-                ## context specific help
-                print_full_help ;
-            else
-                echo "Review available help context and try your search again."
-                echo "$0: Error: Can not find $libexecdir/warewulf/wwmkchroot/$helpfile.hlp"
-                exit 1
-            fi
-            popd >/dev/null
-        else
-            echo "ERROR: Template directory ($libexecdir/warewulf/wwmkchroot) does not exist!"
-            exit 1
-        fi
-    fi
-}
 
 usage() {
     echo "$0 [options] TEMPLATE_NAME PATH"
     echo
     echo "OPTIONS:"
     echo "    -d        Debug output"
-    echo "    -h        Usage summary"
+    echo "    -h        Show usage or module specific help"
     echo
-    echo
-    echo "Context Help:"
-    for i in $libexecdir/warewulf/wwmkchroot/*.hlp; do
-        NAME=`basename $i | sed -e 's/\.hlp$//'`
-        DESC=`grep '^#DESC: ' $i | sed -e 's/#DESC: //'`
-        echo "    -h $(printf " %-20s %s\n" "$NAME" "$DESC")"
-    done
     echo
     echo
     echo "TEMPLATE_NAME (select one of the following):"
@@ -70,6 +35,7 @@ usage() {
     echo
     echo "EXAMPLES:"
     echo
+    echo " # wwmkchroot -h debian"
     echo " # wwmkchroot rhel-generic /var/chroots/rhel"
     echo
 }
@@ -86,10 +52,7 @@ while getopts "a:dhv" opt; do
             VERBOSE=1
         ;;
         h)
-            shift $((OPTIND-1))
-            HELPFILE=$1
-            print_help ;
-            exit
+            SHOW_MODULE_HELP=1
         ;;
         a)
             var=$OPTARG
@@ -104,7 +67,7 @@ shift
 export CHROOTDIR=$1
 shift
 
-if [ -z "$VNFSTEMPLATE" -o -z "$CHROOTDIR" ]; then
+if [ -z "$VNFSTEMPLATE" ]; then
     usage
     exit 1
 fi
@@ -135,11 +98,21 @@ else
 fi
 
 
-#### Running template functions
-test -n "$VERBOSE" && echo "Starting template functions"
-for function in $FUNCTIONS; do
-    test -n "$VERBOSE" && echo "Running: $function"
-    $function || exit 1
-done
+if [ -n "$SHOW_MODULE_HELP" ]; then
+    print_help
+else
+    if [ -z "$CHROOTDIR" ]; then
+        echo "ERROR: You must define the directory to build the chroot"
+        usage
+        exit 1
+    fi
+    #### Running template functions
+    test -n "$VERBOSE" && echo "Starting template functions"
+    for function in $FUNCTIONS; do
+        test -n "$VERBOSE" && echo "Running: $function"
+        $function || exit 1
+    done
+fi
+
 
 # vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
