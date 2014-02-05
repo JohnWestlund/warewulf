@@ -61,8 +61,7 @@ mount -t sysfs none $NEWROOT/sys
 chroot $NEWROOT mount -a -t nfs
 
 # Check if the user defined MIC cards for this node, otherwise skip
-MICCOUNT=$WWMICCOUNT;
-if [[ -z $MICCOUNT || $MICCOUNT -eq 0 ]]; then
+if [[ -z $WWMICCOUNT || $WWMICCOUNT -eq 0 ]]; then
     wwlogger "No MIC cards defined."
     cleanup;
     exit 1;
@@ -141,24 +140,16 @@ WWIP=`echo $WW_IPADDR | tr ',' ' '`;
 WWND=`echo $WWNETDEVS | tr ',' ' '`;
 varcnt=`echo $WWND | tr ' ' '\n' | wc -l`;
 
-i=1;
-NETDEVLIST="";
-while [ $i -le $varcnt ]; do
-    ip=`echo $WWIP | cut -f $i -d ' '`;
-    dev=`echo $WWND | cut -f $i -d ' '`;
-    NETDEVLIST="${NETDEVLIST}${ip}:${dev} ";
-    i=$((i+1));
-done
 
 wwlogger "Copying networking information into ${NEWROOT}${michost_wwfb}";
 # Transfer all the data required for MIC cards initialization
 # to be done in 99-michost.wwfb
-sed -i -e "s/^MICCOUNT=$/MICCOUNT=$MICCOUNT/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^WWMICCOUNT=$/WWMICCOUNT=$WWMICCOUNT/" ${NEWROOT}${michost_wwfb};
 sed -i -e "s/^NODEIP=$/NODEIP=$NODEIP/" ${NEWROOT}${michost_wwfb};
 sed -i -e "s/^MASTERIP=$/MASTERIP=$MASTERIP/" ${NEWROOT}${michost_wwfb};
 sed -i -e "s/^MTU=$/MTU=$MTU/" ${NEWROOT}${michost_wwfb};
 sed -i -e "s/^PREFIX=$/PREFIX=$PREFIX/" ${NEWROOT}${michost_wwfb};
-sed -i -e "s/^NETDEVLIST=$/NETDEVLIST=\"$NETDEVLIST\"/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^WW__NETDEVLIST=$/WW__NETDEVLIST=\"$WW__NETDEVLIST\"/" ${NEWROOT}${michost_wwfb};
 
 cleanup;
 
