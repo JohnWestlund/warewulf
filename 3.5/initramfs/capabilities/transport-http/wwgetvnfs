@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Copyright (c) 2001-2003 Gregory M. Kurtzer
+#
+# Copyright (c) 2003-2011, The Regents of the University of California,
+# through Lawrence Berkeley National Laboratory (subject to receipt of any
+# required approvals from the U.S. Dept. of Energy).  All rights reserved.
+#
+
+. /warewulf/transports/http/functions
+
+TMPFILE=`mktemp`
+
+cd ${NEWROOT:-/}
+
+while true; do
+    for master in `echo $WWMASTER | sed -e 's/,/ /g'`; do
+        # This pipeline always returns true. Would be super nice to check for return value of
+        # wget without disrupting the pipeline! Please... somoene... fixme!
+        wget -q -O - "http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR" 2>/dev/null | gunzip 2>/dev/null | cpio -uidm --quiet 2>/dev/null
+
+        # This is a cheesy way to see if the above wget worked... Ewww, I know. Please FIXME!
+        if [ -f "$NEWROOT/sbin/init" ]; then
+            exit 0
+        fi
+    done
+    echo -n "." 1>&2
+    throttled_sleep
+done
+
+exit 1
