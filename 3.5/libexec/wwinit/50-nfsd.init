@@ -1,0 +1,94 @@
+#!/bin/sh
+##
+## Copyright (c) 2001-2003 Gregory M. Kurtzer
+##
+## Copyright (c) 2003-2012, The Regents of the University of California,
+## through Lawrence Berkeley National Laboratory (subject to receipt of any
+## required approvals from the U.S. Dept. of Energy).  All rights reserved.
+##
+
+#INIT: ALL
+#INIT: MASTER
+#INIT: PROVISION
+
+if [ -f "$WWFUNCTIONS" ]; then
+    . $WWFUNCTIONS
+else
+    echo "ERROR: could not load warewulf functions!"
+    exit 255
+fi
+
+wwreqroot
+
+
+if [ -x "/etc/rc.d/init.d/nfs" ]; then
+    SERVICE_NAME="nfs"
+elif [ -x "/etc/rc.d/init.d/nfsd" ]; then
+    SERVICE_NAME="nfsd"
+elif [ -x "/etc/init.d/nfs-kernel-server" ]; then
+    SERVICE_NAME="nfs-kernel-server"
+else
+    wwprint "Is NFS installed and loaded properly?" error
+    exit 255
+fi
+
+
+
+RETVAL=1
+
+NETWORK=`perl -MWarewulf::Network -MWarewulf::Config -e 'print Warewulf::Network->new()->network(Warewulf::Config->new("provision.conf")->get("network device"));'`
+NETMASK=`perl -MWarewulf::Network -MWarewulf::Config -e 'print Warewulf::Network->new()->netmask(Warewulf::Config->new("provision.conf")->get("network device"));'`
+
+if ! grep -q "^#WWEXPORT:/home:$NETWORK/$NETMASK" /etc/exports; then
+    wwprint "Exporting /home to $NETWORK/$NETMASK\n"
+    echo >> /etc/exports
+    echo "#WWEXPORT:/home:$NETWORK/$NETMASK" >> /etc/exports
+    echo "/home $NETWORK/$NETMASK(rw,no_root_squash)" >> /etc/exports
+    RETVAL=0
+fi
+
+if ! grep -q "^#WWEXPORT:/var/chroots:$NETWORK/$NETMASK" /etc/exports; then
+    wwprint "Exporting /var/chroots to $NETWORK/$NETMASK\n"
+    echo >> /etc/exports
+    echo "#WWEXPORT:/var/chroots:$NETWORK/$NETMASK" >> /etc/exports
+    echo "/var/chroots $NETWORK/$NETMASK(ro,no_root_squash)" >> /etc/exports
+    RETVAL=0
+fi
+
+if ! grep -q "^#WWEXPORT:/usr/local:$NETWORK/$NETMASK" /etc/exports; then
+    wwprint "Exporting /usr/local to $NETWORK/$NETMASK\n"
+    echo >> /etc/exports
+    echo "#WWEXPORT:/usr/local:$NETWORK/$NETMASK" >> /etc/exports
+    echo "/usr/local $NETWORK/$NETMASK(ro,no_root_squash)" >> /etc/exports
+    RETVAL=0
+fi
+
+if ! grep -q "^#WWEXPORT:/opt:$NETWORK/$NETMASK" /etc/exports; then
+    wwprint "Exporting /opt to $NETWORK/$NETMASK\n"
+    echo >> /etc/exports
+    echo "#WWEXPORT:/opt:$NETWORK/$NETMASK" >> /etc/exports
+    echo "/opt $NETWORK/$NETMASK(ro,no_root_squash)" >> /etc/exports
+    RETVAL=0
+fi
+
+if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/node.conf" ]; then
+    DOMAIN=`grep "^domain =" $WAREWULF_SYSCONFDIR/warewulf/defaults/node.conf | cut -d = -f 2 | sed -e 's/ //g'`
+    if [ -n "$DOMAIN" ]; then
+        # Set the NFSv4 domain for nodes.
+        wwprint "Setting domain \"$DOMAIN\" for IDMAPD/NFSv4"
+        wwaction sed -i -e "s/#*[ ]*Domain =.*/Domain = $DOMAIN/" /etc/idmapd.conf
+        RETVAL=0
+    fi
+fi
+
+if [[ -z "$( which update-rc.d 2>/dev/null )" ]]; then
+    wwrun chkconfig $SERVICE_NAME on
+else
+    wwrun update-rc.d $SERVICE_NAME defaults 15 ;
+fi
+
+wwrun service $SERVICE_NAME restart
+wwrun exportfs -a || exit 255
+
+
+exit $RETVAL

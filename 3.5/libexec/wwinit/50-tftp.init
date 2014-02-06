@@ -1,0 +1,38 @@
+#!/bin/sh
+##
+## Copyright (c) 2001-2003 Gregory M. Kurtzer
+##
+## Copyright (c) 2003-2013, The Regents of the University of California,
+## through Lawrence Berkeley National Laboratory (subject to receipt of any
+## required approvals from the U.S. Dept. of Energy).  All rights reserved.
+##
+
+#INIT: ALL
+#INIT: MASTER
+#INIT: PROVISION
+
+if [ -f "$WWFUNCTIONS" ]; then
+    . $WWFUNCTIONS
+else
+    echo "ERROR: could not load warewulf functions!"
+    exit 255
+fi
+
+wwreqroot
+
+if [ -x "/etc/init.d/tftpd-hpa" ]; then
+    SERVICE_NAME="tftpd-hpa"
+else
+    SERVICE_NAME="tftp"
+fi
+
+if [[ -z "$( which update-rc.d 2>/dev/null )" ]]; then
+    wwrun /sbin/chkconfig xinetd on || exit 1
+    wwrun /sbin/chkconfig $SERVICE_NAME on || exit 1
+    wwrun /sbin/service xinetd restart || exit 1
+else
+    wwrun update-rc.d $SERVICE_NAME defaults 3 ;
+    wwrun service $SERVICE_NAME restart || exit 1
+fi
+
+exit 0
