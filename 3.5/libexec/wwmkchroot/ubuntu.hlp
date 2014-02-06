@@ -1,0 +1,33 @@
+# Prints to screen complete help
+print_full_help () {
+
+	. debian.info ;
+
+
+cat <<EOF
+
+	To date these are the current releases.
+	Future releases not listed below should also be supported.
+
+	Support is built in to allow for all ubuntu supported architectures to
+	be built on any machine.
+
+	Valid architectures are:
+		x86_64 (defaults to amd64)
+		amd64
+		i386
+
+	Ubuntu:
+	RELEASE NUMBERS-CODE NAMES:
+
+		10.04-lucid , 10.10-maverick , 11.04-natty , 11.10-oneiric , 12.04-precise , 12.10-quantal , 13.04-raring , 13.10-saucy
+
+		Components	"main,restricted,universe"
+		Packages	"ssh,isc-dhcp-client,pciutils,strace,nfs-common,nfs-kernel-server,ethtool,
+						iproute,iputils-ping,iputils-arping,net-tools,linux-image-server,rsync"
+
+
+EOF
+
+}
+

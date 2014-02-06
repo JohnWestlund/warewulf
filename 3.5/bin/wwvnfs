@@ -1,0 +1,549 @@
+#!/usr/bin/perl -Tw
+#
+# Copyright (c) 2001-2003 Gregory M. Kurtzer
+#
+# Copyright (c) 2003-2011, The Regents of the University of California,
+# through Lawrence Berkeley National Laboratory (subject to receipt of any
+# required approvals from the U.S. Dept. of Energy).  All rights reserved.
+#
+
+use Warewulf::ACVars;
+use Warewulf::Util;
+use Warewulf::Logger;
+use Warewulf::Config;
+use File::Basename;
+use File::Copy;
+use File::Path;
+use File::Find;
+use Getopt::Long;
+use Fcntl ':mode';
+use POSIX;
+{
+    local $^W = 0;
+    require "sys/sysmacros.ph";
+    require "sys/types.ph";
+    require "syscall.ph";
+}
+
+my $sysconfdir = Warewulf::ACVars::get('SYSCONFDIR');
+my $config = Warewulf::Config->new("vnfs.conf");
+my $randstring = &rand_string("12");
+my $output = "/tmp/$randstring.vnfs";
+my $command = "$0 ". join(" ", @ARGV);
+
+# Get our gzip command
+my $gzip_cmd = $config->get("gzip command") || "gzip -9";
+my ($gzip_bin, $gzip_opts) = split(/\s+/, $gzip_cmd, 2);
+if (! $gzip_opts) {
+    # Nothing was passed to the command in the config file
+    $gzip_opts = "";
+}
+
+my $opt_output;
+my $opt_chroot;
+my $opt_help;
+my $opt_debug;
+my $opt_verbose;
+my $opt_quiet;
+my $opt_name;
+my @opt_exclude;
+my $opt_excludefile;
+my @opt_hybridize;
+my $opt_hybridizefile;
+my $opt_includefile;
+my $opt_hybrid;
+my $opt_yes;
+my @exclude_files;
+my @hybridize_files;
+my %exclude_map;
+my %hybridize_map;
+my %link_map;
+my $wwsh_bin;
+my $create_config;
+
+
+Getopt::Long::Configure ("bundling");
+
+if (! @ARGV) {
+    $opt_help = 1;
+}
+
+GetOptions(
+    'h|help'        => \$opt_help,
+    'd|debug'       => \$opt_debug,
+    'v|verbose'     => \$opt_verbose,
+    'q|quiet'       => \$opt_quiet,
+    'c|chroot=s'    => \$opt_chroot,
+    'r|root=s'      => \$opt_chroot,
+    'o|output=s'    => \$opt_output,
+    'e|exclude=s'   => \@opt_exclude,
+    'excludefile=s' => \$opt_excludefile,
+    'hybridize=s'   => \@opt_hybridize,
+    'hybridizefile=s' => \$opt_hybridizefile,
+    'includefile=s' => \$opt_includefile,
+    'hybridpath=s'  => \$opt_hybrid,
+    'y|yes'         => \$opt_yes
+);
+
+&set_log_level("NOTICE");
+
+if ($opt_debug) {
+    &set_log_level("DEBUG");
+} elsif ($opt_verbose) {
+    &set_log_level("INFO");
+} elsif ($opt_quiet) {
+    &set_log_level("WARNING");
+}
+
+if ($opt_help) {
+    print "USAGE: $0 [options] (name)\n";
+    print "\nOPTIONS:\n\n";
+    print "   -c, --chroot      Path to the chroot to use for this VNFS image\n";
+    print "   -r, --root        Alias for --chroot\n";
+    print "   -h, --help        Usage and help summary\n";
+    print "   -o, --output      Output the binary VNFS to a file instead of importing it\n";
+    print "                     directly into Warewulf\n";
+    print "   -e, --exclude     Exclude a file or directory from the VNFS image\n";
+    print "       --excludefile Path to a file that contains a list of files and directories to\n";
+    print "                     exclude from the VNFS image\n";
+    print "       --hybridize   Hybridize a list of files or directories from the VNFS image\n";
+    print "                     (requires --hybridpath to be set, or files are just excluded)\n";
+    print "       --hybridizefile Path to a file that contains a list of files and directories to\n";
+    print "                     be hybridized from the VNFS image\n";
+    print "       --hybridpath  Path to use within the VNFS where the links will be pointed to in\n";
+    print "                     the final image (this needs to be added to the VNFS fstab!)\n";
+    print "   -y, --yes         Skips yes/no prompt if you're importing into an existing VNFS\n";
+    print "\nNOTES:\n\n";
+    print "   When wwvnfs is run for the first time on a VNFS, it will attempt to create a\n";
+    print "   configuration file in the default warewulf config dir ($sysconfdir/warewulf/vnfs/) or in\n";
+    print "   the users ~/.warewulf/vnfs directory. Once the configuration file has been written\n";
+    print "   and updated, you can simply run 'wwvnfs [vnfs_name]' to rebuild the image. You can\n";
+    print "   temporarily override any of these options via command line arguments.\n";
+    print "\nEXAMPLES:\n\n";
+    print "   # wwvnfs --chroot=/var/chroots/rhel-6\n";
+    print "   # wwvnfs custom_name --chroot=/var/chroots/rhel-6 --hybridpath=/hybrid/vnfs_name\n";
+    print "   # wwvnfs --chroot=/var/chroots/rhel-6 --output=rhel-6.vnfs\n";
+    print "   # wwvnfs custom_name\n";
+    print "\n";
+    exit 1;
+}
+
+$opt_name = shift(@ARGV);
+
+@opt_exclude = split(",", join(",", @opt_exclude));
+@opt_hybridize = split(",", join(",", @opt_hybridize));
+
+
+
+if (! $opt_name and $opt_chroot) {
+    $opt_name = basename($opt_chroot);
+    &nprint("Using '$opt_name' as the VNFS name\n");
+}
+
+if ($opt_name and $opt_name =~ /^([a-zA-Z0-9\-_\.]+)$/) {
+    $opt_name = $1;
+    if (! $config->load("vnfs/$opt_name.conf")) {
+        $create_config = 1;
+    }
+} elsif ($opt_name) {
+    &eprint("VNFS name contains illegal characters!\n");
+    exit 1;
+} else {
+    &eprint("What is the name of this VNFS?!\n");
+    exit 1;
+}
+
+if (! $opt_chroot) {
+    $opt_chroot = $config->get("chroot");
+}
+if (! $opt_output) {
+    $opt_output = $config->get("output");
+}
+if (! $opt_excludefile) {
+    $opt_excludefile = $config->get("excludefile");
+}
+if (! $opt_hybridizefile) {
+    $opt_hybridizefile = $config->get("hybridizefile");
+}
+if (! $opt_hybrid) {
+    $opt_hybrid = $config->get("hybridpath");
+}
+
+#TODO: Include file support
+if (! $opt_includefile) {
+    $opt_includefile = $config->get("includefile");
+}
+
+push(@exclude_files, $config->get("exclude"));
+if ($opt_excludefile and $opt_excludefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
+    open(EXCLUDES, $1);
+    while(my $line = <EXCLUDES>) {
+        chomp($line);
+        push(@exclude_files, $line);
+    }
+} elsif ($opt_excludefile) {
+    &eprint("Exclude file contains illegal characters!\n");
+    exit 1;
+}
+
+push(@hybridize_files, $config->get("hybridize"));
+if ($opt_hybridizefile and $opt_hybridizefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
+    open(EXCLUDES, $1);
+    while(my $line = <EXCLUDES>) {
+        chomp($line);
+        push(@hybridize_files, $line);
+    }
+} elsif ($opt_hybridizefile) {
+    &eprint("Exclude file contains illegal characters!\n");
+    exit 1;
+}
+
+# Reverse compatibility for older config formats that used "excludes" instead
+# of the newer format "hybridize".
+push(@hybridize_files, $config->get("excludes"));
+
+
+if ($opt_chroot and $opt_chroot =~ /^([a-zA-Z0-9\/\.\-_]+?)\/?$/) {
+    $opt_chroot = $1;
+} elsif ($opt_chroot) {
+    &eprint("Chroot path contains illegal characters!\n");
+    exit 1;
+} else {
+    &eprint("The path to the template chroot is not given!\n");
+    exit 1;
+}
+
+if ($opt_hybrid) {
+    $opt_hybrid =~ s/\%\{name\}/$opt_name/g;
+    $opt_hybrid =~ s/\/$//g;
+
+    my $hybrid_good;
+    if (open(FSTAB, "$opt_chroot/etc/fstab")) {
+        while (my $line = <FSTAB>) {
+            chomp($line);
+            if ($line =~ /^\s*\S+\s+(\/\S+?)\/?\s+.+/) {
+                if (substr($opt_hybrid, 0, length($1)) eq $1) {
+                    $hybrid_good = 1;
+                }
+            }
+        }
+        close FSTAB;
+    }
+    if (! $hybrid_good) {
+        &wprint("Hybridpath defined, but not configured in the VNFS /etc/fstab!\n");
+    }
+}
+
+if ($opt_hybrid and $opt_hybrid =~ /^([a-zA-Z0-9\-_\/:\.]+?)\/*$/) {
+    $opt_hybrid = $1;
+} elsif ($opt_hybrid) {
+    &eprint("Illegal characters in --hybridpath option: $opt_hybrid\n");
+    exit 1;
+} else {
+    push(@exclude_files, @hybridize_files);
+    @hybridize_files = ();
+}
+
+if ($opt_output and $opt_output =~ /^([a-zA-Z0-9\-_\/:\.]+)$/) {
+    $opt_output = $1;
+}
+
+foreach my $dir (split(":", $ENV{"PATH"})) {
+    if ($dir =~ /^([a-zA-Z0-9_\-\.\/]+)$/) {
+        if (-x "$1/wwsh") {
+            $wwsh_bin = "$1/wwsh";
+            last;
+        }
+    }
+}
+
+&dprint("Sanitizing the PATH environment variable\n");
+$ENV{"PATH"} = "/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin";
+
+
+# Checking gzip command
+if (-x $gzip_bin) {
+    &dprint("Using given full path to gzip ($gzip_bin)\n");
+} else {
+    &dprint("Looking for gzip program in PATH\n");
+    my $found;
+    foreach my $p (split(":", $ENV{"PATH"})) {
+        &dprint("Looking for gzip at '$p/$gzip_bin'\n");
+        if (-x "$p/$gzip_bin") {
+            &dprint("Found full path to gzip ($gzip_bin)\n");
+            $gzip_bin = "$p/$gzip_bin";
+            $found = 1;
+            last;
+        }
+    }
+    if (! $found) {
+        &eprint("gzip program '$gzip_bin' not found!\n");
+        exit 255;
+    }
+}
+
+if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
+    $gzip_bin = $1;
+} else {
+    &eprint("gzip command contains illegal characters!\n");
+    exit 255;
+}
+
+&iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
+
+my $tmpdir = "/var/tmp/wwvnfs.". &rand_string(16);
+umask("0000");
+
+sub
+vnfs_create_file($)
+{
+    my $path = $File::Find::name;
+
+    if ($path) {
+        if ($path =~ /^\Q$opt_chroot\E([[:print:]]*)$/) {
+            $path = $1;
+        } else {
+            &eprint("Path '$path' did not pass untaint check, skipping.\n");
+            return;
+        }
+    }
+
+    &dprint("Evaluating path '$path'\n");
+
+    if (exists($exclude_map{"$path"})) {
+        &dprint("Excluding file: $path\n");
+
+        if (exists($hybridize_map{"$path"})) {
+            &iprint("Hybridizing location: $tmpdir/$path\n");
+            symlink("$opt_hybrid/$path", "$tmpdir/$path");
+        }
+
+    } else {
+        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = lstat("$opt_chroot/$path");
+
+        if (S_ISLNK($mode)) {
+            my $destination = readlink("$opt_chroot/$path");
+            &dprint("Creating symbolic link: $tmpdir/$path -> $destination\n");
+            if ($destination =~ /^([[:print:]]+)$/) {
+                $destination = $1;
+            } else {
+                &eprint("Link destination '$destination' did not pass untaint check, skipping.\n");
+                return;
+            }
+            symlink($destination, "$tmpdir/$path");
+            # Not setting ownership of symlinks... Yes, this is sucky, but a PITA as the
+            # Perl 'chown' command can not change link ownership, and they don't expose
+            # lchown system call.
+        } elsif (exists($link_map{"$dev-$ino"})) {
+            my $destination = $link_map{"$dev-$ino"};
+            &dprint("Creating hard link: $tmpdir/$path -> $destination\n");
+            if (! link($destination, "$tmpdir/$path")) {
+                &wprint("Could not create hardlink of $tmpdir/$path. Copying file instead.\n");
+                copy("$opt_chroot/$path", "$tmpdir/$path");
+            }
+        } else {
+            if (S_ISDIR($mode)) {
+                &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
+                mkpath("$tmpdir/$path");
+            } elsif (S_ISREG($mode)) {
+                &dprint("Copying file: $tmpdir/$path\n");
+                copy("$opt_chroot/$path", "$tmpdir/$path");
+            } elsif (S_ISBLK($mode) or S_ISCHR($mode) or S_ISFIFO($mode) or S_ISSOCK($mode)) {
+                &iprint("Creating special file: $tmpdir/$path\n");
+                syscall(&SYS_mknod, "$tmpdir/$path", $mode, $rdev);
+            } else {
+                # If we got here, we don't know how to deal with this file... Skip it!
+                &eprint("Skipping unknown file type: $opt_chroot/$path\n");
+                return;
+            }
+            chown($uid, $gid, "$tmpdir/$path");
+            chmod($mode & 07777, "$tmpdir/$path");
+            utime($atime, $mtime, "$tmpdir/$path");
+            $link_map{"$dev-$ino"} = "$tmpdir/$path";
+        }
+    }
+}
+
+
+&dprint("Starting main conditional\n");
+if (-d $opt_chroot) {
+    &dprint("Looking for init at: $opt_chroot/sbin/init\n");
+    if (-x "$opt_chroot/sbin/init") {
+        &dprint("Checking to see if the target is a VNFS file\n");
+        my $dirname = dirname($output);
+
+        &nprint("Creating VNFS image from $opt_name\n");
+
+        sub build_exclude_map {
+            my $file = $File::Find::name;
+            $file =~ s/^\Q$opt_chroot\E\/?/\//;
+            $exclude_map{"$file"} = 1;
+            &dprint("Adding file to exclude map: '$file'\n");
+        }
+
+        foreach my $line (@exclude_files) {
+            if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
+                foreach my $glob (glob("$opt_chroot/$1")) {
+                    if (-e $glob) {
+                        &iprint("Finding all files to exclude at: '$glob'\n");
+                        find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
+                    }
+                }
+            }
+        }
+
+        foreach my $line (@hybridize_files) {
+            if ($line =~ /^\/([a-zA-Z0-9_\-\/\.\*]+)$/) {
+                foreach my $glob (glob("$opt_chroot/$1")) {
+                    if (-e $glob) {
+                        # When hybridizing, we always exclude, and we must exclude everything under the top level.
+                        &iprint("Finding all files to exclude at: '$glob' (to be hybridized)\n");
+                        find({ wanted => \&build_exclude_map, no_chdir => 1}, $glob);
+                        # Add the top level exclude to be symlinked back when creating files.
+                        $glob =~ s/^\Q$opt_chroot\E\/?/\//;
+                        $hybridize_map{"$glob"} = 1;
+                        &dprint("Adding file to hybridize map: '$glob'\n");
+                    }
+                }
+            }
+        }
+
+        &iprint("Creating target chroot at: $tmpdir\n");
+        mkpath($tmpdir);
+
+        &nprint("Building new chroot...\n");
+        find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
+
+        &nprint("Building and compressing the final image\n");
+        system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
+        &nprint("Cleaning temporary files\n");
+        system("rm -rf $tmpdir");
+
+        if (-f $output) {
+            if ($opt_output) {
+                my $dirname = dirname($opt_output);
+                if (! -d $dirname) {
+                    mkpath($dirname);
+                }
+                &dprint("Moving $output to $opt_output\n");
+                if (move($output, $opt_output)) {
+                    &nprint("Wrote VNFS image to $opt_output\n");
+                } else {
+                    &eprint("Could not move temporary file to final destination!\n");
+                    &eprint("$!\n");
+                }
+            } else {
+                if ($opt_yes) {
+                    system("yes | $wwsh_bin vnfs import $output --chroot='$opt_chroot' --name='$opt_name'");
+                } else {
+                    system("$wwsh_bin vnfs import $output --chroot='$opt_chroot' --name='$opt_name'");
+                }
+                unlink($output);
+                &nprint("Done.\n");
+            }
+        } else {
+            &eprint("There was an error creating the output file: $opt_output!\n");
+        }
+
+    } else {
+        &eprint("Can not find /sbin/init in your VNFS!\n");
+        exit 1;
+    }
+} else {
+    &eprint("Path to chroot is not valid ('$opt_chroot')\n");
+    exit 1;
+}
+
+
+if ($create_config) {
+    my $config_path;
+    my $config_fh;
+    mkpath("$sysconfdir/warewulf/vnfs");
+    if (open($config_fh, "> $sysconfdir/warewulf/vnfs/$opt_name.conf")) {
+        $config_path = "$sysconfdir/warewulf/vnfs/$opt_name.conf";
+    } else {
+        &iprint("Could not create $sysconfdir/warewulf/vnfs/$opt_name.conf\n");
+        if ($ENV{"HOME"} =~ /^([a-zA-Z0-9\/\.\-_]+)$/) {
+            mkpath("$1/.warewulf/vnfs");
+            if (open($config_fh, "> $1/.warewulf/vnfs/$opt_name.conf")) {
+                $config_path = "$1/.warewulf/vnfs/$opt_name.conf";
+            } else {
+                &iprint("Could not create $1/.warewulf/vnfs/$opt_name.conf\n");
+            }
+        }
+    }
+
+    if ($config_fh) {
+        my $ecount = 0;
+        print $config_fh "# Configuration file for '$opt_name' automatically generated by command:\n";
+        print $config_fh "# $command\n\n";
+        print $config_fh "# Any command line options will override these on a case by case basis.\n";
+
+        print $config_fh "# The location of the template chroot. This needs to be set here or via --chroot.\n";
+        if ($opt_chroot) {
+            print $config_fh "chroot = $opt_chroot\n\n";
+        } else {
+            print $config_fh "# chroot = /path/to/chroot\n\n";
+        }
+
+        print $config_fh "# If this is defined, the VNFS will be written here instead of imported into\n";
+        print $config_fh "# Warewulf automatically\n";
+        if ($opt_output) {
+            print $config_fh "output = $opt_output\n\n";
+        } else {
+            print $config_fh "# output = /tmp/$opt_name.vnfs\n\n";
+        }
+
+        print $config_fh "# If you use this option, you should make sure that the path defined is\n";
+        print $config_fh "# mounted via the VNFS's fstab\n";
+        if ($opt_hybrid) {
+            $opt_hybrid =~ s/\%\{name\}/$opt_name/g;
+            print $config_fh "hybridpath = $opt_hybrid\n\n";
+        } else {
+            print $config_fh "# hybridpath = /hybrid/$opt_name\n\n";
+        }
+
+        print $config_fh "# Location of a single file that lists all files to be excluded from the VNFS\n";
+        if ($opt_excludefile) {
+            print $config_fh "excludefile = $opt_excludefile\n\n";
+        } else {
+            print $config_fh "# excludefile = /etc/warewulf/shared-exclude\n\n";
+        }
+
+        print $config_fh "# The list of files to be excluded from the VNFS\n";
+        if (@opt_exclude) {
+            foreach my $exclude (@opt_exclude) {
+                print $config_fh "exclude += $exclude\n";
+            }
+        } else {
+            print $config_fh "# exclude = /exclude/path1\n";
+            print $config_fh "# exclude += /exclude/path2\n";
+        }
+
+        print $config_fh "# Location of a single file that lists all files to be hybridized from the VNFS\n";
+        if ($opt_excludefile) {
+            print $config_fh "hybridizefile = $opt_excludefile\n\n";
+        } else {
+            print $config_fh "# hybridizefile = /etc/warewulf/shared-hybridize\n\n";
+        }
+
+        print $config_fh "# The list of files to be hybridized from the VNFS\n";
+        if (@opt_hybridize) {
+            foreach my $hybridize (@opt_hybridize) {
+                print $config_fh "hybridize = $hybridize\n";
+            }
+        } else {
+            print $config_fh "# exclude = /exclude/path1\n";
+            print $config_fh "# exclude += /exclude/path2\n";
+        }
+
+        if (close $config_fh) {
+            &nprint("Wrote a new configuration file at: $config_path\n");
+        }
+    } else {
+        &wprint("Could not create a default configuration file!\n");
+    }
+}
+
+# vim:filetype=perl:syntax=perl:expandtab:ts=4:sw=4:
+
