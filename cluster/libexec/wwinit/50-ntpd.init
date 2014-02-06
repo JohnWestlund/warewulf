@@ -85,7 +85,7 @@ EOF
 
 wwprint "Configured NTP services\n"
 
-if [[ -z "$( which update-rc.d )" ]]; then
+if [[ -z "$( which update-rc.d 2>/dev/null )" ]]; then
     wwrun chkconfig $SERVICE_NAME on
 else
     wwrun update-rc.d $SERVICE_NAME defaults 3 ;

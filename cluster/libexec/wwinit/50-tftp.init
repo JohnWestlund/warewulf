@@ -20,13 +20,13 @@ fi
 
 wwreqroot
 
-if [ -x "/etc/rc.d/init.d/tftp" ]; then
-    SERVICE_NAME="tftp"
-elif [ -x "/etc/init.d/tftpd-hpa" ]; then
+if [ -x "/etc/init.d/tftpd-hpa" ]; then
     SERVICE_NAME="tftpd-hpa"
+else
+    SERVICE_NAME="tftp"
 fi
 
-if [[ -z "$( which update-rc.d )" ]]; then
+if [[ -z "$( which update-rc.d 2>/dev/null )" ]]; then
     wwrun /sbin/chkconfig xinetd on || exit 1
     wwrun /sbin/chkconfig $SERVICE_NAME on || exit 1
     wwrun /sbin/service xinetd restart || exit 1
