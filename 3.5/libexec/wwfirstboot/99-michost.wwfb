@@ -1,0 +1,306 @@
+#!/bin/bash -l
+#
+# Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
+# 
+# Warewulf Copyright (c) 2003-2011, The Regents of the University of
+# California, through Lawrence Berkeley National Laboratory (subject to
+# receipt of any required approvals from the U.S. Dept. of Energy).
+# All rights reserved.
+# 
+#########################
+# Copyright (c) 2013, Intel(R) Corporation #{
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#    * Redistributions of source code must retain the above copyright notice,
+#      this list of conditions and the following disclaimer.
+#    * Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#    * Neither the name of Intel(R) Corporation nor the names of its
+#      contributors may be used to endorse or promote products derived from
+#      this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#########################}
+
+## 99-michost.wwfb
+##
+## Setup MIC card image directories
+##
+## 99-michost.wwfb will run the needed command(s) to setup the MIC cards
+##
+#STATUS: primary
+
+# MICPATH should be set to a unic path in each node 
+MICPATH=${MICPATH:-/var/mpss}; 
+MICCTRL="/usr/sbin/micctrl";
+_CWD=`pwd`;
+
+# This variables will be completed by 85-michost during 
+# bootstrap
+WWMICCOUNT=
+NODEIP=
+MASTERIP=
+MTU=
+PREFIX=
+WW__NETDEVLIST=
+
+# Check if MIC cards are defined for this node
+if [[ -z $WWMICCOUNT || $WWMICCOUNT -eq 0 ]]; then
+    msg_status;
+    msg_red "No MIC cards defined.";
+    failure; echo;
+    logger 99_michost "ERROR - No MIC cards defined";
+    return 1;
+fi
+
+# Sanity checks...
+if [[ -z $NODEIP || -z $MTU || -z $PREFIX 
+    || -z $WW__NETDEVLIST || -z $MASTERIP ]]; then
+    msg_status;
+    msg_red "Networking information missing.";
+    failure; echo;
+    logger 99_michost "Networking information missing. Not copied by 85-michost";
+    return 1;
+fi
+
+# The mic.ko module is needed during configuration 
+msg_status;
+msg_white "Loading module mic.ko";
+
+modprobe mic;
+if [ $? -ne 0 ]; then
+    failure; echo;
+    logger 99_michost "Error loading mic.ko module";
+    return 1;
+else
+    success; echo;
+fi
+
+# Ensure the MPSS service is not active
+service mpss stop &>/dev/null;
+
+# Create the destination directory if it does not exist
+if [ ! -d $MICPATH ]; then
+    mkdir -p $MICPATH;
+fi
+
+msg_status;
+msg_white "Initializing Configuration";
+
+# Clean old structure if anything exists
+if [ -d $MICPATH/mic0 ]; then
+    cd $MICPATH;
+    /bin/rm -rf ./mic[0-9]* &>/dev/null;
+    cd $_CWD;
+fi
+
+# Build the base structures
+${MICCTRL} --initdefaults &>/dev/null;
+
+# MIC configuration files
+MPSS_CONFIG_DIR="/etc/mpss";
+DEFAULT_CONF="$MPSS_CONFIG_DIR/default.conf";
+MIC0_CONF="$MPSS_CONFIG_DIR/mic0.conf"
+
+# Sanity check... 
+# At least one MIC card is expected
+if [[ ! -f $DEFAULT_CONF ||  ! -f $MIC0_CONF ]]; then
+    msg_status;
+    msg_red "Error creating base configuration";
+    failure; echo;
+    logger 99_michost "Error creating base configuration:";
+    logger 99_michost "${MICCTRL} --initdefaults";
+    return 1;
+else
+    success; echo;
+fi
+
+# Enable verbose startup
+sed -i.back\
+    -e "s/^\(VerboseLogging\).*/\1 Enabled/"\
+    $MPSS_CONFIG_DIR/mic*.conf;
+
+# Disable power management
+sed  -i.back -e s'/PowerManagement.*/PowerManagement \"cpufreq_on;corec6_off;pc3_off;pc6_off\"/'\
+    $MPSS_CONFIG_DIR/mic*.conf;
+
+msg_status;
+msg_white "Configuring MIC bridge";
+
+# Add the bridge to the MIC configuration
+${MICCTRL} --addbridge=br0 --type=External\
+        --ip=$NODEIP --mtu=$MTU --netbits=$PREFIX &>/dev/null;
+
+if [ $? -ne 0 ]; then
+    failure; echo;
+    logger 99_michost "Error creating MIC bridge";
+    logger 99_michost "${MICCTRL} --addbridge=br0 --type=External\
+            --ip=$NODEIP --mtu=$MTU --netbits=$PREFIX";
+    return 1;
+else
+    success; echo;
+fi
+
+# Flags to check if everything went OK.
+FAIL_MIC=0;
+SUCCESS_MIC=0;
+msg_status;
+msg_white "Setting IP address for MIC cards";
+
+NETDEVLIST=`echo  $WW__NETDEVLIST | tr ',' ' '`;
+
+for netdev in $NETDEVLIST; do
+    ndev=`echo $netdev | cut -f 1 -d '='`;
+    nip=`echo $netdev | cut -f 2 -d '='`;
+
+    # This works to match 'mic0', 'mic1', etc...
+    tmp=`echo $ndev | tr -d '[0-9]'`;
+    if [ "x${tmp}" != "xmic" ]; then
+        continue;
+    fi
+
+    ${MICCTRL} --network=static --bridge=br0 --modhost=yes --modcard=yes\
+    --ip=$nip $ndev &>/dev/null;
+
+    if [ $? -ne 0 ]; then
+        echo;
+        msg_yellow "Error configuring IP $nip for $ndev";
+        logger 99_michost "Error configuring IP $nip for $ndev";
+        logger 99_michost "${MICCTRL} --network=static --bridge=br0 --hosts=yes
+             --ip=$nip $ndev";
+        FAIL_MIC=1;
+    else
+        SUCCESS_MIC=1;
+    fi
+done 
+
+# At least one failed
+if [ $FAIL_MIC -ne 0 ];then
+    if [ $SUCCESS_MIC -ne 0 ];then
+        # At least one succeeded, so warn and continue
+        warning; echo; 
+    else
+        # All failed, no need to continue
+        failure; echo;
+        return 1;
+    fi
+else
+# else, no one failed
+    success; echo;
+fi
+
+msg_status;
+msg_white "Setting NFS mounts from master node";
+
+stat=0
+${MICCTRL} --addnfs="$MASTERIP:/home" --dir=/home &>/dev/null;
+stat1="$?"
+${MICCTRL} --addnfs="$MASTERIP:/opt" --dir=/opt &>/dev/null;
+stat2="$?"
+
+if [[ "$stat1" -ne 0 || "$stat2" -ne 0 ]]; then
+    failure; echo;
+    logger 99_michost "Error setting NFS mounts from master node.";
+    logger 99_michost "${MICCTRL} --addnfs=/home --server=$MASTERIP --dir=/home";
+    logger 99_michost "${MICCTRL} --addnfs=/opt --server=$MASTERIP --dir=/opt";
+    return 1;
+else
+    success; echo;
+fi
+
+# Workaround for problem in NFS IP address
+sed -i -e "s/$NODEIP/$MASTERIP/" $MICPATH/mic*/etc/fstab
+
+# Have extra RPMS to be installed during the card booting.
+# wwinit MIC should leave the RPMs in $MICPATH
+msg_status;
+msg_white "Setting overlay for extra rpms";
+${MICCTRL} --overlay=rpm --state=on --source=$MICPATH &>/dev/null;
+
+if [ $? -ne 0 ]; then
+    failure; echo;
+    logger 99_michost "Error Setting overlay for extra rpms";
+    logger 99_michost "${MICCTRL} --resetconfig";
+    return 1;
+else
+    success; echo;
+fi
+
+
+msg_status;
+msg_white "Propagating configurations"
+
+${MICCTRL} --resetconfig &>/dev/null;
+
+if [ $? -ne 0 ]; then
+    failure; echo;
+    logger 99_michost "Error Propagating configurations";
+    logger 99_michost "${MICCTRL} --resetconfig";
+    return 1;
+else
+    success; echo;
+fi
+
+# Workaround: the ofed-mic service looks for `hostname`-mic<x> 
+# ignoring the domain in the hostname. 
+# Note: this must be done after executing micctrl --resetconfig because
+# it regenerates /etc/hosts on the mic filesystem 
+hostname=$(hostname);
+for netdev in $NETDEVLIST; do
+    nip=`echo $netdev | cut -f 1 -d ':'`;
+    ndev=`echo $netdev | cut -f 2 -d ':'`;
+
+    # This works to match 'mic0', 'mic1', etc...
+    tmp=`echo $ndev | tr -d '[0-9]'`;
+    if [ "x${tmp}" != "xmic" ]; then
+        continue;
+    fi
+
+    sed -i -e "s/\($nip.*\)/\1 $hostname-$ndev/" /etc/hosts
+
+done
+
+# Have the MIC cards to resolve all cluster nodes
+# Note: this must be done after executing micctrl --resetconfig because
+# it regenerates /etc/hosts on the mic filesystem 
+msg_status;
+msg_white "Setting names resolution on the cards";
+ERR=0;
+for netdev in $NETDEVLIST; do
+    ndev=`echo $netdev | cut -f 2 -d ':'`;
+
+    # This works to match 'mic0', 'mic1', etc...
+    tmp=`echo $ndev | tr -d '[0-9]'`;
+    if [ "x${tmp}" != "xmic" ]; then
+        continue;
+    fi
+
+    /bin/cp -f /etc/hosts $MICPATH/$ndev/etc/hosts
+
+    if [ $? -ne 0 ]; then
+        echo;
+        msg_yellow "Error copying /etc/hosts for $ndev";
+        logger 99_michost "Error copying /etc/hosts for $ndev";
+        logger 99_michost "/bin/cp -f /etc/hosts $MICPATH/$ndev/etc/hosts";
+        failure; echo;
+        ERR=1;
+    fi
+done
+if [ $ERR -eq 0 ];then 
+    success; echo;
+fi
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

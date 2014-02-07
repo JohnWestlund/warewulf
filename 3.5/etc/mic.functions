@@ -1,0 +1,483 @@
+#!/bin/sh
+## 
+## Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
+## 
+## Warewulf Copyright (c) 2003-2011, The Regents of the University of
+## California, through Lawrence Berkeley National Laboratory (subject to
+## receipt of any required approvals from the U.S. Dept. of Energy).
+## All rights reserved.
+##
+#########################
+## Copyright (c) 2013, Intel(R) Corporation #{
+##
+## Redistribution and use in source and binary forms, with or without 
+## modification, are permitted provided that the following conditions are met:
+##
+##    * Redistributions of source code must retain the above copyright notice, 
+##      this list of conditions and the following disclaimer.
+##    * Redistributions in binary form must reproduce the above copyright 
+##      notice, this list of conditions and the following disclaimer in the 
+##      documentation and/or other materials provided with the distribution.
+##    * Neither the name of Intel(R) Corporation nor the names of its 
+##      contributors may be used to endorse or promote products derived from 
+##      this software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+## POSSIBILITY OF SUCH DAMAGE.
+#########################}
+##
+
+# Force to install rpm even if it is already installed
+rpm_reinstall(){
+    # Use the first parameter as a flag to define where to install:
+    # locally or in a chroot
+    local CHROOT_FLAG=$1;
+    local yumopt="";
+    local rpmopt="";
+
+    if [ "x$CHROOT_FLAG" == 'xCHROOT_FLAG' ];then
+        shift;
+        yumopt="--config=${CHROOTDIR}/root/yum-ww.conf --installroot=${CHROOTDIR}";
+    fi
+
+    local rpms_in=$@;
+
+    /usr/bin/yum -y -q --disableexcludes=all --tolerant $yumopt reinstall $rpms_in &>/dev/null;
+    if [ "$?" -ne 0 ];then
+        return 255;
+    fi
+
+    return 0;
+}
+
+# Useful function to install RPM files of packages
+rpm_install() {
+
+    # Use the first parameter as a flag to define where to install:
+    # locally or in a chroot
+    local CHROOT_FLAG=$1;
+    local yumopt="";
+    local rpmopt="";
+
+    if [ "x$CHROOT_FLAG" == 'xCHROOT_FLAG' ];then
+        shift;
+        yumopt="--config=${CHROOTDIR}/root/yum-ww.conf --installroot=${CHROOTDIR}";
+        rpmopt="--root=${CHROOTDIR}";
+    fi
+
+    local rpms_in=$@;
+
+    # Collect all rpms that are missing
+    local rpm_to_install='';
+    for rpm_file in $rpms_in; do
+        # If the input is not a file, assume it is a package name 
+        if [ ! -f $rpm_file ];then
+            pkg_name=$rpm_file
+        else
+            pkg_name=$(basename $rpm_file |sed 's/\(.*\)\.rpm/\1/');
+        fi
+
+        # Check if already installed
+        if ! /bin/rpm -q $pkg_name $rpmopt &>/dev/null; then
+            rpm_to_install="$rpm_to_install $rpm_file";
+        fi
+    done
+
+    # If all rpms are installed exit OK
+    if [ "x$rpm_to_install" == 'x' ]; then
+        echo 
+        wwprint " + Already installed";
+        return 0;
+    fi
+
+    /usr/bin/yum -y -q --disableexcludes=all --tolerant $yumopt install $rpm_to_install &>/dev/null;
+    if [ "$?" -ne 0 ];then
+        return 255;
+    fi
+
+    return 0;
+}
+
+# Useful function to remove RPM packages
+uninst_pkg(){
+
+    # Use the first parameter as a flag to define where to install:
+    # locally or in a chroot
+    local CHROOT_FLAG=$1;
+    local yumopt="";
+    local rpmopt="";
+
+    if [ "x$CHROOT_FLAG" == 'xCHROOT_FLAG' ];then
+        shift;
+        yumopt="--config=${CHROOTDIR}/root/yum-ww.conf --installroot=${CHROOTDIR}";
+        rpmopt="--root=${CHROOTDIR}";
+    fi
+
+    local pkgs_to_remove=$@;
+    local RETVAL=0;
+    for pkg in $pkgs_to_remove; do
+        if rpm -q $pkg $rpmopt &>/dev/null; then
+            /usr/bin/yum --tolerant --quiet $yumopt -y remove $pkg &>/dev/null;
+
+            # Workaround for kernel-ib that produces problems with yum
+            # in the chroot
+            if [ "x$pkg" == 'xkernel-ib' ]; then
+                yum-complete-transaction  $yumopt -y &>/dev/null;
+            fi
+
+            if [ $? -ne 0 ]; then
+                RETVAL=1;
+            fi
+        fi
+    done
+    return $RETVAL;
+}
+
+
+# Install the Intel(R) Manycore Platform Software Satack
+inst_mpss() {
+
+    # Packages in OFED that conflict with IB support in MPSS
+    conflict_OFED_pkgs="dapl dapl-utils compat-dapl-utils dapl-devel \
+    dapl-devel-static kernel-ib-devel kernel-ib ";
+
+    pkg_file=${MPSS_FILE:-$1};
+
+    # Look for the package if not passed
+    if [ -z "$pkg_file" ]; then
+        pkg_file=$(/bin/ls -1 $HOME/KNC_*_*.tar $HOME/mpss*.tar 2>/dev/null | sort -V | tail -1);
+    fi
+
+    if [[ -z "$pkg_file" || ! -f "$pkg_file" ]]; then
+        wwprint " ! Intel(R) MPSS Package not found." error;
+        reply_error;
+        exit 255;
+    fi
+
+    wwprint " + Package $(msg_green $pkg_file) found\n";
+
+    # Warn if the version found is not supported
+    mpss_version=$(echo $pkg_file | sed 's/[^0-9.]*\([0-9.]*\).*/\1/');
+    mpss_major=$(echo $mpss_version|  cut -f 1 -d '.');
+    mpss_minor=$(echo $mpss_version|  cut -f 2 -d '.');
+    mpss_update=$(echo $mpss_version|  cut -f 3 -d '.');
+  
+    if [ -z $mpss_update ];then
+       mpss_update=0;
+    fi 
+
+    supported_version="3.1.0"
+    supported_major=$(echo $supported_version|  cut -f 1 -d '.');
+    supported_minor=$(echo $supported_version|  cut -f 2 -d '.');
+    supported_update=$(echo $supported_version|  cut -f 3 -d '.');
+
+    if [ "$mpss_major" -lt "$supported_major" ];then
+        wwprint "   WARNING: supported vesion >= $supported_version " warn;
+        reply_warn;
+    elif [ "$mpss_minor" -lt "$supported_minor" ];then
+        wwprint "   WARNING: supported vesion >= $supported_version " warn;
+        reply_warn;
+    elif [ "$mpss_update" -lt "$supported_update" ];then
+        wwprint "   WARNING: supported vesion >= $supported_version " warn;
+        reply_warn;
+    fi    
+
+    tmpdir=$(mktemp -d /tmp/MPSS_-XXXXXXXXXX);
+
+    # Uncompress the package 
+    tar -xf $pkg_file -C $tmpdir &>/dev/null;
+    if [ "$?" -ne 0 ]; then
+        wwprint " ! ERROR: Failure when extracting the Intel(R) MPSS package" error;
+        reply_error;
+        /bin/rm -rf $tmpdir;
+        exit 255;
+    fi
+
+    MPSS_dir=$(ls ${tmpdir});
+    # Our full path to the uncompressed folder
+    MPSS_path="${tmpdir}/${MPSS_dir}";
+    MPSS_rpms=$(/bin/ls -1 -r ${MPSS_path}/*.rpm );
+    wwprint " + Installing Intel(R) MPSS package";
+
+    rpm_install $MPSS_rpms;
+
+    if [ "$?" -ne 0 ]; then
+        reply_error;
+        /bin/rm -rf $tmpdir;
+        exit 255;
+    fi
+    reply_ok;
+
+    # If InfinBand is set, Install the OFED components
+    if [[ ! -z "$OFED_FLAG" &&  "$OFED_FLAG" -ne 0 ]]; then
+        # romove conflicting OFED pakcages 
+        wwprint " + Removing conflicting OFED packages";
+        uninst_pkg $conflict_OFED_pkgs;
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+
+        MPSS_OFED_path="${MPSS_path}/ofed/";
+        MPSS_OFED_rpms=$(/bin/ls -1 -r ${MPSS_OFED_path}*.rpm);
+        wwprint " + Installing the Intel(R) MPSS OFED package";
+
+        rpm_install $MPSS_OFED_rpms;
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+    fi
+
+    # If a chroot was defined, install MPSS there
+    if [ ! -z "$CHROOTDIR" ]; then
+
+        wwprint " + Installing dependencies in the chroot";
+        dependencies="bridge-utils.x86_64";  
+        rpm_install 'CHROOT_FLAG' $dependencies;
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+
+        wwprint " + Installing Intel(R) MPSS package in the chroot";
+        rpm_install 'CHROOT_FLAG' $MPSS_rpms;
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+
+        # Include coreutils in the nodes image. It is expected that the
+        # wwfirstboot module for mic will configure MPSS to install these
+        # rpms in the card during the node boot. 
+        wwprint " + Copying Intel(R) MPSS coreutils package in the chroot";
+
+        # Look for ${MPSS_path}/k1om/coreutils-<version>.k10m.rpm and 
+        #libgmp10-<version>.k1om.rpm
+        coreutils_rpms=$(find ${MPSS_path}/k1om/ |grep -E 'coreutils-[0-9]|libgmp');
+
+        # The wwfirstboot package must be installed but check it.
+        if [ -f $CHROOTDIR/etc/sysconfig/wwfirstboot.conf ]; then
+            . $CHROOTDIR/etc/sysconfig/wwfirstboot.conf;
+        else
+            MICPATH=/var/mpss;
+        fi
+        
+        local CHROOT_MICPATH="$CHROOTDIR$MICPATH";
+
+        # Create the destination directory if it does not exist
+        if [ ! -d $CHROOT_MICPATH ]; then
+                mkdir -p $CHROOT_MICPATH;
+        fi
+
+        /bin/cp $coreutils_rpms $CHROOT_MICPATH;
+
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+
+        # If InfinBand is set, Install the OFED components
+        if [[ ! -z "$OFED_FLAG" && "$OFED_FLAG" -ne 0 ]]; then
+            wwprint " + Removing conflicting OFED packages in the chroot";
+            uninst_pkg 'CHROOT_FLAG' $conflict_OFED_pkgs;
+            if [ "$?" -ne 0 ]; then
+                reply_error;
+                /bin/rm -rf $tmpdir;
+                exit 255;
+            fi
+            reply_ok;
+
+            wwprint " + Installing the Intel(R) MPSS OFED package in the chroot";
+            rpm_install 'CHROOT_FLAG' $MPSS_OFED_rpms;
+            if [ "$?" -ne 0 ]; then
+                reply_error;
+                /bin/rm -rf $tmpdir;
+                exit 255;
+            fi
+            reply_ok;
+
+            # Need to reinstall the driver rpm to generate the init in the chroot
+            MPSS_OFED_driver_rpms=$(/bin/ls -1 -r ${MPSS_OFED_path}*.rpm| grep -e "ofed-driver-[0-9]");
+            rpm_reinstall 'CHROOT_FLAG' $MPSS_OFED_driver_rpms;
+        fi
+    fi
+
+    # Remove temporary folder
+    /bin/rm -rf $tmpdir
+
+    return 0;
+}
+
+# Enable the MPSS related services in the chroot
+enable_mic_services(){
+
+    # Only has sense for the chroot
+    if [ ! -z "$CHROOTDIR" ]; then
+        wwprint " + Enabling the Intel(R) mpss service in the chroot";
+
+        /usr/sbin/chroot ${CHROOTDIR} /bin/bash -c "/sbin/chkconfig --add mpss";
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            /bin/rm -rf $tmpdir;
+            exit 255;
+        fi
+        reply_ok;
+
+        if [[ ! -z "$OFED_FLAG" && "$OFED_FLAG" -ne 0 ]]; then
+            wwprint " + Enabling the Intel(R) ofed-mic service in the chroot";
+            RETVAL=0;
+            /usr/sbin/chroot ${CHROOTDIR} /bin/bash -c "/sbin/chkconfig --add ofed-mic";
+            RETVAL=$?;
+            /usr/sbin/chroot ${CHROOTDIR} /bin/bash -c "/sbin/chkconfig --level 35 ofed-mic on";
+            RETVAL=$?;
+
+            if [ "$RETVAL" -ne 0 ]; then
+                reply_error;
+                /bin/rm -rf $tmpdir;
+                exit 255;
+            fi
+
+            reply_ok;
+        fi
+    fi
+    return 0;
+}
+
+# Configure the SSH keys in such a way that MPSS can use them
+# and set users environment.
+set_ssh_keys(){
+
+    wwprint " + Setup of VNFS SSH keys for root user";
+    if [[ ! -f $HOME/.ssh/id_rsa ]]; then
+        if ! ssh-keygen -f $HOME/.ssh/id_rsa -t rsa -N '' -C 'SSH Key for MIC' -q; then
+            reply_error;
+            exit 255;
+        fi
+    fi
+
+    # Assume root user does not have its $HOME shared
+    if [ ! -z "$CHROOTDIR" ]; then
+
+        if [[ ! -d $CHROOTDIR/root/.ssh ]]; then
+            mkdir -m 0700 -p $CHROOTDIR/root/.ssh;
+        fi
+
+        # Override if already existed
+        cat $HOME/.ssh/id_rsa > $CHROOTDIR/root/.ssh/id_rsa;
+        chmod 600  $CHROOTDIR/root/.ssh/id_rsa;
+        cat $HOME/.ssh/id_rsa.pub > $CHROOTDIR/root/.ssh/id_rsa.pub;
+    fi
+    
+    reply_ok;
+
+    # MPSS needs the ssh keys to have the default names to configure passwordless
+    # access to the cards. 
+    # NOTE: assume $HOME is NFS shared across the cluster nodes
+
+    wwprint " + Setup of SSH keys and environment for normal users users";
+    users=$(/usr/bin/getent passwd |grep home|grep -v nologin|cut -f1 -d':');
+
+    for user in $users; do
+
+        # NOTE: assume the cluster file will be creaed at user login
+        RETVAL=0;
+        su - $user -c "cat .ssh/cluster > .ssh/id_rsa";
+        RETVAL=$?;
+        su - $user -c "cat .ssh/cluster.pub > .ssh/id_rsa.pub";
+        RETVAL=$?;
+
+        if [ "$RETVAL" -ne 0 ]; then
+            wwprint "\n ! ERROR: Failed to configure ssh keys for user $user";
+            reply_error;
+        fi
+
+        RETVAL=0;
+        # miccheck requires micctrl (whic is in /usr/sbin) in the PATH
+        if ! grep -q 'export PATH=$PATH:/usr/sbin/' /home/$user/.bashrc ; then
+            echo '# Configured by 89-mic.init: have micctrl in $PATH' >> /home/$user/.bashrc
+            echo 'export PATH=$PATH:/usr/sbin/' >> /home/$user/.bashrc
+            RETVAL=$?;
+        fi
+
+        # Enable MKL automatic offloading to the MIC Cards
+        if ! grep -q 'MKL_MIC_ENABLE=1' /home/$user/.bashrc ; then
+            echo '# Configured by 89-mic.init: Enable Intel(R) MKL offloading to MIC cards'\
+            >> /home/$user/.bashrc
+            echo 'export OFFLOAD_REPORT=2 MKL_MIC_ENABLE=1' >> /home/$user/.bashrc
+            RETVAL=$?;
+        fi
+
+        if [ "$RETVAL" -ne 0 ]; then
+            wwprint "\n ! ERROR: Failed to configure .barshrc for user $user";
+            reply_error;
+        fi
+    done
+    reply_ok;
+
+    return 0;
+}
+
+# Configure  mic.ko module to be in bootstrap.conf
+set_mic_module(){
+    wwprint " + Checking for mic.ko in bootstrap.conf"
+    if ! wwtest grep -q "drivers += extra/mic.ko" /etc/warewulf/bootstrap.conf; then
+        wwprint " + Adding mic.ko to bootstrap.conf"
+        echo -e "#Intel(R) Xeon Phi(tm) driver\ndrivers += extra/mic.ko"\
+        >> /etc/warewulf/bootstrap.conf
+        reply_ok;
+    fi
+    
+    return 0;
+}
+
+# Install the Warewulf mic-node package in the chroot
+inst_ww_mic_node(){
+
+    pkg_file=${WW_MIC_NODE:-$1};
+    # Only has sense for the chroot
+    if [ ! -z "$CHROOTDIR" ]; then
+
+        # Look for the package if not passed
+        if [ -z "$pkg_file" ]; then
+            pkg_file=$(/bin/ls -1 $HOME/warewulf-mic-node*.rpm 2>/dev/null | sort -V | tail -1);
+        fi
+
+        if [[ -z "$pkg_file" || ! -f "$pkg_file" ]]; then
+            wwprint " ! Warewulf mic-node package not found." error;
+            reply_error;
+            return 255;
+        fi
+
+        wwprint " + Package $(msg_green $pkg_file) found\n";
+
+        wwprint " + Installing mic-node package in the chroot";
+        rpm_install 'CHROOT_FLAG' $pkg_file;
+        if [ "$?" -ne 0 ]; then
+            reply_error;
+            return 255;
+        fi
+        reply_ok;
+    fi
+
+    return 0;
+}
