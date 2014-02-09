@@ -18,7 +18,7 @@ WWVERSION=""
 WWPREFIX=""
 CHOICE=""
 EDITOR=""
-CLUSTERVER="3.4"
+CLUSTERVER="3.5"
 FILETYPE='.tar.gz'
 SOURCEDIR="$( pwd )"
 
@@ -621,7 +621,8 @@ warn_msg () {
         editor)
             echo
             echo "Which command line text editor would you like to use ?"
-            echo "nano should already be installed."
+            echo
+            echo "     nano should already be installed by default on Debian."
             echo "YES = Configure nano as the default system editor for this user."
             echo " NO = Install and set vi as default system editor for this user."
             ;;
@@ -730,9 +731,9 @@ warn_msg () {
             echo "    path      (optional) Path configure will use as --prefix="
             echo "              No path, configure will use default path of /usr/local"
             echo
-            echo "sudo install-wwdebsystem 3.4              - will istall to the default /usr/local"
+            echo "sudo install-wwdebsystem 3.5              - will istall to the default /usr/local"
             echo
-            echo "sudo install-wwdebsystem 2013-10-19 /usr  - will install nightly build to /usr"
+            echo "sudo install-wwdebsystem 2014-02-15 /usr  - will install nightly build to /usr"
             echo
             ;;
 
