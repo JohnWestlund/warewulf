@@ -175,22 +175,22 @@ kargs()
     my ($self, @strings) = @_;
     my $key = "kargs";
 
-    if (uc($strings[0]) eq "UNDEF") {
-        $self->del($key);
-        return $self->get($key);
-    }
-
     if (@strings) {
         my $name = $self->get("name");
         my @new;
-        foreach my $string (@strings) {
-            my @kargs = split(/\s+/,$string); # pre-emptively split
-            foreach my $karg (@kargs) {
-                &dprint("Object $name set $key +=' $karg'\n");
-                push(@new,$karg);
+        if (uc($strings[0]) eq "UNDEF") {
+            $self->del($key);
+            return $self->get($key);
+        } else {
+            foreach my $string (@strings) {
+                my @kargs = split(/\s+/,$string); # pre-emptively split
+                foreach my $karg (@kargs) {
+                    &dprint("Object $name set $key +=' $karg'\n");
+                    push(@new,$karg);
+                }
             }
+            $self->set($key,@new);
         }
-        $self->set($key,@new);
     }
 
     return $self->get($key);
