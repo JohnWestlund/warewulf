@@ -268,10 +268,10 @@ origin()
                     &dprint("Object $name set $key += '$1'\n");
                     push(@neworigins, $1);
                 } else {
-                    &eprint("Invalid characters to set $key += '$string'\n");
+                    &eprint("Invalid characters to set $key = '$string'\n");
                 }
-                $self->set($key, @neworigins);
             }
+            $self->set($key, @neworigins);
         } else {
             $self->del($key);
             &dprint("Object $name del $key\n");

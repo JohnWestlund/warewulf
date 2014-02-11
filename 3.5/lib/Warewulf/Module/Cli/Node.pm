@@ -281,7 +281,7 @@ exec()
     if ($command eq "delete") {
         my @changes;
 
-        @changes = map { sprintf("%8s: %s %s", "DEL", "NODE", $_->name()); } $objSet->get_list();
+        @changes = map { sprintf("%8s: %s %s", "DEL", "NODE", $_->name()); } $objSet->get_list("fqdn", "domain", "cluster", "name");
         if ($self->confirm_changes($term, $object_count, "node(s)", @changes)) {
             $return_count = $db->del_object($objSet);
             &nprint("Deleted $return_count nodes.\n");
@@ -294,7 +294,7 @@ exec()
             "HWADDR"
         );
         &nprint("================================================================================\n");
-        foreach my $o ($objSet->get_list()) {
+        foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
             printf("%-19s %-19s %-19s %-19s\n",
                 &ellipsis(19, ($o->name() || "UNDEF"), "end"),
                 &ellipsis(19, (join(",", $o->groups()) || "UNDEF")),
@@ -304,7 +304,7 @@ exec()
             $return_count++;
         }
     } elsif ($command eq "print") {
-        foreach my $o ($objSet->get_list()) {
+        foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
             my $nodename = $o->name() || "UNDEF";
 
             &nprintf("#### %s %s#\n", $nodename, "#" x (72 - length($nodename)));
@@ -410,7 +410,7 @@ exec()
                 if ($opt_ipaddr =~ /^(\d+\.\d+\.\d+\.\d+)$/) {
                     my $ip_serialized = Warewulf::Network->ip_serialize($1);
                     my $show_changes;
-                    foreach my $o (sort {$a->name() cmp $b->name()} $objSet->get_list()) {
+                    foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
                         my $nodename = $o->name();
                         if (! $opt_netdev) {
                             my @devs = $o->netdevs_list();
