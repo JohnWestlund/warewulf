@@ -545,7 +545,8 @@ set_file_member()
         if ($val eq "UNDEF") {
             $val = undef;
         } elsif ($field eq "origin") {
-            @{$val} = split(',', $val);
+            my @tmp = split(',', $val);
+            $val = \@tmp;
         } elsif ($field eq "mode") {
             $val = oct($val);
         }
