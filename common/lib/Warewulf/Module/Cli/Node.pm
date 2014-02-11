@@ -282,9 +282,6 @@ exec()
         my @changes;
 
         @changes = map { sprintf("%8s: %s %s", "DEL", "NODE", scalar $_->name()); } $objSet->get_list("fqdn", "domain", "cluster", "name");
-#        foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
-#            push(@changes, sprintf("%8s: %s %s", "DEL", "NODE", scalar $o->name()));
-#        }
         if ($self->confirm_changes($term, $object_count, "node(s)", @changes)) {
             $return_count = $db->del_object($objSet);
             &nprint("Deleted $return_count nodes.\n");
