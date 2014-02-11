@@ -141,6 +141,7 @@ add_log_target()
             if (! $target) {
                 return undef;
             }
+            $target->autoflush(1);
         } else {
             my $is_obj;
 
@@ -152,6 +153,7 @@ add_log_target()
             if (! $is_obj) {
                 return undef;
             }
+            $target->autoflush(1);
         }
     } elsif ($target =~ /^SYSLOG(?::([^:]+)(?::([^:]+))?)?$/i) {
         my ($ident, $facility) = ($1, $2);
@@ -172,6 +174,7 @@ add_log_target()
         if (! $target) {
             return undef;
         }
+        $target->autoflush(1);
     }
 
     foreach my $level (@levels) {
@@ -351,8 +354,12 @@ init_log_targets()
 {
     my ($so, $se);
 
+    autoflush STDOUT 1;
+    autoflush STDERR 1;
     $so = IO::Handle->new_from_fd(fileno(STDOUT), "w");
+    $so->autoflush(1);
     $se = IO::Handle->new_from_fd(fileno(STDERR), "w");
+    $se->autoflush(1);
     @TARGETS = (
         [ $se ],  # CRITICAL
         [ $se ],  # ERROR
