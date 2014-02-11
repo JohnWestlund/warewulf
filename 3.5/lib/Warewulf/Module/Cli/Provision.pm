@@ -497,7 +497,7 @@ exec()
         &wprint("master's syslog server if it is in listen mode.\n");
 
     } elsif ($command eq "print") {
-        foreach my $o ($objSet->get_list()) {
+        foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
             my @files;
             my $fileObjSet;
             my $name = $o->name() || "UNDEF";
@@ -507,7 +507,7 @@ exec()
                 $fileObjSet = $db->get_objects("file", "_id", $o->get("fileids"));
             }
             if ($fileObjSet) {
-                foreach my $f ($fileObjSet->get_list()) {
+                foreach my $f ($fileObjSet->get_list("name")) {
                     push(@files, $f->name());
                 }
             } else {
@@ -550,7 +550,7 @@ exec()
     } elsif ($command eq "list") {
         &nprintf("%-19s %-15s %-21s %-21s\n", "NODE", "VNFS", "BOOTSTRAP", "FILES");
         &nprint("================================================================================\n");
-        foreach my $o ($objSet->get_list()) {
+        foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
             my $fileObjSet;
             my @files;
             my $name = $o->name() || "UNDEF";
@@ -560,7 +560,7 @@ exec()
                 $fileObjSet = $db->get_objects("file", "_id", @fileids);
             }
             if ($fileObjSet) {
-                foreach my $f ($fileObjSet->get_list()) {
+                foreach my $f ($fileObjSet->get_list("name")) {
                     push(@files, $f->name());
                 }
             } else {

@@ -216,7 +216,7 @@ persist()
 
     &dprint("Iterating through nodes\n");
 
-    foreach my $n ($datastore->get_objects("node")->get_list()) {
+    foreach my $n ($datastore->get_objects("node")->get_list("fqdn", "domain", "cluster", "name")) {
         my $hostname = $n->nodename() || "undef";
         my $nodename = $n->name() || "undef";
         my $db_id = $n->id();

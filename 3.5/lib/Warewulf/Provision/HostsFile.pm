@@ -120,7 +120,7 @@ generate()
     $hosts .= "#\n";
     $hosts .= "# See provision.conf for configuration paramaters\n\n";
 
-    foreach my $n ($datastore->get_objects("node")->get_list()) {
+    foreach my $n ($datastore->get_objects("node")->get_list("fqdn", "domain", "cluster", "name")) {
         my $nodeid = $n->id();
         my $name = $n->name();
         my $nodename = $n->nodename();
