@@ -496,7 +496,7 @@ exec()
                 my $user_group = getpwuid($obj->uid() || 0) . ' ' . getgrgid($obj->gid() || 0);
                 my @o = $obj->origin();
 
-                printf("%-16s: %10s %d %-16s %9d %s\n",
+                printf("%-24s: %10s %d %-16s %9d %s\n",
                        $obj->name(),
                        $obj->modestring(),
                        scalar(@o),
