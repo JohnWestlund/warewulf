@@ -343,7 +343,7 @@ exec()
             $return_count = $db->del_object($objSet);
         } elsif ($command eq "list" or $command eq "print") {
             &nprint("VNFS NAME            SIZE (M) CHROOT LOCATION\n");
-            foreach my $obj ($objSet->get_list()) {
+            foreach my $obj ($objSet->get_list("name")) {
                 printf("%-20s %-8.1f %s\n",
                     $obj->name() || "UNDEF",
                     ($obj->size() ? ($obj->size()/(1024*1024)) : ("0")),

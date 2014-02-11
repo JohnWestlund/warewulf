@@ -209,6 +209,23 @@ get_list_entries($$)
     }
 }
 
+# This is a private method for sorting objects for get_list()
+sub _objectsortby()
+{
+    foreach my $s (@_) {
+        my $testa = $a->get($s);
+        my $testb = $b->get($s);
+        if ($testa and $testb) {
+            if ($testa gt $testb) {
+                return 1;
+            } elsif ($testa lt $testb) {
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+
 =item get_list()
 
 Return an array of all objects in this ObjectSet.
@@ -218,11 +235,11 @@ Return an array of all objects in this ObjectSet.
 sub
 get_list()
 {
-    my ($self) = @_;
+    my $self = shift;
 
     if (exists($self->{"ARRAY"})) {
         if (wantarray()) {
-            return @{$self->{"ARRAY"}};
+            return sort _objectsortby @{$self->{"ARRAY"}};
         } else {
             my $aref;
 

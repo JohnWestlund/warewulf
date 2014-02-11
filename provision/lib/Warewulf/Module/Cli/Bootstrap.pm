@@ -290,7 +290,7 @@ exec()
                 $return_count = $db->del_object($objSet);
             } elsif ($command eq "list" or $command eq "print") {
                 &nprint("BOOTSTRAP NAME            SIZE (M)\n");
-                foreach my $obj ($objSet->get_list()) {
+                foreach my $obj ($objSet->get_list("name")) {
                     printf("%-25s %-8.1f\n",
                         $obj->name() || "UNDEF",
                         $obj->size() ? $obj->size()/(1024*1024) : "0"
@@ -298,7 +298,7 @@ exec()
                     $return_count ++;
                 }
             } elsif ($command eq "rebuild" or $command eq "build") {
-                foreach my $o ($objSet->get_list()) {
+                foreach my $o ($objSet->get_list("name")) {
                     &dprint("Calling build_local_bootstrap()\n");
                     $o->build_local_bootstrap();
                     $return_count ++;

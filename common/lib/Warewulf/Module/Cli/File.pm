@@ -479,7 +479,7 @@ exec()
             }
 
         } elsif ($command eq "sync" or $command eq "resync") {
-            foreach my $obj ($objSet->get_list()) {
+            foreach my $obj ($objSet->get_list("name")) {
                 my $orig = $obj->origin() || "UNDEF";
                 if ($orig eq "UNDEF" && $obj->name() ne "dynamic_hosts") {
                     &nprintf("%-16s :: No ORIGIN defined\n", $obj->name());
@@ -491,7 +491,7 @@ exec()
             #&nprint("================================================================================\n");
             &iprintf("%-16s  %10s %s %-16s %9s %s\n",
                      "NAME", "PERMS", "O", "USER GROUP", "SIZE", "DEST");
-            foreach my $obj ($objSet->get_list()) {
+            foreach my $obj ($objSet->get_list("name")) {
                 my $perms = "-";
                 my $user_group = getpwuid($obj->uid() || 0) . ' ' . getgrgid($obj->gid() || 0);
                 my @o = $obj->origin();
@@ -506,7 +506,7 @@ exec()
                     );
             }
         } elsif ($command eq "print") {
-            foreach my $obj ($objSet->get_list()) {
+            foreach my $obj ($objSet->get_list("name")) {
                 my $name = $obj->get("name") || "UNDEF";
                 &nprintf("#### %s %s#\n", $name, '#' x (72 - length($name)));
                 printf("%-16s: %-16s = %s\n", $name, "ID", ($obj->id() || "ERROR"));
