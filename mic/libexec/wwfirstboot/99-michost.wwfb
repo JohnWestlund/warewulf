@@ -260,8 +260,8 @@ fi
 # it regenerates /etc/hosts on the mic filesystem 
 hostname=$(hostname);
 for netdev in $NETDEVLIST; do
-    nip=`echo $netdev | cut -f 1 -d ':'`;
-    ndev=`echo $netdev | cut -f 2 -d ':'`;
+    ndev=`echo $netdev | cut -f 1 -d '='`;
+    nip=`echo $netdev | cut -f 2 -d '='`;
 
     # This works to match 'mic0', 'mic1', etc...
     tmp=`echo $ndev | tr -d '[0-9]'`;
@@ -280,7 +280,7 @@ msg_status;
 msg_white "Setting names resolution on the cards";
 ERR=0;
 for netdev in $NETDEVLIST; do
-    ndev=`echo $netdev | cut -f 2 -d ':'`;
+    ndev=`echo $netdev | cut -f 1 -d '='`;
 
     # This works to match 'mic0', 'mic1', etc...
     tmp=`echo $ndev | tr -d '[0-9]'`;
