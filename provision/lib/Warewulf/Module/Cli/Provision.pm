@@ -97,6 +97,7 @@ help()
     $h .= "         --bootlocal     Boot the node from the local disk (do not provision)\n";
     $h .= "         --console       Set a specific console for the kernel command line\n";
     $h .= "         --kargs         Define the kernel arguments (assumes \"quiet\" if UNDEF)\n";
+    $h .= "         --pxelinux      Define a custom PXELINUX/boot image to use\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "\n";
@@ -178,6 +179,7 @@ exec()
     my @opt_fileadd;
     my @opt_filedel;
     my $opt_kargs;
+    my $opt_pxelinux;
     my $return_count;
     my $objSet;
     my @changes;
@@ -195,6 +197,7 @@ exec()
         'fileadd=s'     => \@opt_fileadd,
         'filedel=s'     => \@opt_filedel,
         'kargs=s'       => \$opt_kargs,
+        'pxelinux=s'    => \$opt_pxelinux,
         'master=s'      => \@opt_master,
         'bootserver=s'  => \@opt_bootserver,
         'b|bootstrap=s' => \$opt_bootstrap,
@@ -500,6 +503,27 @@ exec()
             }
         }
 
+        if ($opt_pxelinux) {
+            if ($opt_pxelinux =~ /^([a-zA-Z0-9\.]+)/) {
+                $opt_pxelinux = $1;
+
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->pxelinux($opt_pxelinux);
+                    &dprint("Setting pxelinux file to: $opt_pxelinux\n");
+                    $persist_bool = 1;
+                }
+                if (uc($opt_pxelinux) eq "UNDEF") {
+                    push(@changes, sprintf("     DEL: %-20s\n", "PXELINUX"));
+                } else {
+                    push(@changes, sprintf("     SET: %-20s = %s\n", "PXELINUX", $opt_pxelinux));
+                }
+
+            } else {
+                &eprint("Invalid command for pxelinux file!\n");
+            }
+        }
+
         if ($persist_bool) {
             if ($command ne "new" and $term->interactive()) {
                 print "Are you sure you want to make the following changes to ". $object_count ." node(s):\n\n";
@@ -562,6 +586,7 @@ exec()
             printf("%15s: %-16s = %s\n", $name, "PRESHELL", $o->preshell() ? "TRUE" : "FALSE");
             printf("%15s: %-16s = %s\n", $name, "POSTSHELL", $o->postshell() ? "TRUE" : "FALSE");
             printf("%15s: %-16s = %s\n", $name, "CONSOLE", $o->console() || "UNDEF");
+            printf("%15s: %-16s = %s\n", $name, "PXELINUX", $o->pxelinux() || "UNDEF");
             printf("%15s: %-16s = \"%s\"\n", $name, "KARGS", $kargs);
             if ($o->get("filesystems")) {
                 printf("%15s: %-16s = %s\n", $name, "FILESYSTEMS", join(",", $o->get("filesystems")));

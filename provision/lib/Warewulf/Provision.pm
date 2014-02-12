@@ -196,6 +196,34 @@ kargs()
     return $self->get($key);
 }
 
+
+=item pxelinux()
+
+Set or return the pxelinux file to use for this node.
+
+=cut
+
+sub 
+pxelinux()
+{
+    my ($self, $string) = @_;
+    my $key = "pxelinux";
+
+    if (defined($string)) {
+        my $name = $self->get("name");
+        my @new;
+        if (uc($string) eq "UNDEF") {
+            $self->del($key);
+        } elsif ($string =~ /^([a-zA-Z0-9\.]+)$/) {
+            $self->set($key,$1);
+        } else {
+            &eprint("Invalid characters to set $key = '$string'\n")
+        }
+    }
+
+    return $self->get($key);
+}
+
 =item fileidadd(@fileids)
 
 Add a file ID or list of file IDs to the current object.

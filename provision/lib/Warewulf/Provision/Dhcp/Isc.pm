@@ -12,6 +12,7 @@ package Warewulf::Provision::Dhcp::Isc;
 
 use Warewulf::ACVars;
 use Warewulf::Logger;
+use Warewulf::Provision;
 use Warewulf::Provision::Dhcp;
 use Warewulf::DataStore;
 use Warewulf::Network;
@@ -234,6 +235,7 @@ persist()
         if (! @bootservers or scalar(grep { $_ eq $ipaddr} @bootservers)) {
             my $clustername = $n->cluster();
             my $domainname = $n->domain();
+            my $pxelinux_file = $n->pxelinux();
             my $master_ipv4_addr;
             my $domain;
 
@@ -303,6 +305,9 @@ persist()
                     $dhcpd_contents .= "   # Node entry for Warewulf data store ID: $db_id\n";
                     $dhcpd_contents .= "   host $nodename-$devname {\n";
                     $dhcpd_contents .= "      option host-name $hostname;\n";
+                    if ($pxelinux_file) {
+                        $dhcpd_contents .= "      filename \"/warewulf/$pxelinux_file\";\n";
+                    }
                     if ($node_gateway) {
                         $dhcpd_contents .= "      option routers $node_gateway;\n";
                     }
