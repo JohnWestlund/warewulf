@@ -93,6 +93,7 @@ help()
     $h .= "         --filedel       Remove a file to be provisioned to this node\n";
     $h .= "         --preshell      Start a shell on the node before provisioning (boolean)\n";
     $h .= "         --postshell     Start a shell on the node after provisioning (boolean)\n";
+    $h .= "         --postnetdown   Shutdown the network after provisioning (boolean)\n";
     $h .= "         --bootlocal     Boot the node from the local disk (do not provision)\n";
     $h .= "         --console       Set a specific console for the kernel command line\n";
     $h .= "         --kargs         Define the kernel arguments (assumes \"quiet\" if UNDEF)\n";
@@ -169,6 +170,7 @@ exec()
     my $opt_vnfs;
     my $opt_preshell;
     my $opt_postshell;
+    my $opt_postnetdown;
     my $opt_bootlocal;
     my @opt_master;
     my @opt_bootserver;
@@ -199,6 +201,7 @@ exec()
         'V|vnfs=s'      => \$opt_vnfs,
         'preshell=s'    => \$opt_preshell,
         'postshell=s'   => \$opt_postshell,
+        'postnetdown=s' => \$opt_postnetdown,
         'bootlocal=s'   => \$opt_bootlocal,
         'l|lookup=s'    => \$opt_lookup,
     );
@@ -319,6 +322,31 @@ exec()
                     $persist_bool = 1;
                 }
                 push(@changes, sprintf("     SET: %-20s = %s\n", "POSTSHELL", 1));
+            }
+        }
+
+        if (defined($opt_postnetdown)) {
+            if (uc($opt_postnetdown) eq "UNDEF" or
+                uc($opt_postnetdown) eq "FALSE" or
+                uc($opt_postnetdown) eq "NO" or
+                uc($opt_postnetdown) eq "N" or
+                $opt_postnetdown == 0
+            ) {
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->postnetdown(0);
+                    &dprint("Disabling postnetdown for node name: $name\n");
+                    $persist_bool = 1;
+                }
+                push(@changes, sprintf("   UNDEF: %-20s\n", "POSTNETDOWN"));
+            } else {
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->postnetdown(1);
+                    &dprint("Enabling postnetdown for node name: $name\n");
+                    $persist_bool = 1;
+                }
+                push(@changes, sprintf("     SET: %-20s = %s\n", "POSTNETDOWN", 1));
             }
         }
 

@@ -281,6 +281,29 @@ master()
 }
 
 
+=item postnetdown($bool)
+
+Shutdown the network after provisioning
+
+=cut
+
+sub
+postnetdown()
+{
+    my ($self, $bool) = @_;
+
+    if (defined($bool)) {
+        if ($bool) {
+            $self->set("postnetdown", 1);
+        } else {
+            $self->del("postnetdown");
+        }
+    }
+
+    return $self->get("postnetdown");
+}
+
+
 =item preshell($bool)
 
 Set or return the preshell boolean

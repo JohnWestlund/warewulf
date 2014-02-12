@@ -101,33 +101,37 @@ ifup() {
                     fi
                 fi
 
-                # Debian based /etc/network/interfaces
-                echo "auto lo" > /tmp/interfaces
-                echo "iface lo inet loopback" >> /tmp/interfaces
-                echo '' >> /tmp/interfaces
-                echo "auto $DEVICE" >> /tmp/interfaces
-                echo "iface $DEVICE inet static" >> /tmp/interfaces
-                echo "    address $WWIPADDR" >> /tmp/interfaces
-                echo "    netmask $WWNETMASK" >> /tmp/interfaces
-                if [ -n "$WWGATEWAY" ]; then
-                    echo "    gateway $WWGATEWAY" >> /tmp/interfaces
-                fi
-                if [ -n "$HWADDR" ]; then
-                    echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
-                fi
+                if [ -n "$WWPOSTNETDOWN" ]; then
+                    # Debian based /etc/network/interfaces
+                    echo "# This was created by the Warewulf bootstrap" > /tmp/interfaces
+                    echo "auto lo" >> /tmp/interfaces
+                    echo "iface lo inet loopback" >> /tmp/interfaces
+                    echo '' >> /tmp/interfaces
+                    echo "auto $DEVICE" >> /tmp/interfaces
+                    echo "iface $DEVICE inet static" >> /tmp/interfaces
+                    echo "    address $WWIPADDR" >> /tmp/interfaces
+                    echo "    netmask $WWNETMASK" >> /tmp/interfaces
+                    if [ -n "$WWGATEWAY" ]; then
+                        echo "    gateway $WWGATEWAY" >> /tmp/interfaces
+                    fi
+                    if [ -n "$HWADDR" ]; then
+                        echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+                    fi
 
-                # RHEL based ifcfg
-                echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
-                echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
-                echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
-                echo "IPADDR=$WWIPADDR" >> /tmp/ifcfg-$DEVICE
-                echo "NETMASK=$WWNETMASK" >> /tmp/ifcfg-$DEVICE
-                echo "GATEWAY=$WWGATEWAY" >> /tmp/ifcfg-$DEVICE
-                echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
+                    # RHEL based ifcfg
+                    echo "# This was created by the Warewulf bootstrap" > /tmp/ifcfg-$DEVICE
+                    echo "DEVICE=$DEVICE" >> /tmp/ifcfg-$DEVICE
+                    echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
+                    echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
+                    echo "IPADDR=$WWIPADDR" >> /tmp/ifcfg-$DEVICE
+                    echo "NETMASK=$WWNETMASK" >> /tmp/ifcfg-$DEVICE
+                    echo "GATEWAY=$WWGATEWAY" >> /tmp/ifcfg-$DEVICE
+                    echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
 
-                if [ -n "$WWMTU" ]; then
-                    echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE  # RHEL
-                    echo "    mtu $WWMTU" >> /tmp/interfaces # DEB
+                    if [ -n "$WWMTU" ]; then
+                        echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE  # RHEL
+                        echo "    mtu $WWMTU" >> /tmp/interfaces # DEB
+                    fi
                 fi
 
                 COUNT=0
@@ -156,30 +160,34 @@ ifup() {
                 msg_gray "($IPADDR/$NETMASK)"
                 wwsuccess
 
-                # DEB
-                echo "auto lo" > /tmp/interfaces
-                echo "iface lo inet loopback" >> /tmp/interfaces
-                echo '' >> /tmp/interfaces
-                echo "auto $DEVICE" >> /tmp/interfaces
-                echo "iface $DEVICE inet static" >> /tmp/interfaces
-                echo "    address $WWIPADDR" >> /tmp/interfaces
-                echo "    netmask $WWNETMASK" >> /tmp/interfaces
-                if [ -n "$WWGATEWAY" ]; then
-                    echo "    gateway $WWGATEWAY" >> /tmp/interfaces
-                fi
-                if [ -n "$HWADDR" ]; then
-                    echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
-                fi
+                if [ -n "$WWPOSTNETDOWN" ]; then
+                    # DEB
+                    echo "# This was created by the Warewulf bootstrap" > /tmp/interfaces
+                    echo "auto lo" >> /tmp/interfaces
+                    echo "iface lo inet loopback" >> /tmp/interfaces
+                    echo '' >> /tmp/interfaces
+                    echo "auto $DEVICE" >> /tmp/interfaces
+                    echo "iface $DEVICE inet static" >> /tmp/interfaces
+                    echo "    address $WWIPADDR" >> /tmp/interfaces
+                    echo "    netmask $WWNETMASK" >> /tmp/interfaces
+                    if [ -n "$WWGATEWAY" ]; then
+                        echo "    gateway $WWGATEWAY" >> /tmp/interfaces
+                    fi
+                    if [ -n "$HWADDR" ]; then
+                        echo "    hwaddress ether $HWADDR" >> /tmp/interfaces
+                    fi
 
-                # RHEL
-                echo "DEVICE=$DEVICE" > /tmp/ifcfg-$DEVICE
-                echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
-                echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
-                echo "IPADDR=$IPADDR" >> /tmp/ifcfg-$DEVICE
-                echo "NETMASK=$NETMASK" >> /tmp/ifcfg-$DEVICE
-                echo "GATEWAY=$GATEWAY" >> /tmp/ifcfg-$DEVICE
-                echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
-
+                    # RHEL
+                    echo "# This was created by the Warewulf bootstrap" > /tmp/ifcfg-$DEVICE
+                    echo "DEVICE=$DEVICE" >> /tmp/ifcfg-$DEVICE
+                    echo "BOOTPROTO=static" >> /tmp/ifcfg-$DEVICE
+                    echo "ONBOOT=yes" >> /tmp/ifcfg-$DEVICE
+                    echo "IPADDR=$IPADDR" >> /tmp/ifcfg-$DEVICE
+                    echo "NETMASK=$NETMASK" >> /tmp/ifcfg-$DEVICE
+                    echo "GATEWAY=$GATEWAY" >> /tmp/ifcfg-$DEVICE
+                    echo "HWADDR=$HWADDR" >> /tmp/ifcfg-$DEVICE
+                fi
+    
                 if [ -n "$WWMTU" ]; then
                     echo "MTU=$WWMTU" >> /tmp/ifcfg-$DEVICE  # RHEL
                     echo "    mtu $WWMTU" >> /tmp/interfaces # DEB
@@ -329,6 +337,15 @@ if [ -x "$NEWROOT/sbin/init" ]; then
         wwsuccess
     else
         wwfailure
+    fi
+    if [ -n "$WWPOSTNETDOWN" ]; then
+        NETDEV=`cat /tmp/wwdev`
+        msg_white "Shutting down network interface $NETDEV: "
+        if ifconfig $NETDEV down; then
+            wwsuccess
+        else
+            wwfailure
+        fi
     fi
     mkdir -p $NEWROOT${WWBOOTSTRAPLOGS:-/var/log} >/dev/null 2>&1
     cat /var/log/messages >> $NEWROOT${WWBOOTSTRAPLOGS:-/var/log}/messages
