@@ -13,11 +13,22 @@ TMPFILE=`mktemp`
 
 cd ${NEWROOT:-/}
 
+mkfifo /tmp/vnfs-download
+
 while true; do
     for master in `echo $WWMASTER | sed -e 's/,/ /g'`; do
-        # This pipeline always returns true. Would be super nice to check for return value of
-        # wget without disrupting the pipeline! Please... somoene... fixme!
-        wget -q -O - "http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR" 2>/dev/null | gunzip 2>/dev/null | cpio -uidm --quiet 2>/dev/null
+#        # This pipeline always returns true. Would be super nice to check for return value of
+#        # wget without disrupting the pipeline! Please... somoene... fixme!
+#        wget -O - "http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR" | gunzip 2>/dev/null | cpio -uidm --quiet 2>/dev/null
+
+        gunzip < /tmp/vnfs-download | cpio -uidm --quiet &
+
+        wget -O /tmp/vnfs-download http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR
+        WGETEXIT=$?
+
+        wait
+
+        rm -f /tmp/vnfs-download
 
         # This is a cheesy way to see if the above wget worked... Ewww, I know. Please FIXME!
         if [ -f "$NEWROOT/sbin/init" ]; then
@@ -27,5 +38,6 @@ while true; do
     echo -n "." 1>&2
     throttled_sleep
 done
+echo
 
 exit 1
