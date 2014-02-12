@@ -16,8 +16,12 @@ else
     exit
 fi
 
-if [ -n "$RANDOM" -a ! -f "/init" ]; then
-    SLEEPTIME=`expr $RANDOM % 30`
+WWGETFILES_INTERVAL=${WWGETFILES_INTERVAL:-180}
+
+if [ -n "$SLEEPTIME" ]; then
+    sleep $SLEEPTIME
+elif [ -n "$RANDOM" -a ! -f "/init" ]; then
+    SLEEPTIME=`expr $RANDOM % $WWGETFILES_INTERVAL`
     sleep $SLEEPTIME
 fi
 
@@ -26,7 +30,9 @@ if [ ! -d $NEWROOT/tmp/ ]; then
     mkdir $NEWROOT/tmp/
 fi
 
-if [ -f "$TIMESTAMP_FILE" ]; then
+if [ "$1" = "-F" ]; then
+    rm -f "$TIMESTAMP_FILE"
+elif [ -f "$TIMESTAMP_FILE" ]; then
     if [ -z "$NEWROOT" ]; then
         TIMESTAMP=`cat $TIMESTAMP_FILE`
     fi
