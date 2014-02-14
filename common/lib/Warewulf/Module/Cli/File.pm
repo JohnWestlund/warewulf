@@ -277,13 +277,15 @@ exec()
         }
 
     } elsif ($command eq "import") {
-#        foreach my $o (@opt_origin) {
-#            if (!scalar(grep { $_ eq $o} @ARGV)) {
-#                push(@ARGV, @opt_origin);
-#            }
-#        }
+        if (!scalar(@ARGV) && scalar(@opt_origin)) {
+            push(@ARGV, @opt_origin);
+        }
+        if (!scalar(@ARGV)) {
+            &eprint("No files found to import.  Nothing to do!\n");
+            return undef;
+        }
         foreach my $path (@ARGV) {
-            if ($path =~ /^([a-zA-Z0-9\-_\.\/]+)$/) {
+            if ($path =~ /^([^\'\"\`]+)$/) {
                 my @statinfo;
 
                 $path = $1;
@@ -302,7 +304,7 @@ exec()
                         $obj = $objSet->get_object(0);
                         $oname = $obj->name() || "UNDEF";
                         if (! $term->yesno("Overwrite existing file object \"$oname\" in the data store?")) {
-                            &nprint("Not exporting \"$name\"\n");
+                            &nprint("Not importing \"$name\"\n");
                             return undef;
                         }
                     } else {
@@ -320,7 +322,7 @@ exec()
                     $obj->origin((scalar(@opt_origin) ? (split(",", join(",", @opt_origin))) : ($path)));
                     $db->persist($obj);
                 } else {
-                    &eprint("\"$path\" not found -- $!\n");
+                    &eprintf("\"$path\" not found -- %s\n", "$!" || "not a regular file");
                 }
             } else {
                 &eprint("Filename \"$path\" contains illegal characters; ignoring.\n");
