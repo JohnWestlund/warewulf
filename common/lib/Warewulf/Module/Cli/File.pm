@@ -76,7 +76,7 @@ help()
     $h .= "OPTIONS:\n";
     $h .= "     -l, --lookup       Identify files by specified property (default: \"name\")\n";
     $h .= "     -p, --program      What external program should be used (edit/show)\n";
-    $h .= "     -d, --path         Set destination (i.e., output) path for this file\n";
+    $h .= "     -D, --path         Set destination (i.e., output) path for this file\n";
     $h .= "     -o, --origin       Set origin (i.e., input) path for this file\n";
     $h .= "     -m, --mode         Set permission attribute for this file\n";
     $h .= "     -u, --uid          Set the UID for this file\n";
@@ -193,7 +193,7 @@ exec()
         'o|origin=s'    => \@opt_origin,
         'source=s'      => \@opt_origin,
         'path=s'        => \$opt_path,
-        'd|dest=s'      => \$opt_path,
+        'D|dest=s'      => \$opt_path,
         'm|mode=s'      => \$opt_mode,
         'u|uid=s'       => \$opt_uid,
         'g|gid=s'       => \$opt_gid,
