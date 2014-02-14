@@ -403,6 +403,32 @@ prop()
     return $self->get($key);
 }
 
+=item prop_boolean(I<key>, I<default>[ I<value> ])
+
+Wrapper for C<prop()> to simplify and standardize the creation and
+implementation of boolean (true/false) properties for objects.  True
+values include C<1>, C<true>, C<yes>, and C<on>.  False values are
+C<0>, C<false>, C<no>, and C<off>.  The actual value of the member
+property will be either C<1> or C<0> when queried.
+
+=cut
+
+sub
+prop_boolean()
+{
+    my $ret = $_[0]->prop($_[1], sub {
+                                     if ($_[0] =~ /^(1|true|on|yes)$/i) {
+                                         return 1;
+                                     } elsif ($_[0] =~ /^(0|false|off|no)$/i) {
+                                         return 0;
+                                     } else {
+                                         &eprint("Invalid boolean value:  \"$_[0]\"\n");
+                                         return undef;
+                                     }
+                                 }, @_[3..$#_]);
+    return ((defined($ret)) ? ($ret) : ($_[2]));
+}
+
 =item get_hash()
 
 Return a hash (or hashref) containing all member variables and their
@@ -487,6 +513,7 @@ clone()
     my ($self, @set_args) = @_;
     my $newobj;
 
+    # Uses Perl's deep-clone function (Storable::dclone()).
     $newobj = dclone($self);
     if (scalar(@set_args)) {
         $newobj->set(@set_args);
