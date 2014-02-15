@@ -1,10 +1,11 @@
-%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || echo 0000)}}
+%{!?_rel:%{expand:%%global _rel r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || git svn find-rev `git show -s --pretty=format:%h` || echo 0000)}}
 %define debug_package %{nil}
 
 Name: warewulf-provision
 Summary: Warewulf - Provisioning Module
 Version: @PACKAGE_VERSION@
-Release: %{_rel}
+Release: 1.%{_rel}
+#Release: 1.%{?_dist}
 License: US Dept. of Energy (BSD-like)
 Group: System Environment/Clustering
 Source: %{name}-%{version}.tar.gz
