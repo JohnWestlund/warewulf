@@ -7,7 +7,7 @@ top_srcdir = @top_srcdir@
 BUSYBOX_VERSION = 1.19.3
 BUSYBOX_SOURCE = $(top_srcdir)/3rd_party/GPL/busybox-$(BUSYBOX_VERSION).tar.bz2
 BUSYBOX_DIR = busybox-$(BUSYBOX_VERSION)
-BUSYBOX_PATCHES = $(top_srcdir)/3rd_party/GPL/busybox-1.19.3-udhcpc_ipoib.patch
+BUSYBOX_PATCHES = $(top_srcdir)/3rd_party/GPL/busybox-1.19.3-udhcpc_ipoib.patch $(top_srcdir)/3rd_party/GPL/busybox-1.19.3-wget_progress_defaults_to_stdout.patch
 
 E2FSPROGS_VERSION = 1.42
 E2FSPROGS_SOURCE = $(top_srcdir)/3rd_party/GPL/e2fsprogs-$(E2FSPROGS_VERSION).tar.gz

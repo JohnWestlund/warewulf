@@ -1,0 +1,88 @@
+diff -Nurp busybox-1.19.3/libbb/progress.c busybox-1.19.3.mej/libbb/progress.c
+--- busybox-1.19.3/libbb/progress.c	2011-09-05 19:35:17.000000000 -0700
++++ busybox-1.19.3.mej/libbb/progress.c	2014-02-14 12:24:06.779220728 -0800
+@@ -82,7 +82,11 @@ void FAST_FUNC bb_progress_update(bb_pro
+ 	unsigned since_last_update, elapsed;
+ 	int barlength;
+ 	int kiloscale;
++    FILE *fp = stdout;
+ 
++    if (!isatty(fileno(stdout))) {
++        fp = stderr;
++    }
+ 	//transferred = 1234; /* use for stall detection testing */
+ 	//totalsize = 0; /* use for unknown size download testing */
+ 
+@@ -138,15 +142,15 @@ void FAST_FUNC bb_progress_update(bb_pro
+ 	}
+ 
+ 	if (ENABLE_UNICODE_SUPPORT)
+-		fprintf(stderr, "\r%s", p->curfile);
++		fprintf(fp, "\r%s", p->curfile);
+ 	else
+-		fprintf(stderr, "\r%-20.20s", p->curfile);
++		fprintf(fp, "\r%-20.20s", p->curfile);
+ 
+ 	beg_and_transferred = beg_size + transferred;
+ 
+ 	if (totalsize != 0) {
+ 		unsigned ratio = 100 * beg_and_transferred / totalsize;
+-		fprintf(stderr, "%4u%%", ratio);
++		fprintf(fp, "%4u%%", ratio);
+ 
+ 		barlength = get_tty2_width() - 49;
+ 		if (barlength > 0) {
+@@ -156,7 +160,7 @@ void FAST_FUNC bb_progress_update(bb_pro
+ 			memset(buf, ' ', barlength);
+ 			buf[barlength] = '\0';
+ 			memset(buf, '*', stars);
+-			fprintf(stderr, " |%s|", buf);
++			fprintf(fp, " |%s|", buf);
+ 		}
+ 	}
+ 
+@@ -165,7 +169,7 @@ void FAST_FUNC bb_progress_update(bb_pro
+ 		kiloscale++;
+ 	}
+ 	/* see http://en.wikipedia.org/wiki/Tera */
+-	fprintf(stderr, "%6u%c", (unsigned)beg_and_transferred, " kMGTPEZY"[kiloscale]);
++	fprintf(fp, "%6u%c", (unsigned)beg_and_transferred, " kMGTPEZY"[kiloscale]);
+ #define beg_and_transferred dont_use_beg_and_transferred_below()
+ 
+ 	since_last_update = elapsed - p->last_change_sec;
+@@ -183,9 +187,9 @@ void FAST_FUNC bb_progress_update(bb_pro
+ 	elapsed -= p->start_sec; /* now it's "elapsed since start" */
+ 
+ 	if (since_last_update >= STALLTIME) {
+-		fprintf(stderr, "  - stalled -");
++		fprintf(fp, "  - stalled -");
+ 	} else if (!totalsize || !transferred || (int)elapsed < 0) {
+-		fprintf(stderr, " --:--:-- ETA");
++		fprintf(fp, " --:--:-- ETA");
+ 	} else {
+ 		unsigned eta, secs, hours;
+ 
+@@ -202,6 +206,6 @@ void FAST_FUNC bb_progress_update(bb_pro
+ 			eta = 1000*60*60 - 1;
+ 		secs = eta % 3600;
+ 		hours = eta / 3600;
+-		fprintf(stderr, "%3u:%02u:%02u ETA", hours, secs / 60, secs % 60);
++		fprintf(fp, "%3u:%02u:%02u ETA", hours, secs / 60, secs % 60);
+ 	}
+ }
+diff -Nurp busybox-1.19.3/networking/wget.c busybox-1.19.3.mej/networking/wget.c
+--- busybox-1.19.3/networking/wget.c	2011-09-05 19:35:17.000000000 -0700
++++ busybox-1.19.3.mej/networking/wget.c	2014-02-14 12:26:58.726522429 -0800
+@@ -125,7 +125,11 @@ static void progress_meter(int flag)
+ 
+ 	if (flag == PROGRESS_END) {
+ 		bb_progress_free(&G.pmt);
+-		bb_putchar_stderr('\n');
++        if (isatty(STDOUT_FILENO)) {
++            write(STDOUT_FILENO, "\n", 1);
++        } else {
++            bb_putchar_stderr('\n');
++        }
+ 		G.transferred = 0;
+ 	}
+ }
