@@ -174,7 +174,7 @@ foreach my $o ($objSet->get_list()) {
         $excludes_opts .= " --exclude='$exclude'";
     }
 
-    $cmd = "cd $chroot; rsync -avH $excludes_opts $skiplist_excludes_opts . $name:/ > $logdir/$name.log 2>&1 && echo done || echo fail";
+    $cmd = "cd $chroot; rsync -Havx $excludes_opts $skiplist_excludes_opts . $name:/ > $logdir/$name.log 2>&1 && echo done || echo fail";
 
     if ($opt_show) {
         print "$cmd\n";
