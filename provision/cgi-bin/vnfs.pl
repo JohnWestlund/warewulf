@@ -157,19 +157,19 @@ if ($q->param('hwaddr')) {
                     }
 
                 } else {
-                    &eprint("VNFS request for an unset VNFS\n");
+                    &eprint("VNFS request for an unknown VNFS (VNFSID: $vnfsid)\n");
                     $q->print("Content-Type: application/octet-stream\r\n");
                     $q->print("Status: 404\r\n");
                     $q->print("\r\n");
                 }
             } else {
-                &eprint($node->get("name") ." has no VNFS set\n");
+                &eprint("$node_name has no VNFS set\n");
                 $q->print("Content-Type: application/octet-stream\r\n");
                 $q->print("Status: 404\r\n");
                 $q->print("\r\n");
             }
         } else {
-            &eprint("VNFS request for an unknown node\n");
+            &eprint("VNFS request for an unknown node (HWADDR: $hwaddr)\n");
             $q->print("Content-Type: application/octet-stream\r\n");
             $q->print("Status: 404\r\n");
             $q->print("\r\n");
