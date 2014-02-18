@@ -153,6 +153,20 @@ ktime($$)
     return $self->prop("ktime", qr/^([0-9]+)$/, @_);
 }
 
+=item pad()
+
+How many seconds to wait before spawning the next command.
+
+=cut
+
+sub
+pad($$)
+{
+    my $self = shift;
+
+    return $self->prop("pad", qr/^([0-9]+)$/, @_);
+}
+
 
 =item pcount()
 
@@ -272,11 +286,16 @@ forkobj($)
     my ($self, $obj) = @_;
     my $select = $self->get("select");
     my $command = $obj->get("command");
+    my $pad = $self->pad();
     my $fh;
     my $pid;
 
 #TODO: At some point capture STDERR seperately and print properly
     &dprint("Spawning command: $command\n");
+    if ($pad) {
+        &dprint("Padding/sleeping by: $pad\n");
+        sleep $pad;
+    }
     $pid = open($fh, '-|');  # Fork off child process securely.
     if (!defined($pid)) {
         # Disaster
