@@ -164,7 +164,7 @@ pad($$)
 {
     my $self = shift;
 
-    return $self->prop("pad", qr/^([0-9]+)$/, @_);
+    return $self->prop("pad", qr/^([0-9]+)$/, @_) || 0;
 }
 
 
@@ -292,10 +292,6 @@ forkobj($)
 
 #TODO: At some point capture STDERR seperately and print properly
     &dprint("Spawning command: $command\n");
-    if ($pad) {
-        &dprint("Padding/sleeping by: $pad\n");
-        sleep $pad;
-    }
     $pid = open($fh, '-|');  # Fork off child process securely.
     if (!defined($pid)) {
         # Disaster
@@ -312,8 +308,13 @@ forkobj($)
         $obj->set("starttime", time());
         $obj->set("pid", $pid);
         $self->pcount("+1");
+        $self->set("lasttime", time());
         return 1;
     } else {
+        if ($pad) {
+            &dprint("Padding/sleeping by: $pad\n");
+            sleep $pad;
+        }
         # Child
         # Securely pass $command intact to shell
         close(STDERR);
