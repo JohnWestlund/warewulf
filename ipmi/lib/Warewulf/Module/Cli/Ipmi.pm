@@ -114,6 +114,9 @@ help()
     $h .= "                         randomly generated)\n";
     $h .= "         --noautoconfig  Remove the autoconfig flag so the node doesn't get configured\n";
     $h .= "                         automatically\n";
+    $h .= "     -p, --padding       Pad the speed of the IPMI commands (very useful for throttling\n";
+    $h .= "                         boots)\n";
+    $h .= "     -f, --fanout        Change the fanout for parallel IPMI commands (default: 8)\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "\n";
@@ -180,6 +183,8 @@ exec()
     my $db = $self->{"DB"};
     my $term = Warewulf::Term->new();
     my $opt_lookup = "name";
+    my $opt_fanout = 8;
+    my $opt_padding;
     my $opt_ipaddr;
     my $opt_netmask;
     my $opt_uid;
@@ -210,6 +215,8 @@ exec()
         'autoconfig'    => \$opt_autoconfig,
         'noautoconfig'  => \$opt_noautoconfig,
         'l|lookup=s'    => \$opt_lookup,
+        'p|padding=s'   => \$opt_padding,
+        'f|fanout=s'    => \$opt_fanout,
     );
 
     $command = shift(@ARGV);
@@ -380,7 +387,9 @@ exec()
     } elsif ($command eq "poweron") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("poweron");
@@ -392,7 +401,9 @@ exec()
     } elsif ($command eq "poweroff") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("poweroff");
@@ -404,7 +415,9 @@ exec()
     } elsif ($command eq "powercycle") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("powercycle");
@@ -416,7 +429,9 @@ exec()
     } elsif ($command eq "powerstatus") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("powerstatus");
@@ -428,7 +443,9 @@ exec()
     } elsif ($command eq "ident") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("ident");
@@ -440,7 +457,9 @@ exec()
     } elsif ($command eq "noident") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("noident");
@@ -452,7 +471,9 @@ exec()
     } elsif ($command eq "printsel") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("printsel");
@@ -464,7 +485,9 @@ exec()
     } elsif ($command eq "clearsel") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("clearsel");
@@ -476,7 +499,9 @@ exec()
     } elsif ($command eq "printsdr") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("printsdr");
@@ -488,7 +513,9 @@ exec()
     } elsif ($command eq "forcepxe") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("forcepxe");
@@ -500,7 +527,9 @@ exec()
     } elsif ($command eq "forcedisk") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("forcedisk");
@@ -512,7 +541,9 @@ exec()
     } elsif ($command eq "forcecdrom") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("forcecdrom");
@@ -524,7 +555,9 @@ exec()
     } elsif ($command eq "forcebios") {
 
         my $parallel = Warewulf::ParallelCmd->new();
-        $parallel->ktime(30);
+        $parallel->ktime(15);
+        $parallel->pad($opt_padding);
+        $parallel->fanout($opt_fanout);
         foreach my $o ($objSet->get_list()) {
             my $name = $o->name();
             my $cmd = $o->ipmi_command("forcebios");
