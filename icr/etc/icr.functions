@@ -99,25 +99,25 @@ base_chroot(){
     # Add an icr suffix 
     CHROOT_NAME="${DISTRO}_icr"
 
-    if [ -n "$DISTRO" ]; then
-        wwprint " + Checking on an existing Warewulf ICR VNFS image";
+    wwprint "Creating a template chroot at /var/chroots/$CHROOT_NAME:\n";
+    wwprint "note: These next steps may take a while...\n" yellow;
+    mkdir -p /var/chroots;
+    if wwrun wwmkchroot $DISTRO /var/chroots/$CHROOT_NAME; then
+        # Define the path to the created chroot
+        export CHROOTDIR="/var/chroots/$CHROOT_NAME";
 
-        # Check if the ICR VNFS already exists in Warewulf 
-        wwsh vnfs list 2>/dev/null| grep $CHROOT_NAME &>/dev/null
-        if [ "$?" -ne 0 ];then
-            reply_no;
-            wwprint "note: These next steps may take a while...\n" yellow
-            wwprint "Creating a template chroot at /var/chroots/$CHROOT_NAME:\n"
-            mkdir -p /var/chroots
-            if wwrun wwmkchroot $DISTRO /var/chroots/$CHROOT_NAME; then
-                #define the path to the created chroot
-                export CHROOTDIR="/var/chroots/$CHROOT_NAME";
-            fi
-        else
-            # If the vnfs already exists assume the chroot also exits
-            export CHROOTDIR="/var/chroots/$CHROOT_NAME";
-            reply_ok;
-        fi
+        # Save the path to the chroot for wwinit modules running after this one 
+        echo "export CHROOTDIR="/var/chroots/$CHROOT_NAME"" >  ${WWTMPDIR}/CHROOTDIR; 
+    else
+       exit 255;
+    fi
+
+    # If /sbin/init exists assume the CHROOTDIR was created correctly
+    if [ ! -f $CHROOTDIR/sbin/init ]; then
+        wwprint " ! ERROR: ${CHROOTDIR}/root/yum-ww.conf not found\n" error;
+        wwprint "         chroot may be corrupt" error;
+        reply_error;
+        exit 255;
     fi
 }
 
@@ -150,7 +150,7 @@ icr_configs() {
     . $ICR_OVERLAY &>/dev/null;
 
 
-    # if no ICR version defined default to 1.2
+    # if no ICR version defined default to 1.3
     if [ -z "$icr_version" ]; then
 	    icr_version="1.3"
     fi	
@@ -240,6 +240,7 @@ memlock_config(){
 
     if [ ! -f $limits_file ]; then
         wwprint " ! ERROR: limits.conf file not present" error;
+        reply_error;
         return 255
     fi
 
@@ -335,6 +336,7 @@ inst_icrt() {
     # Full path to the EULA
     icrt_EULA="${icrt_dir}/Master_EULA_for_Intel_Tools_Runtimes_Kit.txt";
 
+    wwprint " + Intel(R) Cluster Runtimes EULA:\n"
     # Show the Eula and wait for user to accept it
     if  ! show_eula ${icrt_EULA} ; then
         wwprint " ! Didn't accept the Intel(R) Cluster Runtimes EULA" error;
@@ -438,6 +440,7 @@ inst_clck(){
     # Full path to the EULA
     clck_EULA="${clck_dir}/license.txt";
 
+    wwprint " + Intel(R) Cluster Checker EULA:\n"
     # Show the Eula and wait for user to accept it
     if ! show_eula ${clck_EULA} ; then
         wwprint " ! Didn't accept the Intel(R) Cluster Checker EULA" error;
@@ -515,7 +518,8 @@ show_eula() {
   return $RETVAL;
 }
 
-# Extract and install the Intel(R) LAN drivers Package. 
+# Extract and install the Intel(R) LAN drivers Package.
+# Used by 71-intel_lan.init
 inst_iLAN_drivers(){
 
     pkg_file=${ILAND_FILE:-$1};
@@ -618,6 +622,14 @@ inst_iLAN_drivers(){
     wwprint " + Configuring throttling reate";
     drivers=$(ls $drivers_source_dir|grep tar.gz| cut -f1 -d '-');
     RETVAL=0;
+    chroot_modprobe=1;
+
+    # Check if the chroot is available
+    if [[ -z "$CHROOTDIR" || ! -d "$CHROOTDIR"  || 
+        ! -f "${CHROOTDIR}/root/yum-ww.conf" ]]; then
+        chroot_modprobe=0;
+    fi
+
     for driver in $drivers;do
         if ! /bin/grep $driver /etc/modprobe.d/intel_nic.conf &>/dev/null ;then
             echo "options $driver InterruptThrottleRate=0,3" >> /etc/modprobe.d/intel_nic.conf;
@@ -627,12 +639,14 @@ inst_iLAN_drivers(){
             # If at least one driver was not configured, reload
             RELOAD=1;
         fi
-        if ! /bin/grep $driver ${CHROOTDIR}/etc/modprobe.d/intel_nic.conf &>/dev/null ;then
-            echo "options $driver InterruptThrottleRate=0,3" >> ${CHROOTDIR}/etc/modprobe.d/intel_nic.conf;
-            if [ "$?" -ne 0 ]; then
-                RETVAL=1;
+        if [ "$chroot_modprobe" -eq 1 ];then
+            if ! /bin/grep $driver ${CHROOTDIR}/etc/modprobe.d/intel_nic.conf &>/dev/null ;then
+                echo "options $driver InterruptThrottleRate=0,3" >> ${CHROOTDIR}/etc/modprobe.d/intel_nic.conf;
+                if [ "$?" -ne 0 ]; then
+                    RETVAL=1;
+                fi
             fi
-        fi
+       fi
     done
 
 	if [ " $RETVAL" -ne 0 ]; then
@@ -640,8 +654,14 @@ inst_iLAN_drivers(){
 	     /bin/rm -rf $tmpdir;
 	     reply_error;
 	     return 255;
+    else
+        reply_ok;
     fi
-    reply_ok;
+    # Let the user know throttling rate was not configured in the chroot
+    if [ "$chroot_modprobe" -eq 0 ];then
+        wwprint " WARNING: skipped InterruptThrottleRate configuration on chroot\n" warn;
+    fi
+
 
     # Restart the network service to load the just installed Intel(R) LAN drivers
     if [ $RELOAD -ne 0 ]; then
@@ -668,7 +688,14 @@ wwfirstboot(){
 
     # Some sanity checking
     if [[ -z "$CHROOTDIR" || ! -d "$CHROOTDIR" ]]; then
-        wwprint " ! ERROR: Invalid CHROOT path: ${CHROOTDIR}" error;
+        wwprint " ! ERROR: Invalid CHROOT path" error;
+        reply_error;
+        return 255;
+    fi
+
+    if [ ! -f "${CHROOTDIR}/sbin/init" ]; then
+        wwprint " ! ERROR: ${CHROOTDIR}/root/yum-ww.conf not found\n" error;
+        wwprint "         chroot may be corrupt" error;
         reply_error;
         return 255;
     fi
@@ -717,38 +744,5 @@ wwfirstboot(){
     return 0;
 }
 
-
-# Create an ICR vnfs for the chroot created and a bootstrap 
-# with the updated drivers
-vnfs_boot_build(){
-
-    # Some sanity checking
-    if [[ -z "$CHROOTDIR" || ! -d "$CHROOTDIR" ]]; then
-        wwprint " ! ERROR: Invalid CHROOT path: ${CHROOTDIR}" error;
-        reply_error;
-        return 255;
-    fi
-    
-    wwprint "Building the VNFS image and importing into Warewulf:\n"
-    if wwrun wwvnfs -y --hybridpath=${CHROOTDIR} --chroot ${CHROOTDIR}; then
-        if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
-            sed -i -e "s/^.*vnfs[ ]*=.*/vnfs = $CHROOT_NAME/" /etc/warewulf/defaults/provision.conf;
-        fi
-    else 
-        return 255;
-    fi
-
-    KVERSION=`uname -r`
-    wwprint "Creating bootstrap for $KVERSION:\n"
-    if wwrun wwbootstrap $KVERSION; then
-        if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
-            sed -i -e "s/^.*bootstrap[ ]*=.*/bootstrap = $KVERSION/" /etc/warewulf/defaults/provision.conf
-        fi
-    else
-        return 255
-    fi
-    
-    return 0;
-}
 
 # vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

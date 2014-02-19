@@ -28,8 +28,9 @@ elif [ -x "/etc/rc.d/init.d/nfsd" ]; then
 elif [ -x "/etc/init.d/nfs-kernel-server" ]; then
     SERVICE_NAME="nfs-kernel-server"
 else
-    wwprint "Is NFS installed and loaded properly?" error
-    exit 255
+    wwprint " ! ERROR: NFS service not detected" error;
+    reply_error;
+    exit 255;
 fi
 
 

@@ -24,6 +24,10 @@ if [ -x "/etc/rc.d/init.d/ntpd" ]; then
     SERVICE_NAME="ntpd"
 elif [ -x "/etc/init.d/ntp" ]; then
     SERVICE_NAME="ntp"
+else
+    wwprint " ! ERROR: NTP client not found" error;
+    reply_error;
+    exit 255;
 fi
 
 

@@ -87,6 +87,15 @@ if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/ofed.functions" ]; then
 fi
 . $WAREWULF_SYSCONFDIR/warewulf/wwinit/ofed.functions;
 
+# Check if a previous module created a chroot and defined its path.
+# If so, use it
+if [ -f  "${WWTMPDIR}/CHROOTDIR" ]; then
+   . ${WWTMPDIR}/CHROOTDIR; 
+fi
+
+# In case CHROOTDIR was passed at execution time
+CHROOTDIR=${CHROOTDIR:-}
+
 # Make sure we're the root user
 wwreqroot
 
@@ -95,7 +104,6 @@ RETVAL=0;
 
 # Variables
 OFEDPKG=${OFEDPKG:-}
-CHROOTDIR=${CHROOTDIR:-}
 ofedinfo="/usr/bin/ofed_info";
 installed_in_master=0;
 skip_master=0;

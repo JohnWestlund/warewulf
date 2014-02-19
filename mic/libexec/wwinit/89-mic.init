@@ -38,7 +38,7 @@
 ## 89-mic.init
 ## Basic configuration files to get MIC working in a cluster setup. 
 
-#INIT: all
+#INIT: ALL
 #INIT: MIC
 
 # Some sanity checking
@@ -54,16 +54,26 @@ if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/mic.functions" ]; then
 fi
 . ${WAREWULF_SYSCONFDIR}/warewulf/wwinit/mic.functions;
 
+# Check if a previous module created a chroot and defined its path.
+# If so, use it
+if [ -f  "${WWTMPDIR}/CHROOTDIR" ]; then
+   . ${WWTMPDIR}/CHROOTDIR; 
+fi
+
+# In case CHROOTDIR was passed at execution time
+CHROOTDIR=${CHROOTDIR:-}
+
 if [[ ! -z "$CHROOTDIR" && ! -d "$CHROOTDIR" ]]; then
     wwprint " ! ERROR: Invalid CHROOT path" error;
     reply_error;
     exit 255;
 fi
 
-if [[ ! -z "$CHROOTDIR" && ! -f "${CHROOTDIR}/root/yum-ww.conf" ]]; then
-    wwprint " ! ERROR: ${CHROOTDIR}/root/yum-ww.conf not found" error;
+if [ ! -f "${CHROOTDIR}/sbin/init" ]; then
+    wwprint " ! ERROR: ${CHROOTDIR}/root/yum-ww.conf not found\n" error;
+    wwprint "         chroot may be corrupt" error;
     reply_error;
-    exit 255;
+    return 255;
 fi
 
 # Figure out if we even have an 'InfiniBand' device showing up.
