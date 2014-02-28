@@ -44,7 +44,7 @@ foreach $node ( sort keys %nodestats ) {
       $nodename = $node;
    }
    if ( $cluster ) {
-      if ( $nodestats{$node}{NODESTATUS} eq 'READY' ) {
+      if ( $nodestats{$node}{NODESTATUS} =~ /^READY\b/i ) {
          $cluster{$cluster}{NODES_READY} ++;
          $cluster{$cluster}{CPUUTIL} += $nodestats{$node}{CPUUTIL};
          $cluster{$cluster}{LOADAVG} += $nodestats{$node}{LOADAVG};
@@ -81,11 +81,11 @@ foreach $node ( sort keys %nodestats ) {
    $nodecount++;
    $cluster{$cluster}{NODE_DISPLAY} .= "<a href='/warewulf-legacy/$nodestats{$node}{CLUSTERNAME}/$nodename'>";
    next if ( $cluster_view and $cluster_view ne $nodestats{$node}{CLUSTERNAME} );
-   if ( $nodestats{$node}{NODESTATUS} eq 'DOWN' ) {
+   if ( $nodestats{$node}{NODESTATUS} =~ /^DOWN\b/i ) {
       $cluster{$cluster}{NODE_DISPLAY} .= "<img border=0 src=/warewulf-legacy/images/node-dead.png alt='' title='$node status: $nodestats{$node}{NODESTATUS}'>";
       $nodes_down++;
-   } elsif ( $nodestats{$node}{NODESTATUS} ne 'READY' ) {
-      $cluster{$cluster}{NODE_DISPLAY} .= "<img border=0 src=/warewulf-legacy/images/node-unknown.png alt='' title='$node status: UNKNOWN'>";
+   } elsif ( $nodestats{$node}{NODESTATUS} !~ /^READY\b/i ) {
+      $cluster{$cluster}{NODE_DISPLAY} .= "<img border=0 src=/warewulf-legacy/images/node-unknown.png alt='' title='$node status: $nodestats{$node}{NODESTATUS}'>";
       $nodes_unknown++;
    } else {
       if ( $nodestats{$node}{LOADAVG} > $nodestats{$node}{CPUCOUNT} * 2 ) {

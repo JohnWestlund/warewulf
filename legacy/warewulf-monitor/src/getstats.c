@@ -594,13 +594,9 @@ char * get_node_status(void) {
 
    if((fd = fopen(STATUSFILE, "r")) != NULL) {
 
-      fgets(buffer, BUFFERSIZE-1, fd);
+      fgets(buffer, BUFFERSIZE, fd);
       fclose(fd);
-
-      while (!isspace(buffer[tmp])) tmp++;
-      buffer[tmp] = '\0';
-
-      snprintf(ret, strlen(buffer)+13, "%s", buffer);
+      snprintf(ret, BUFFERSIZE, "%s", buffer);
 
    }
 
