@@ -144,7 +144,7 @@ foreach ( sort @filtered ) {
    if ( $idle and ( $nodestatus{$_}{USERPROC} > 0 or $nodestatus{$_}{CPUUTIL} >= 5 ) ) {
      next;
    }
-   if ( $nodestatus{$_}{LASTCONTACT} >= 300 or ( $nodestatus{$_}{NODESTATUS} and $nodestatus{$_}{NODESTATUS} ne "READY" )) {
+   if ( $nodestatus{$_}{LASTCONTACT} >= 300 or ( $nodestatus{$_}{NODESTATUS} and ! $nodestatus{$_}{NODESTATUS} =~ /^READY/ )) {
       push(@nodes_down, $_);
    } else {
       push(@nodes_ready, $_);
