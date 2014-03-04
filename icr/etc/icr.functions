@@ -226,8 +226,47 @@ EOF
     wwprint " + Configuring memlock to unlimited in the chroot" ;
     wwaction memlock_config ${CHROOTDIR};
 
+    # Disable Interrupt throttling on the provisioning interface 
+    wwprint " + Disabling Interrupt throttling on the provisioning interface" ;
+    wwaction Interrupt_throttling ;
+    wwprint " + Disabling Interrupt throttling in the chroot" ;
+    wwaction Interrupt_throttling ${CHROOTDIR};
+
     return 0;
 }
+
+# Disable Interrupt throttling on the provisioning network interface
+function Interrupt_throttling(){
+    local NETDEV=$(grep "^network device =" $WAREWULF_SYSCONFDIR/warewulf/provision.conf | cut -d = -f 2);
+    local chroot_dir='';
+
+    # Sanity check to verify $1 is a chroot path
+    if [[ ! -z $1 && -d $1 && 
+       -f "$1/root/yum-ww.conf" ]]; then
+        chroot_dir=$1;
+    fi
+    rc_local="$chroot_dir/etc/rc.d/rc.local"; 
+    
+    if [ ! -f $rc_local ]; then
+        wwprint " ! ERROR: $rc_local file not present" error;
+        reply_error;
+        return 255
+    fi
+
+    # Set rc.local to disable Interrupt throttling on every boot
+    if ! grep 'wwinit ICR' $rc_local &>/dev/null; then
+        echo "# Added by wwinit ICR: turn off Interrupt handling on $NETDEV" >> ${rc_local};
+        echo "ethtool -C $NETDEV rx-usecs 0 &>/dev/null" >>  ${rc_local};
+    fi
+
+    # Disable Interrupt throttling on the master node current session
+    if [[ "$(ethtool -c $NETDEV |grep rx-usecs: | awk {'print $2'})" -ne "0" ]];then
+        ethtool -C $NETDEV rx-usecs 0 &>/dev/null
+    fi
+
+    return 0;
+}
+
 
 # Set memlock to unlimited, some HPC applications may fail otherwise.
 memlock_config(){
@@ -579,15 +618,30 @@ inst_iLAN_drivers(){
     # Build and install the Intel(R) LAN drivers drivers
     mkdir -p /root/rpmbuild/{SOURCES,SPECS};
 
-    wwprint " note: These next steps may take a while...\n" yellow;
-    wwprint " + Building and installing Intel(R) LAN drivers";
     drivers_source_dir="${tmpdir}/drivers/";
     drivers_rpm_dir="/root/rpmbuild/RPMS/x86_64/";
 
     # Ensure all the files are owned by root
     chown -R root.root ${drivers_source_dir}/*
 
-    for file in $(find $drivers_source_dir -name "*.tar.gz");do
+    # Check if the user defined a specific driver
+    if [[ -n "$INTEL_LAN_DRIVER" ]]; then
+        drivers_list=$(find $drivers_source_dir -name "*.tar.gz" |grep "$INTEL_LAN_DRIVER-" );    
+        if [[ -n "$drivers_list" ]]; then
+            wwprint " + Only installing $INTEL_LAN_DRIVER \n";
+        else
+            wwprint " ! ERROR: Invalid driver name $INTEL_LAN_DRIVER" error; 
+            /bin/rm -rf $tmpdir;
+            reply_error;
+            return 255;
+        fi
+    else
+        drivers_list=$(find $drivers_source_dir -name "*.tar.gz");    
+    fi
+
+    wwprint " note: These next steps may take a while...\n" yellow;
+    wwprint " + Building and installing Intel(R) LAN drivers";
+    for file in $drivers_list;do
         pkg_name=$(basename $file .tar.gz)
 
         # Avoid building and installing if they are already installed
@@ -620,7 +674,14 @@ inst_iLAN_drivers(){
 
     # Configure the throttling rate parameter the drivers.
     wwprint " + Configuring throttling reate";
-    drivers=$(ls $drivers_source_dir|grep tar.gz| cut -f1 -d '-');
+
+    # If a specific driver was selected, only set throttling rate for it
+    if [[ -n "$INTEL_LAN_DRIVER" ]];then
+        drivers=$(ls $drivers_source_dir|grep tar.gz|grep "$INTEL_LAN_DRIVER-"| cut -f1 -d '-');
+    else
+        drivers=$(ls $drivers_source_dir|grep tar.gz| cut -f1 -d '-');
+    fi
+
     RETVAL=0;
     chroot_modprobe=1;
 
