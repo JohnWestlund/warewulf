@@ -86,6 +86,7 @@ help()
     $h .= "         --groupdel      Remove node from specified group(s)\n";
     $h .= "     -D, --netdev        Specify network device to add or modify (defaults: $netdev)\n";
     $h .= "         --netdel        Remove specified netdev from node\n";
+    $h .= "         --netrename     Rename a given network interface\n";
     $h .= "     -I, --ipaddr        Set IP address of given netdev\n";
     $h .= "     -M, --netmask       Set subnet mask of given netdev\n";
     $h .= "     -N, --network       Set network address of netdev\n";
@@ -168,8 +169,9 @@ exec()
     my $db = $self->{"DB"};
     my $term = Warewulf::Term->new();
     my $config_defaults = Warewulf::Config->new("defaults/node.conf");
-    my $opt_netdev = $config_defaults->get("netdev");
     my $opt_lookup = "name";
+    my $opt_netdev = $config_defaults->get("netdev");
+    my $opt_netrename;
     my $opt_hwaddr;
     my $opt_hwprefix;
     my $opt_ipaddr;
@@ -208,6 +210,7 @@ exec()
         'groupdel=s'    => \@opt_groupdel,
         'D|netdev=s'    => \$opt_netdev,
         'netdel'        => \$opt_devremove,
+        'netrename=s'   => \$opt_netrename,
         'H|hwaddr=s'    => \$opt_hwaddr,
         'p|hwprefix=s'  => \$opt_hwprefix,
         'I|ipaddr=s'    => \$opt_ipaddr,
@@ -353,6 +356,20 @@ exec()
                 }
             }
             push(@changes, sprintf("%8s: %-20s\n", "DEL", $opt_netdev));
+        } elsif ($opt_netrename) {
+            foreach my $o ($objSet->get_list()) {
+                if (! $opt_netdev) {
+                    my @devs = $o->netdevs_list();
+                    if (scalar(@devs) == 1) {
+                        $opt_netdev = shift(@devs);
+                    }
+                }
+                if(defined $o->netrename($opt_netdev, $opt_netrename) ) {
+                    $persist_count++;
+                }
+            }
+            push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "$opt_netdev.NAME", $opt_netrename));
+
         } else {
             if ($opt_hwaddr) {
                 $opt_hwaddr = lc($opt_hwaddr);

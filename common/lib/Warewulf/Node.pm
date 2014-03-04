@@ -461,6 +461,46 @@ netdel()
 }
 
 
+=item netrename($current_devname, $new_devname)
+
+Rename a given network device
+
+=cut
+
+sub
+netrename()
+{
+    my ($self, $current_devname, $new_devname) = @_;
+    my $netdev;
+
+    if ($current_devname and $new_devname) {
+        if (!($current_devname = &validate_netdev_name($current_devname))) {
+            &eprint("Current netdev name '$current_devname' contains illegal characters\n");
+            return undef;
+        }
+        if (!($new_devname = &validate_netdev_name($new_devname))) {
+            &eprint("Current netdev name '$new_devname' contains illegal characters\n");
+            return undef;
+        }
+    } else {
+        &eprint("Warewulf::Node::netrename() requires 2 arguments!\n");
+        return undef;
+    }
+
+    $netdev = $self->netdevs($current_devname);
+
+    if (! $netdev) {
+        &eprint("Could not find netdev '$current_devname' to rename!\n");
+        return undef;
+    }
+
+    &iprint("Renaming netdev '$current_devname' to '$new_devname'\n");
+    $netdev->set("name", $new_devname);
+
+    return($netdev);
+}
+
+
 =item hwaddr_list()
 
 Shortcut to retrieve a list of all HWADDR's for this node
