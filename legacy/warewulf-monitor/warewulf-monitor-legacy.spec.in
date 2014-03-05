@@ -4,8 +4,8 @@
 Summary: Legacy Monitoring Package from Warewulf
 Name: warewulf-monitor-legacy
 Version: @PACKAGE_VERSION@
-Release: %{_rel}%{?_dist}
-#Release: 1%{?_dist}
+Release: %{_rel}%{?dist}
+#Release: 1%{?dist}
 License: GPL
 Group: System Environment/Clustering
 URL: http://warewulf.lbl.gov/
