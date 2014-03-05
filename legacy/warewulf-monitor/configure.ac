@@ -13,9 +13,17 @@ fi
 AC_SUBST(PERLBIN)
 
 dnl# Try to get SVN revision
-SVNVERSION=`svnversion -c | sed 's/^.*://g' 2>/dev/null || echo 0000`
+if test -d .git -o -d ../.git ; then
+    GITREV=`git show -s --pretty=format:%h`
+    SVNVERSION=`git svn find-rev $GITREV`
+else
+    SVNVERSION=`svnversion -c | sed 's/^.*://g' 2>/dev/null || echo 0000`
+fi
 if test "$SVNVERSION" = "0000" ; then
     SVNVERSION=`svnversion 2>/dev/null || echo 0000`
+fi
+if test "$SVNVERSION" = "exported" ; then
+    SVNVERSION=0000
 fi
 AC_SUBST(SVNVERSION)
 
