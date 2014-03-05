@@ -1,10 +1,10 @@
-%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || echo 0000)}}
+%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || git svn find-rev `git show -s --pretty=format:%h` || echo 0000)}}
 %define debug_package %{nil}
 
 Summary: Tools used for clustering with Warewulf
 Name: warewulf-cluster
 Version: @PACKAGE_VERSION@
-Release: %{_rel}
+Release: %{_rel}%{?dist}
 License: US Dept. of Energy (BSD-like)
 Group: System Environment/Clustering
 URL: http://warewulf.lbl.gov/
@@ -22,6 +22,7 @@ utilization and maintenance of clusters or groups of computers.
 This package contains tools to facilitate management of a Cluster
 with Warewulf.
 
+
 %package node
 Summary: Tools used for clustering with Warewulf
 Group: System Environment/Clustering
@@ -33,6 +34,7 @@ utilization and maintenance of clusters or groups of computers.
 
 This is the cluster-node module, that is installed onto the
 provisioned nodes.
+
 
 %prep
 %setup
@@ -48,6 +50,10 @@ provisioned nodes.
 cp -r $RPM_BUILD_ROOT/etc/warewulf/vnfs/include/* $RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT/etc/warewulf/vnfs
 rmdir $RPM_BUILD_ROOT/etc/warewulf >/dev/null 2>&1 || :
+
+
+%post node
+chkconfig --add wwfirstboot
 
 
 %clean
@@ -69,9 +75,6 @@ rm -rf $RPM_BUILD_ROOT
 /etc/rc.d/init.d/wwfirstboot
 %defattr(0755, root, root)
 %{_libexecdir}/warewulf/wwfirstboot/*
-
-%post node
-chkconfig --add wwfirstboot
 
 
 %changelog

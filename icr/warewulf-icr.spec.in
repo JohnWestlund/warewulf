@@ -1,10 +1,10 @@
-%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || echo 0000)}}
+%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || git svn find-rev `git show -s --pretty=format:%h` || echo 0000)}}
 %define debug_package %{nil}
 
 Summary: Intel Cluster Ready specific configurations for Warewulf
 Name: warewulf-icr
 Version: @PACKAGE_VERSION@
-Release: %{_rel}
+Release: %{_rel}%{?dist}
 License: US Dept. of Energy (BSD-like)
 Group: System Environment/Clustering
 URL: http://warewulf.lbl.gov/
@@ -22,6 +22,7 @@ utilization and maintenance of clusters or groups of computers.
 This package contains scripts and configuration files that will
 enable you to build clusters compliant with the Intel Cluster Ready
 specification.
+
 
 %prep
 %setup
@@ -50,5 +51,6 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/icr.functions
 %{_libexecdir}/warewulf/wwinit
 %{_libexecdir}/warewulf/wwmkchroot
+
 
 %changelog

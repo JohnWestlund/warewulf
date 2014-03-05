@@ -1,10 +1,10 @@
-%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || echo 0000)}}
+%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || git svn find-rev `git show -s --pretty=format:%h` || echo 0000)}}
 %define debug_package %{nil}
 
 Name: warewulf-mic
 Summary: Warewulf Intel(R) Xeon Phi(TM) Package
 Version: @PACKAGE_VERSION@
-Release: %{_rel}
+Release: %{_rel}%{?dist}
 License: US Dept. of Energy (BSD-like)
 Group: System Environment/Clustering
 URL: http://warewulf.lbl.gov/
@@ -21,6 +21,7 @@ utilization and maintenance of clusters or groups of computers.
 
 This is the Intel(R) Xeon Phi(TM) package for Warewulf. This 
 adds basic provisioning support for the Xeon Phi(TM) cards.
+
 
 %package node
 Summary: Warewulf Intel(R) Xeon Phi(TM) Package
