@@ -130,8 +130,6 @@ if ($opt_help) {
 
 $opt_name = shift(@ARGV);
 
-@opt_exclude = split(",", join(",", @opt_exclude));
-@opt_hybridize = split(",", join(",", @opt_hybridize));
 
 
 
@@ -174,28 +172,36 @@ if (! $opt_includefile) {
     $opt_includefile = $config->get("includefile");
 }
 
-push(@exclude_files, $config->get("exclude"));
-if ($opt_excludefile and $opt_excludefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
-    open(EXCLUDES, $1);
-    while(my $line = <EXCLUDES>) {
-        chomp($line);
-        push(@exclude_files, $line);
+if (@opt_exclude) {
+    push(@exclude_files, split(",", join(",", @opt_exclude)));
+} else {
+    push(@exclude_files, $config->get("exclude"));
+    if ($opt_excludefile and $opt_excludefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
+        open(EXCLUDES, $1);
+        while(my $line = <EXCLUDES>) {
+            chomp($line);
+            push(@exclude_files, $line);
+        }
+    } elsif ($opt_excludefile) {
+        &eprint("Exclude file contains illegal characters!\n");
+        exit 1;
     }
-} elsif ($opt_excludefile) {
-    &eprint("Exclude file contains illegal characters!\n");
-    exit 1;
 }
 
-push(@hybridize_files, $config->get("hybridize"));
-if ($opt_hybridizefile and $opt_hybridizefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
-    open(EXCLUDES, $1);
-    while(my $line = <EXCLUDES>) {
-        chomp($line);
-        push(@hybridize_files, $line);
+if (@opt_hybridize) {
+    push(@hybridize_files, split(",", join(",", @opt_hybridize)));
+} else {
+    push(@hybridize_files, $config->get("hybridize"));
+    if ($opt_hybridizefile and $opt_hybridizefile =~ /^([a-zA-Z0-9_\-\.\/]+)$/ ) {
+        open(EXCLUDES, $1);
+        while(my $line = <EXCLUDES>) {
+            chomp($line);
+            push(@hybridize_files, $line);
+        }
+    } elsif ($opt_hybridizefile) {
+        &eprint("Exclude file contains illegal characters!\n");
+        exit 1;
     }
-} elsif ($opt_hybridizefile) {
-    &eprint("Exclude file contains illegal characters!\n");
-    exit 1;
 }
 
 # Reverse compatibility for older config formats that used "excludes" instead
