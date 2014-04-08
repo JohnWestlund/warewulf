@@ -254,7 +254,7 @@ msg_white "Probing for HW Address: "
 if [ -f "/sys/class/net/$NETDEV/address" ]; then
     WWINIT_HWADDR=`cat /sys/class/net/$NETDEV/address`
     if [ ${#WWINIT_HWADDR} -eq 59 ]; then
-        WWINIT_HWADDR=`expr substr $HWADDR 37 23`
+        WWINIT_HWADDR=`expr substr $WWINIT_HWADDR 37 23`
     fi
     msg_gray "($WWINIT_HWADDR)"
     wwsuccess
