@@ -74,6 +74,7 @@
 
 #INIT: ALL
 #INIT: IntelIB
+#INIT: INTELIB
 
 if [ ! -f "$WWFUNCTIONS" ]; then
     echo "ERROR: Could not load Warewulf functions - $WWFUNCTIONS";
