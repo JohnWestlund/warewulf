@@ -192,12 +192,12 @@ if [ $skip_master -ne 1 ]; then
     fi
 
     # Configure OFED Package
-    wwprint " + Configuring Intel IB OFED+ Package\n";
-    if ! config_pkg; then
-        wwprint "\nERROR: Failed to configure Intel IB OFED+ package" error;
-        reply_error;
-        exit 255;
-    fi
+#wwprint " + Configuring Intel IB OFED+ Package\n";
+# if ! config_pkg; then
+#     wwprint "\nERROR: Failed to configure Intel IB OFED+ package" error;
+#     reply_error;
+#     exit 255;
+# fi
 
     # Build IntelIB Package
     wwprint " note: These next steps may take a while...\n" yellow

@@ -190,7 +190,9 @@ inst_build_dep() {
 build_pkg() {
     wwprint " + Building Intel IB OFED+ Packages ... This will take a while." warn;
     echo;
-    ${ofed_cmd} -c ${ofed_source}/${ofed_conf};
+    build_opts='-a --32bit --rebuild -vv';
+#${ofed_cmd} -c ${ofed_source}/${ofed_conf};
+${ofed_cmd} ${build_opts}
     return $?;
 }
 
@@ -198,7 +200,7 @@ build_pkg() {
 # as a paramater, or try and be smart and find the package in $HOME
 config_pkg() {
     ofed_all_conf='ofed-all.conf';
-    build_opts='--all --build32 --print-available';
+    build_opts='-a --32bit --rebuild -vv';
 
     if [ ! -z $1 ]; then
         pkg_file=$1;
@@ -219,7 +221,7 @@ config_pkg() {
     iibdir=`basename $pkg_file .tgz`
     OFED_basename=`ls $tmpdir/IntelIB-Basic* |grep OFED`;
     ofed_source="${tmpdir}/${iibdir}/${OFED_basename}";
-    ofed_cmd="${ofed_source}/install.pl";
+    ofed_cmd="${ofed_source}/INSTALL";
 
     # Remove any and all conflicting OFED RPMs. This may take a couple
     # runs to get rid of everything.
