@@ -408,8 +408,6 @@ chroot_install() {
     wwprint " + Installing Intel IB OFED+ RPMS into CHROOT\n";
     # Force install because of clashing files between packages.
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/*.rpm;
-    # OFED 1.5.4.x requires kernel-ib rpms to be re installed.
-    rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/kernel-ib*.rpm;
     return 0;
 }
 
@@ -507,36 +505,6 @@ print \$node_ib0_ip;
 
     return 0;
 }
-
-# Edit the dat.conf file to leave only valid providers
-dat_conf(){
-
-    if [[ ! -z $1 && -d $1 && -x $1/sbin/init ]]; then
-        chroot_path=$1;
-    fi
-
-    if [ ! -f $chroot_path/etc/dat.conf ]; then
-        wwprint " WARNING: dat.conf file not present\n" warn;
-        return 255
-    fi
-    
-    sed -i "1i#Edited by wwinit Intel IB OFED+ module" $chroot_path/etc/dat.conf;
-    # Comment all entries by default
-    sed -i.orig -e"s/\(.*\)/#\1/" $chroot_path/etc/dat.conf;
-
-    # Check if the devices are ConnectX Cards
-    ibstat -l |grep "mlx4_0" &>/dev/null;
-    if [ $? -eq 0 ]; then
-        sed -i -e "s/#\(OpenIB-mlx4_0-[12]\s.*\)/\1/" $chroot_path/etc/dat.conf;
-        sed -i -e "s/#\(ofa-v2-mlx4_0-[12]\s.*\)/\1/" $chroot_path/etc/dat.conf;
-    fi
-
-    sed -i -e "s/#\(OpenIB-cma u1.2*\)/\1/" $chroot_path/etc/dat.conf;
-    sed -i -e "s/#\(ofa-v2-ib[01]\s.*\)/\1/" $chroot_path/etc/dat.conf;
-    
-    return 0;
-}
-
 
 # Clean up
 cleanup() {
