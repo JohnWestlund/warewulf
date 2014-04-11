@@ -49,6 +49,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755, root, warewulf) %dir %{_sysconfdir}/warewulf/wwinit/
 %attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/ofed.functions
 %attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/icr.functions
+%attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/IntelIB.functions
 %{_libexecdir}/warewulf/wwinit
 %{_libexecdir}/warewulf/wwmkchroot
 
