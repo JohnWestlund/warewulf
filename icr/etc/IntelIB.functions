@@ -369,7 +369,6 @@ sshd_config() {
 # Install OFED RPMS in the CHROOT for compute nodes
 chroot_install() {
 
-    #XXX: Should this be reversed?? i.e. ${1:-$VNFSROOT} ?? -JMS
     chroot_path=${VNFSROOT:-$1};
 
     # Some sanity checking...

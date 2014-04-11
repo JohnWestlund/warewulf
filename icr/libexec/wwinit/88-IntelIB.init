@@ -305,7 +305,6 @@ if [ $skip_master -ne 1 ]; then
         RETVAL=1;
     fi
 
-    #TODO: Bootstrap/VNFS rebuild needs to happen -jms
 
     exit $RETVAL
 fi
