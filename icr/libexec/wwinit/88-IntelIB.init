@@ -115,19 +115,19 @@ skip_vnfs=0;
 if [ -z $OFEDFORCE ];then 
     # Some Mellanox* ConnectX* cards are not shown as InfiniBand
     if ! lspci | grep -i -e 'InfiniBand' -e 'Mellanox.*ConnectX' &>/dev/null ; then
-        wwprint "WARNING: No InfiniBand device seen from lspci. Exiting OFED setup.\n" warn;
+        wwprint "WARNING: No InfiniBand device seen from lspci. Exiting Intel IB OFED+ setup.\n" warn;
         exit 255;
     fi
 fi
 
-wwprint "OFED Configuration starting.\n";
+wwprint "Intel IB OFED+ Configuration starting.\n";
 # Check for existence/usage of ofed_info on host and chroot root... Verify 
 # against version of OFED found.
 if [ -z $OFEDPKG ]; then
     OFEDPKG=$(/bin/ls -1 $HOME/IntelIB-*.tgz 2>/dev/null | sort -V | tail -1);
     # Detect early if the package file is not available
     if [[ -z "$OFEDPKG" || ! -f "$OFEDPKG" ]]; then
-        wwprint " ! OFED Package not found." error;
+        wwprint " ! Intel IB OFED+ Package not found." error;
         reply_error;
         exit 255;
     fi
@@ -150,7 +150,7 @@ if [ ! -z $CHROOTDIR ]; then
         reported_ver=$(${CHROOTDIR}/${ofedinfo} | head -n 1 | cut -f 1 -d ':');
 
         if [ "x${reported_ver}" == "x${OFEDVER}" ]; then
-            wwprint "OFED version ${reported_ver} found in chroot...";
+            wwprint "Intel IB OFED+ version ${reported_ver} found in chroot...";
             reply_skipped;
             skip_vnfs=1;
         fi
@@ -158,14 +158,14 @@ if [ ! -z $CHROOTDIR ]; then
     
     # if chroot exists, only skip the master if installed in both: master and chroot    
     if [[ $installed_in_master -eq 1 && $skip_vnfs -eq 1 ]]; then 
-        wwprint "OFED version ${reported_master_ver} found...";
+        wwprint "Intel IB OFED+ version ${reported_master_ver} found...";
         reply_skipped;
         skip_master=1;
     fi
 else
     # if chroot does not exist, skip the master if installed in the master
     if [ $installed_in_master -eq 1 ]; then 
-        wwprint "OFED version ${reported_master_ver} found...";
+        wwprint "Intel IB OFED+ version ${reported_master_ver} found...";
         reply_skipped;
         skip_master=1;
     fi
@@ -184,7 +184,7 @@ if [ $skip_master -ne 1 ]; then
     fi
 
     # Install Build Dependencies
-    wwprint " + Installing IntelIB build dependencies";
+    wwprint " + Installing Intel IB OFED+ build dependencies";
     if ! wwaction inst_build_dep; then
         wwprint "\nERROR: Failed to install build dependencies..." error;
         reply_error;
@@ -192,9 +192,9 @@ if [ $skip_master -ne 1 ]; then
     fi
 
     # Configure OFED Package
-    wwprint " + Configuring IntelIB Package\n";
+    wwprint " + Configuring Intel IB OFED+ Package\n";
     if ! config_pkg; then
-        wwprint "\nERROR: Failed to configure IntelIB package" error;
+        wwprint "\nERROR: Failed to configure Intel IB OFED+ package" error;
         reply_error;
         exit 255;
     fi
