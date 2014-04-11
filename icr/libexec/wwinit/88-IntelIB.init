@@ -72,8 +72,8 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-#INIT: ALL
-#INIT: IntelIB
+#INIT:ALL
+#INIT:IntelIB
 #INIT: INTELIB
 
 if [ ! -f "$WWFUNCTIONS" ]; then
@@ -195,7 +195,7 @@ if [ $skip_master -ne 1 ]; then
     fi
 
     # Configure OFED Package
-    wwprint " + Configuring OFED Package\n";
+    wwprint " + Configuring IntelIB Package\n";
     if ! config_pkg; then
         wwprint "\nERROR: Failed to configure IntelIB package" error;
         reply_error;
@@ -206,7 +206,7 @@ if [ $skip_master -ne 1 ]; then
     wwprint " note: These next steps may take a while...\n" yellow
     wwprint " + Building IntelIB Package";
     if ! wwaction build_pkg; then
-        wwprint "\nERROR: Failed to build IntelIb package" error;
+        wwprint "\nERROR: Failed to build IntelIB package" error;
         reply_error;
         exit 255;
     fi
