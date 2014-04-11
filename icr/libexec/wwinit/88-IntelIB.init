@@ -2,7 +2,7 @@
 #
 # Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
 # 
-# Warewulf Copyright (c) 2003-2013, The Regents of the University of
+# Warewulf Copyright (c) 2003-2014, The Regents of the University of
 # California, through Lawrence Berkeley National Laboratory (subject to
 # receipt of any required approvals from the U.S. Dept. of Energy).
 # All rights reserved.
@@ -45,7 +45,7 @@
 # distribute, and sublicense such enhancements or derivative works thereof,
 # in binary and source code form.
 #
-## Copyright (c) 2012, Intel Corporation
+## Copyright (c) 2014, Intel Corporation
 ##
 ## Redistribution and use in source and binary forms, with or without 
 ## modification, are permitted provided that the following conditions are met:
@@ -109,9 +109,6 @@ ofedinfo="/usr/bin/ofed_info";
 installed_in_master=0;
 skip_master=0;
 skip_vnfs=0;
-
-#XXX: A better determination of if there's an InfiniBand card should be used.
-#  This is an "okay" check, but it's possible it could fail. -jms
 
 # Figure out if we even have an 'InfiniBand' device showing up.
 # Set OFEDFORCE to continue, even if nothing shows up from lspci

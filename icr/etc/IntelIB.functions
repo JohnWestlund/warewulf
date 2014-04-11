@@ -2,7 +2,7 @@
 #
 # Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
 # 
-# Warewulf Copyright (c) 2003-2013, The Regents of the University of
+# Warewulf Copyright (c) 2003-2014, The Regents of the University of
 # California, through Lawrence Berkeley National Laboratory (subject to
 # receipt of any required approvals from the U.S. Dept. of Energy).
 # All rights reserved.
@@ -45,7 +45,7 @@
 # distribute, and sublicense such enhancements or derivative works thereof,
 # in binary and source code form.
 #
-## Copyright (c) 2012, Intel(R) Corporation
+## Copyright (c) 2014, Intel(R) Corporation
 ##
 ## Redistribution and use in source and binary forms, with or without 
 ## modification, are permitted provided that the following conditions are met:
@@ -122,7 +122,7 @@ uninst_os_ib() {
     # This is only for the CHROOT. uninstall.sh is ran during config_pkg() on
     # the main node
     if [ ! -z ${chroot_path} ]; then
-        # Remove any and all conflicting OFED package RPMs. This may take a couple
+        # Remove any and all conflicting Intel IB OFED+ package RPMs. This may take a couple
         # runs to get rid of everything.
         for i in 0 1; do
             /usr/sbin/chroot ${chroot_path} /bin/bash -c "yes | /root/uninstall.sh" &>/dev/null;
@@ -237,9 +237,6 @@ config_pkg() {
         exit 255;
     fi
 
-    # Some components of OFED 1.5.x have conflicts with RHEL 6.4 or newer. However,
-    # adding MPSS OFED components makes it work.
-    grep -v debuginfo ${ofed_source}/${ofed_all_conf} > ${ofed_source}/${ofed_conf};
 
     return 0;
 }
@@ -413,10 +410,6 @@ chroot_install() {
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/*.rpm;
     # OFED 1.5.4.x requires kernel-ib rpms to be re installed.
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/kernel-ib*.rpm;
-    # OFED 3.5.x requires compat-rdma rpms to be re installed to generate the 
-    # /etc/init/* scripts. 
-    rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/compat-rdma*.rpm;
-
     return 0;
 }
 
