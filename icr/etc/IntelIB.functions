@@ -188,7 +188,7 @@ inst_build_dep() {
 
 # Build the OFED package. This will take a while...
 build_pkg() {
-    wwprint " + Building OFED Packages ... This will take a while." warn;
+    wwprint " + Building Intel IB OFED+ Packages ... This will take a while." warn;
     echo;
     ${ofed_cmd} -c ${ofed_source}/${ofed_conf};
     return $?;
@@ -207,11 +207,11 @@ config_pkg() {
     fi
 
     tmpdir=$(mktemp -d /tmp/OFED_ICR-XXXXXXXXXX);
-    wwprint " + OFED Version: $OFED_basename\n";
+    wwprint " + Intel IB OFED+ Version: $OFED_basename\n";
     # Uncompress OFED
     tar -xzf $pkg_file -C $tmpdir;
     if [ $? -ne 0 ]; then
-        wwprint " ! ERROR: Failure when extracting the OFED package" error;
+        wwprint " ! ERROR: Failure when extracting the Intel IB OFED+ package" error;
         reply_error;
         /bin/rm -rf $tmpdir;
         exit 255;
@@ -232,7 +232,7 @@ config_pkg() {
     ${ofed_cmd} ${build_opts} &>/dev/null;
 
     if [ $? -ne 0 ]; then
-        wwprint " ! ERROR: Failure running OFED install.pl from $tmpdir/$OFED_basename";
+        wwprint " ! ERROR: Failure running Intel IB OFED+ install.pl from $tmpdir/$OFED_basename";
         reply_error;
         exit 255;
     fi
@@ -275,7 +275,7 @@ config_services() {
     ib_opensm_service='opensmd';
     ib_openib_service='openibd';
 
-    wwprint " + Configuring OFED Services\n";
+    wwprint " + Configuring Intel IB OFED+ Services\n";
 
     # Unload cxgb3i to avoid issues stopping openibd service
     /sbin/modprobe -r cxgb3i;
@@ -332,7 +332,7 @@ compat-dapl-static dapl-static";
         sed -i -e "s/^\(exclude=.*\)/\1 $exclude_pkgs/" $yum_conf_file;
     else
         # Append excludes
-        echo "## Added by OFED wwinit" >> $yum_conf_file;
+        echo "## Added by Intel IB OFED+ wwinit" >> $yum_conf_file;
         echo "exclude=$exclude_pkgs" >> $yum_conf_file;
     fi
 
@@ -361,7 +361,7 @@ sshd_config() {
     if egrep '^ulimit ' $sshd_conf_file &>/dev/null; then
         sed -i -e "s/^ulimit -l.*/ulimit $ulimit_options/" $sshd_conf_file;
     else
-        echo -e "## OFED Modules\nulimit $ulimit_options\n" >> $sshd_conf_file;
+        echo -e "## Intel IB OFED+ Modules\nulimit $ulimit_options\n" >> $sshd_conf_file;
     fi
 
     return 0;
@@ -385,7 +385,7 @@ chroot_install() {
         exit 255;
     fi
     if [[ -z $ofed_source || ! -d $ofed_source ]]; then
-        wwprint " ! ERROR: OFED Source not found at: ${ofed_source}" error;
+        wwprint " ! ERROR: Intel IB OFED+ Source not found at: ${ofed_source}" error;
         reply_error;
         exit 255;
     fi
@@ -408,7 +408,7 @@ chroot_install() {
 
     OFED_RPM_dir="${ofed_source}/RPMS/${dist_rpm}/x86_64";
 
-    wwprint " + Installing OFED RPMS into CHROOT\n";
+    wwprint " + Installing Intel IB OFED+ RPMS into CHROOT\n";
     # Force install because of clashing files between packages.
     rpm --force --root=${chroot_path} -ivh ${OFED_RPM_dir}/*.rpm;
     # OFED 1.5.4.x requires kernel-ib rpms to be re installed.
@@ -434,12 +434,12 @@ config_bootstrap() {
         $bootstrap_conf_file;
 
     # Add Built OFED Modules
-    if ! grep -q '## OFED Modules' $bootstrap_conf_file; then
+    if ! grep -q '## Intel IB OFED+ Modules' $bootstrap_conf_file; then
         if [[ $ofed_ver_maj -lt 3 ]]; then
-            OFED_mod='## OFED Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
+            OFED_mod='## Intel IB OFED+ Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
         else
             # At least OFED-3.5-rc5 has compat and net
-            OFED_mod='## OFED Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
+            OFED_mod='## Intel IB OFED+ Modules\ndrivers += updates/drivers/infiniband/*, updates/drivers/net/*\n';
             OFED_mod="${OFED_mod}drivers += updates/compat/*, updates/net/*\n";
         fi
         echo -e ${OFED_mod} >> $bootstrap_conf_file;
@@ -527,7 +527,7 @@ dat_conf(){
         return 255
     fi
     
-    sed -i "1i#Edited by wwinit OFED module" $chroot_path/etc/dat.conf;
+    sed -i "1i#Edited by wwinit Intel IB OFED+ module" $chroot_path/etc/dat.conf;
     # Comment all entries by default
     sed -i.orig -e"s/\(.*\)/#\1/" $chroot_path/etc/dat.conf;
 
