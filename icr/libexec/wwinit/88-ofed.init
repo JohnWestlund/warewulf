@@ -116,7 +116,7 @@ skip_vnfs=0;
 # Set OFEDFORCE to continue, even if nothing shows up from lspci
 if [ -z $OFEDFORCE ];then 
     # Some Mellanox* ConnectX* cards are not shown as InfiniBand
-    if ! lspci | grep -i -e 'InfiniBand' -e 'Mellanox.*ConnectX' &>/dev/null ; then
+    if ! lspci | grep -i -e 'InfiniBand' -e 'Mellanox' &>/dev/null ; then
         wwprint "WARNING: No InfiniBand device seen from lspci. Exiting OFED setup.\n" warn;
         exit 255;
     fi

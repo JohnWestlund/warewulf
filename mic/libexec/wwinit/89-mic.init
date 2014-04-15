@@ -80,7 +80,7 @@ fi
 # Set OFEDFORCE to force, even if nothing shows up from lspci
 if [ ! -z $OFEDFORCE ];then 
     OFED_FLAG=1;
-elif lspci | grep -i -e 'InfiniBand' -e 'Mellanox.*ConnectX' &>/dev/null ; then
+elif lspci | grep -i -e 'InfiniBand' -e 'Mellanox' -e 'QLogic' &>/dev/null ; then
     OFED_FLAG=1;
 fi
 
