@@ -191,8 +191,7 @@ build_pkg() {
     wwprint " + Building Intel IB OFED+ Packages ... This will take a while." warn;
     echo;
     build_opts='-a --32bit --rebuild -vv';
-#${ofed_cmd} -c ${ofed_source}/${ofed_conf};
-${ofed_cmd} ${build_opts}
+    ${ofed_cmd} ${build_opts}
     return $?;
 }
 
