@@ -419,14 +419,6 @@ set_ssh_keys(){
             RETVAL=$?;
         fi
 
-        # Enable MKL automatic offloading to the MIC Cards
-        if ! grep -q 'MKL_MIC_ENABLE=1' /home/$user/.bashrc ; then
-            echo '# Configured by 89-mic.init: Enable Intel(R) MKL offloading to MIC cards'\
-            >> /home/$user/.bashrc
-            echo 'export OFFLOAD_REPORT=2 MKL_MIC_ENABLE=1' >> /home/$user/.bashrc
-            RETVAL=$?;
-        fi
-
         if [ "$RETVAL" -ne 0 ]; then
             wwprint "\n ! ERROR: Failed to configure .barshrc for user $user";
             reply_error;

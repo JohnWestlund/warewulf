@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: 10-acvars.t 581 2011-08-13 00:19:18Z mej $
 #
 
 use Test::More;

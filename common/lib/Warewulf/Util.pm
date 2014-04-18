@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Util.pm 1466 2013-11-13 02:28:29Z gmk $
 #
 
 package Warewulf::Util;

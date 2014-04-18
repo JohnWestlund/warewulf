@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: 01-modules.t 714 2012-01-24 18:22:47Z gmk $
 #
 
 use Test::More;

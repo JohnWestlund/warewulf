@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: SQL.pm 689 2011-12-20 00:34:04Z mej $
 #
 
 package Warewulf::DataStore::SQL;

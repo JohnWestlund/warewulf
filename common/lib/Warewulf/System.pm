@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: System.pm 579 2011-08-12 20:26:58Z mej $
 #
 
 package Warewulf::System;

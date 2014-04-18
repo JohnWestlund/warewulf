@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Cli.pm 1097 2012-09-07 20:21:52Z gmk $
 #
 
 package Warewulf::Module::Cli;

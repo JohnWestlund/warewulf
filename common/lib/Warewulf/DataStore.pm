@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: DataStore.pm 1049 2012-08-15 18:18:12Z gmk $
 #
 
 package Warewulf::DataStore;

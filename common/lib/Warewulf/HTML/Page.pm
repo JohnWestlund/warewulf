@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Page.pm 689 2011-12-20 00:34:04Z mej $
 #
 
 package Warewulf::HTML::Page;

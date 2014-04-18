@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Config.pm 1521 2014-01-13 19:41:49Z gmk $
 #
 
 package Warewulf::Config;

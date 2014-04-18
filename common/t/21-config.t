@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: 21-config.t 808 2012-02-29 19:22:48Z mej $
 #
 
 use Test::More;

@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: NewObject.pm 1061 2012-08-18 21:21:17Z jms $
 #
 
 package Warewulf::Event::NewObject;

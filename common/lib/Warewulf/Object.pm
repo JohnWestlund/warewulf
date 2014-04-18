@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Object.pm 1584 2014-02-14 22:22:20Z mej $
 #
 
 package Warewulf::Object;

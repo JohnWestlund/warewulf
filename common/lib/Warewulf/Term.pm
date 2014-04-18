@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Term.pm 1115 2012-09-17 18:27:59Z gmk $
 #
 
 package Warewulf::Term;

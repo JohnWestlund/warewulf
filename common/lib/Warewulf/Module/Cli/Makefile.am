@@ -1,4 +1,4 @@
-# $Id$
+# $Id: Makefile.am 1004 2012-06-14 01:00:39Z bernard $
 
 perlmodsdir = ${PERL_VENDORLIB}/Warewulf/Module/Cli
 

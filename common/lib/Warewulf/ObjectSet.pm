@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: ObjectSet.pm 1566 2014-02-11 19:16:13Z gmk $
 #
 
 package Warewulf::ObjectSet;

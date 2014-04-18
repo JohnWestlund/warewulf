@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: File.pm 995 2012-06-11 23:11:29Z bernard $
 #
 
 package Warewulf::DSO::File;

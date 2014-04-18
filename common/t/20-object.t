@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: 20-object.t 1383 2013-05-07 22:00:47Z mej $
 #
 
 use Test::More;

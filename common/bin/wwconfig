@@ -6,7 +6,7 @@
 # through Lawrence Berkeley National Laboratory (subject to receipt of any
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
-# $Id$
+# $Id: wwconfig 796 2012-02-24 16:48:08Z jms $
 #
 
 use Warewulf::ACVars;

@@ -33,7 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 #########################
-# $Id$
+# $Id: Network.pm 1333 2013-03-25 19:41:48Z mej $
 #
 
 package Warewulf::Network;

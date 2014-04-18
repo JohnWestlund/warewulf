@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: 11-util.t 600 2011-08-19 01:00:02Z mej $
 #
 
 use Test::More;

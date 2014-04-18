@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Daemon.pm 602 2011-08-20 00:30:02Z mej $
 #
 
 package Warewulf::Daemon;

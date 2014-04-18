@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: Logger.pm 1574 2014-02-11 23:06:30Z mej $
 #
 
 package Warewulf::Logger;

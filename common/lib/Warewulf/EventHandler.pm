@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: EventHandler.pm 1047 2012-08-15 16:19:15Z gmk $
 #
 
 package Warewulf::EventHandler;

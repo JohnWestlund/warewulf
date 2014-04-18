@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: ParallelCmd.pm 1593 2014-02-18 20:37:31Z gmk $
 #
 
 package Warewulf::ParallelCmd;

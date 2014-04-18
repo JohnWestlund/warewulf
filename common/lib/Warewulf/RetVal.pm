@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: RetVal.pm 1036 2012-07-28 15:56:52Z mej $
 #
 
 package Warewulf::RetVal;

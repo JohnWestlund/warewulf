@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id$
+# $Id: 00-dependencies.t 574 2011-08-06 01:45:50Z mej $
 #
 
 use Test::More;
