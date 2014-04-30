@@ -351,6 +351,10 @@ vnfs_create_file($)
             if (S_ISDIR($mode)) {
                 &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
                 mkpath("$tmpdir/$path");
+                if ($dev != $File::Find::topdev) {
+                    # Don't cross filesystem boundaries.  Just create the mountpoint.
+                    $File::Find::prune = 1;
+                }
             } elsif (S_ISREG($mode)) {
                 &dprint("Copying file: $tmpdir/$path\n");
                 copy("$opt_chroot/$path", "$tmpdir/$path");
