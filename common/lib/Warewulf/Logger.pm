@@ -357,9 +357,13 @@ init_log_targets()
     autoflush STDOUT 1;
     autoflush STDERR 1;
     $so = IO::Handle->new_from_fd(fileno(STDOUT), "w");
-    $so->autoflush(1);
+    if (defined($so)) {
+        $so->autoflush(1);
+    }
     $se = IO::Handle->new_from_fd(fileno(STDERR), "w");
-    $se->autoflush(1);
+    if (defined($se)) {
+        $se->autoflush(1);
+    }
     @TARGETS = (
         [ $se ],  # CRITICAL
         [ $se ],  # ERROR
@@ -367,7 +371,7 @@ init_log_targets()
         [ $so ],  # NOTICE
         [ $so ],  # INFO
         [ $se ]   # DEBUG
-    );        
+    );
 }
 
 # Convert one or more user-supplied log levels to their numeric equivalents.
@@ -449,8 +453,13 @@ write_to_targets($$)
 {
     my ($level, $str) = @_;
 
-    foreach my $target (@{$TARGETS[$level]}) {
-        if ($target eq "SYSLOG") {
+    for (my $i = 0; $i < scalar(@{$TARGETS[$level]}); $i++) {
+        my $target = $TARGETS[$level][$i];
+
+        if (!defined($target)) {
+            # Dead target.  Remove it.
+            splice(@{$TARGETS[$level]}, $i, 1);
+        } elsif ($target eq "SYSLOG") {
             syslog($SYSLOG_LEVELS[$level], "%s", $str);
         } elsif (ref($target)) {
             if (ref($target) eq "CODE") {
