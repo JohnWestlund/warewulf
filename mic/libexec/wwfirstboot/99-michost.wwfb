@@ -222,7 +222,7 @@ else
 fi
 
 # Workaround for problem in NFS IP address
-sed -i -e "s/$NODEIP/$MASTERIP/" $MICPATH/mic*/etc/fstab
+sed -i -e "s/${NODEIP}/${MASTERIP}/" $MICPATH/mic*/etc/fstab
 
 # Have extra RPMS to be installed during the card booting.
 # wwinit MIC should leave the RPMs in $MICPATH
