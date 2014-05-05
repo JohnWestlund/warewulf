@@ -53,19 +53,22 @@ cleanup() {
     umount $NEWROOT/proc
 }
 
+# Check if the user defined MIC cards for this node, otherwise skip
+# Short circuit if sentence seems not to work in busybox
+if [[ -z "$WWMICCOUNT" ]]; then 
+    wwlogger "No MIC cards defined."
+    exit 1;
+elif [[ "$WWMICCOUNT" -eq 0 ]]; then
+    wwlogger "No MIC cards defined."
+    exit 1;
+fi
+
 #XXX: /sys is required for micctrl, mount /proc just to be nice.
 mount -t proc proc $NEWROOT/proc
 mount -t sysfs none $NEWROOT/sys
 
 # /opt *may* be NFS mounted...
 chroot $NEWROOT mount -a -t nfs
-
-# Check if the user defined MIC cards for this node, otherwise skip
-if [[ -z $WWMICCOUNT || $WWMICCOUNT -eq 0 ]]; then
-    wwlogger "No MIC cards defined."
-    cleanup;
-    exit 1;
-fi
 
 # In the Warewulf bootstrap $NEWROOT should always be defined
 # as the location where the VNFS image is being extracted. The
