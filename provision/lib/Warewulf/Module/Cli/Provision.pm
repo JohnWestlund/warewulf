@@ -179,6 +179,7 @@ exec()
     my @opt_fileadd;
     my @opt_filedel;
     my $opt_kargs;
+    my $opt_console;
     my $opt_pxelinux;
     my $return_count;
     my $objSet;
@@ -197,6 +198,7 @@ exec()
         'fileadd=s'     => \@opt_fileadd,
         'filedel=s'     => \@opt_filedel,
         'kargs=s'       => \$opt_kargs,
+        'console=s'     => \$opt_console,
         'pxelinux=s'    => \$opt_pxelinux,
         'master=s'      => \@opt_master,
         'bootserver=s'  => \@opt_bootserver,
@@ -500,6 +502,26 @@ exec()
                 push(@changes, sprintf("     DEL: %-20s = %s\n", "KARGS", "[ALL]"));
             } else {
                 push(@changes, sprintf("     SET: %-20s = %s\n", "KARGS", '"' . join(" ",@kargs) . '"'));
+            }
+        }
+
+        if ($opt_console) {
+            if ($opt_console =~ /^(tty[S0-9]+\,[0-9]+)/) {
+                $opt_console = $1;
+
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->console($opt_console);
+                    &dprint("Setting console argument for node name: $name\n");
+                    $persist_bool = 1;
+                }
+                if (uc($opt_console) eq "UNDEF") {
+                    push(@changes, sprintf("     DEL: %-20s\n", "CONSOLE"));
+                } else {
+                    push(@changes, sprintf("     SET: %-20s = %s\n", "CONSOLE", $opt_console));
+                }
+            } else {
+                &eprint("Invalid console format!\n");
             }
         }
 
