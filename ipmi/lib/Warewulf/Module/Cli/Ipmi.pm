@@ -114,8 +114,7 @@ help()
     $h .= "                         randomly generated)\n";
     $h .= "         --noautoconfig  Remove the autoconfig flag so the node doesn't get configured\n";
     $h .= "                         automatically\n";
-    $h .= "     -p, --padding       Pad the speed of the IPMI commands (very useful for throttling\n";
-    $h .= "                         boots)\n";
+    $h .= "     -d, --delay         Delay/pad the IPMI commands (very useful for throttling boots)\n";
     $h .= "     -f, --fanout        Change the fanout for parallel IPMI commands (default: 8)\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
@@ -215,6 +214,7 @@ exec()
         'autoconfig'    => \$opt_autoconfig,
         'noautoconfig'  => \$opt_noautoconfig,
         'l|lookup=s'    => \$opt_lookup,
+        'd|delay=s'     => \$opt_padding,
         'p|padding=s'   => \$opt_padding,
         'f|fanout=s'    => \$opt_fanout,
     );
