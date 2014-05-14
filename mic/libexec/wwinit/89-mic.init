@@ -77,9 +77,13 @@ if [ ! -f "${CHROOTDIR}/sbin/init" ]; then
 fi
 
 # Figure out if we even have an 'InfiniBand' device showing up.
-# Set OFEDFORCE to force, even if nothing shows up from lspci
+# Use OFEDFORCE to force the InfiniBand*  components install behavior 
+# regardless of what is detected by lspci:
+# OFEDFORCE=0 ; InfiniBand* components will not be installed
+# OFEDFORCE=1 ; InfiniBand* components will be installed
+
 if [ ! -z $OFEDFORCE ];then 
-    OFED_FLAG=1;
+    OFED_FLAG=$OFEDFORCE;
 elif lspci | grep -i -e 'InfiniBand' -e 'Mellanox' -e 'QLogic' &>/dev/null ; then
     OFED_FLAG=1;
 fi

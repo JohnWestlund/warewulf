@@ -88,6 +88,12 @@ if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/IntelIB.functions" ]; then
 fi
 . $WAREWULF_SYSCONFDIR/warewulf/wwinit/IntelIB.functions;
 
+if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/ofed.functions" ]; then
+    echo "ERROR: Could not load IntelIB wwinit functions!";
+    exit 255;
+fi
+. $WAREWULF_SYSCONFDIR/warewulf/wwinit/ofed.functions;
+
 # Check if a previous module created a chroot and defined its path.
 # If so, use it
 if [ -f  "${WWTMPDIR}/CHROOTDIR" ]; then
@@ -97,6 +103,20 @@ fi
 # In case CHROOTDIR was passed at execution time
 CHROOTDIR=${CHROOTDIR:-}
 
+# Some sanity checking
+if [[ -z "$CHROOTDIR" || ! -d "$CHROOTDIR" ]]; then
+    wwprint " ! ERROR: Invalid CHROOT path" error;
+    reply_error;
+    exit 255;
+fi
+
+if [ ! -f "${CHROOTDIR}/sbin/init" ]; then
+    wwprint " ! ERROR: ${CHROOTDIR}/sbin/init not found,\n" error;
+    wwprint "         chroot may be corrupted" error;
+    reply_error;
+    exit 255;
+fi
+
 # Make sure we're the root user
 wwreqroot
 
@@ -105,10 +125,6 @@ RETVAL=0;
 
 # Variables
 OFEDPKG=${OFEDPKG:-}
-ofedinfo="/usr/bin/ofed_info";
-installed_in_master=0;
-skip_master=0;
-skip_vnfs=0;
 
 # Figure out if we even have an 'InfiniBand' device showing up.
 # Set OFEDFORCE to continue, even if nothing shows up from lspci
@@ -119,193 +135,173 @@ if [ -z $OFEDFORCE ];then
     fi
 fi
 
-wwprint "Intel IB OFED+ Configuration starting.\n";
-# Check for existence/usage of ofed_info on host and chroot root... Verify 
-# against version of OFED found.
+wwprint "Intel IB OFED+ install starting.\n";
+
 if [ -z $OFEDPKG ]; then
     OFEDPKG=$(/bin/ls -1 $HOME/IntelIB-*.tgz 2>/dev/null | sort -V | tail -1);
     # Detect early if the package file is not available
     if [[ -z "$OFEDPKG" || ! -f "$OFEDPKG" ]]; then
         wwprint " ! Intel IB OFED+ Package not found." error;
         reply_error;
+        cleanup
         exit 255;
     fi
     wwprint " + Package $(msg_green $OFEDPKG) found\n";
-
-    OFEDVER=$(basename ${OFEDPKG} .tgz);
 fi
 
-if [[ -f /usr/bin/ofed_info && -x /usr/bin/ofed_info ]]; then
-    reported_master_ver=$(${ofedinfo} | head -n 1 | cut -f 1 -d ':');
-    if [ "x${reported_master_ver}" == "x${OFEDVER}" ]; then
-        installed_in_master=1;
-    fi
+
+# Extract Intel IB OFED+ Package
+wwprint " + Extracting Intel IB OFED+ Package";
+if ! extract_iib_pkg $OFEDPKG ; then
+    wwprint "\nERROR: Failed to extract Intel IB OFED+ package" error;
+    reply_error;
+    cleanup
+    exit 255;
 fi
 
-if [ ! -z $CHROOTDIR ]; then
-    if [[ -f ${CHROOTDIR}/${ofedinfo} && -x ${CHROOTDIR}/${ofedinfo} ]]; then
-        # ofed_info is just a shell script so no need to use chroot to execute it 
-        # and get the OFED version reported; grep would probably work too...
-        reported_ver=$(${CHROOTDIR}/${ofedinfo} | head -n 1 | cut -f 1 -d ':');
+# Remove any base OS Packages that may conflict (ofed.functions)
+wwprint " + Removing conflicting OS packages";
+if ! uninst_os_ib; then
+    wwprint "\nERROR: Failed removing packages..." error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
 
-        if [ "x${reported_ver}" == "x${OFEDVER}" ]; then
-            wwprint "Intel IB OFED+ version ${reported_ver} found in chroot...";
-            reply_skipped;
-            skip_vnfs=1;
-        fi
-    fi
-    
-    # if chroot exists, only skip the master if installed in both: master and chroot    
-    if [[ $installed_in_master -eq 1 && $skip_vnfs -eq 1 ]]; then 
-        wwprint "Intel IB OFED+ version ${reported_master_ver} found...";
-        reply_skipped;
-        skip_master=1;
-    fi
+# Install Dependencies
+wwprint " + Installing Intel IB OFED+ dependencies";
+if ! inst_iib_dep; then
+    wwprint "\nERROR: Failed to install dependencies..." error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Install package
+wwprint " note: The next step may take some minutes...\n" yellow
+wwprint " + Installing Intel IB OFED+";
+if ! inst_pkg; then
+    wwprint "\nERROR: Failed to install IntelIB" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Configure IB0 on Head Node (ofed.functions)
+wwprint " + Configuring IB0 device on Head Node";
+if ! config_ib0; then
+    wwprint "\nERROR: Failed to configure ib0 device" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Configure Services (ofed.functions)
+wwprint " + Configure Intel IB OFED+ Services";
+if ! wwaction config_services; then
+    wwprint "\nERROR: Failed to configure IntelIB services" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Disable YUM updates of packages (ofed.functions)
+wwprint " + Disabling YUM updates of related packages";
+if ! wwaction dis_yum_update; then
+    wwprint "\nWARNING: Failed to configure excludes in yum.conf" warn;
+    reply_warn;
+    RETVAL=1;
+fi
+
+# Configure SSHD service (ofed.functions)
+wwprint " + Configuring SSHD to bypass RLIMIT_MEMLOCK errors";
+if  wwaction sshd_config; then
+    wwprint " + Restarting sshd" warn;
+    # This *should* be fine to do even if we're ssh'd into the machine. The
+    # forked sshd we're connected to just won't have the new settings until
+    # we login again
+    service sshd restart &>/dev/null;
+    reply_ok;
 else
-    # if chroot does not exist, skip the master if installed in the master
-    if [ $installed_in_master -eq 1 ]; then 
-        wwprint "Intel IB OFED+ version ${reported_master_ver} found...";
-        reply_skipped;
-        skip_master=1;
-    fi
+    wwprint "\nWARNING: Failed to modify SSHD configuration" warn;
+    reply_warn;
+    RETVAL=1;
 fi
 
 
-# We *truly* only skip the full thing if both skip_master and skip_vnfs are 
-# set to 1.
-if [ $skip_master -ne 1 ]; then
-    # Remove any base OS Packages that may conflict
-    wwprint " + Removing conflicting OS packages from Head Node";
-    if ! wwaction uninst_os_ib; then
-        wwprint "\nERROR: Failed removing packages..." error;
+#XXX: For now, only do these if we have a CHROOTDIR defined.
+if [[ ! -z $CHROOTDIR  ]]; then
+    # Uninstall OS Packages in the  CHROOTDIR (ofed.functions)
+    wwprint " + Removing conflicting OS packages from chroot";
+    if ! uninst_os_ib "${CHROOTDIR}"; then
+        wwprint "\nERROR: Failed to remove possibly conflicting RPM packages";
         reply_error;
+        cleanup
         exit 255;
     fi
 
-    # Install Build Dependencies
-    wwprint " + Installing Intel IB OFED+ build dependencies";
-    if ! wwaction inst_build_dep; then
-        wwprint "\nERROR: Failed to install build dependencies..." error;
+    wwprint " + Installing Intel IB OFED+ dependencies in chroot";
+    if ! inst_iib_dep "${CHROOTDIR}"; then
+        wwprint "\nERROR: Failed to install dependencies..." error;
         reply_error;
+        cleanup
         exit 255;
     fi
 
-    # Configure OFED Package
-#wwprint " + Configuring Intel IB OFED+ Package\n";
-# if ! config_pkg; then
-#     wwprint "\nERROR: Failed to configure Intel IB OFED+ package" error;
-#     reply_error;
-#     exit 255;
-# fi
-
-    # Build IntelIB Package
-    wwprint " note: These next steps may take a while...\n" yellow
-    wwprint " + Building IntelIB Package";
-    if ! wwaction build_pkg; then
-        wwprint "\nERROR: Failed to build IntelIB package" error;
+    # Install packages into CHROOTDIR
+    wwprint " note: The next step may take some minutes...\n" yellow
+    wwprint " + Installing Intel IB OFED+ in the chroot";
+    if ! inst_pkg_chroot "${CHROOTDIR}"; then
+        wwprint "\nERROR: Failed to install IntelIB in the chroot" error;
         reply_error;
+        cleanup
         exit 255;
     fi
 
-    # Configure IB0 on Head Node
-    wwprint " + Configuring IB0 device on Head Node";
-    if ! wwaction config_ib0; then
-        wwprint "\nERROR: Failed to configure ib0 device" error;
-        reply_error;
-        exit 255;
-    fi
-
-    # Configure IntelIB Services
-    wwprint " + Configure IntelIB Services";
-    if ! wwaction config_services; then
-        wwprint "\nERROR: Failed to configure IntelIB services" error;
-        reply_error;
-        exit 255;
-    fi
-
-    # Disable YUM updates of packages
-    wwprint " + Disabling YUM updates of IntelIB related packages";
-    if ! wwaction dis_yum_update; then
-        wwprint "\nWARNING: Failed to configure excludes in yum.conf" warn;
-        reply_warn;
-        RETVAL=1;
-    fi
-
-    # Configure SSHD service
-    wwprint " + Configuring SSHD to bypass RLIMIT_MEMLOCK errors";
-    if wwaction sshd_config; then
-        wwprint " + Restarting sshd" warn;
-        # This *should* be fine to do even if we're ssh'd into the machine. The
-        # forked sshd we're connected to just won't have the new settings until
-        # we login again
-        service sshd restart &>/dev/null;
-        reply_ok;
-    else
+    # Configure SSHD in the CHROOTDIR (ofed.functions)
+    wwprint " + Configuring SSHD in the chroot";
+    if ! sshd_config "${CHROOTDIR}"; then
         wwprint "\nWARNING: Failed to modify SSHD configuration" warn;
         reply_warn;
         RETVAL=1;
     fi
-
-
-    #XXX: For now, only do these if we have a CHROOTDIR defined, and we have not
-    # already installed IntelIB into it.
-    wwprint "Configuring chroot Directory";
-    if [[ ! -z $CHROOTDIR && $skip_vnfs -ne 1 ]]; then
-
-        echo; # Echo to get a newline from the prior 'wwprint' call
-        # Uninstall OS Packages from CHROOTDIR
-        wwprint " + Removing conflicting OS packages from DIR";
-        if ! wwaction uninst_os_ib "${CHROOTDIR}"; then
-            wwprint "\nERROR: Failed to remove possibly conflicting RPM packages";
-            reply_error;
-            exit 255;
-        fi
-
-        # Install packages into CHROOTDIR
-        wwprint " + Installing IntelIB into the chroot";
-        if ! wwaction chroot_install "${CHROOTDIR}"; then
-            wwprint "\nERROR: Failed to install IntelIB in the chroot" error;
-            reply_error;
-            exit 255;
-        fi
-
-        # Configure SSHD in the CHROOTDIR
-        wwprint " + Configuring SSHD in the chroot";
-        if ! wwaction sshd_config "${CHROOTDIR}"; then
-            wwprint "\nWARNING: Failed to modify SSHD configuration" warn;
-            reply_warn;
-            RETVAL=1;
-        fi
-
-    else
-        reply_skipped;
-    fi
-
-    # Configure bootstrap.conf to include new IntelIB modules
-    wwprint " + Configuring bootstrap.conf For IntelIB";
-    if ! wwaction config_bootstrap; then
-        wwprint "\nWARNING: Failed to modify bootstrap.conf file" warn;
-        reply_warn;
-        RETVAL=1;
-    fi
-
-    # Modify provision settings to include an ifcfg-ib0 file on the nodes
-    wwprint " + Configuring InfiniBand Adapter ifcfg-ib0 file in datastore";
-    if ! wwaction config_ib0_chroot; then
-        wwprint "\nWARNING: Failed to create ifcfg-ib0 file in datastore" warn;
-        reply_warn;
-        RETVAL=1;
-    fi
-
-    wwprint " + Cleaning...";
-    if ! wwaction cleanup; then
-        wwprint "\nWARNING: Failed to do cleanup of /tmp" warn;
-        reply_warn;
-        RETVAL=1;
-    fi
-
-
-    exit $RETVAL
 fi
+
+# Configure bootstrap.conf to include new IntelIB modules (ofed.functions)
+wwprint " + Configuring bootstrap.conf for Intel IB OFED+ modules";
+
+# OFED drivers are left in different path according to the version
+ofed_ver=$(ofed_info | grep -e "OFED-[0-9]"|sed -e 's/OFED-//' -e 's/://')
+ofed_ver_maj=${ofed_ver%%.*};
+
+if !  config_bootstrap; then
+    wwprint "\nWARNING: Failed to modify bootstrap.conf file" warn;
+    reply_warn;
+    RETVAL=1;
+else
+    reply_ok;
+fi
+
+# Modify provision settings to include an ifcfg-ib0 file on the nodes
+# (ofed.functions)
+wwprint " + Configuring InfiniBand Adapter ifcfg-ib0 file in datastore";
+if ! config_ib0_chroot; then
+    wwprint "\nWARNING: Failed to create ifcfg-ib0 file in datastore" warn;
+    reply_warn;
+    RETVAL=1;
+fi
+
+#  Clean temporary folder (ofed.functions)
+wwprint " + Cleaning...";
+if !  cleanup; then
+    wwprint "\nWARNING: Failed to do cleanup of /tmp" warn;
+    reply_warn;
+    RETVAL=1;
+else
+    reply_ok;
+fi
+
+
+exit $RETVAL
 
 # vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

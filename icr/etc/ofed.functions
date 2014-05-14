@@ -99,7 +99,7 @@ uninst_os_ib() {
     fi
 
     yum_grp_name='"Infiniband Support"';
-    ofed_old_pkg="libibumad libibverbs rds-tools mstflint kernel-ib rdma libibcommon";
+    ofed_old_pkg="libibumad libibverbs rds-tools mstflint rdma libibcommon";
     if yum $yumopt grouplist $yum_grp_name 2>/dev/null | grep 'Installed Groups' 2>/dev/null; then
         wwprint " + Removing group $yum_grp_name from system." warn
         yum --tolerant --quiet $yumopt groupremove -y $yum_grp_name;
@@ -107,10 +107,9 @@ uninst_os_ib() {
     else
         # If we're here, we're trying to force remove anything instead of 
         # by the 'Infiniband Support' group
-        wwprint " + Removing individual InfiniBand packages." warn;
         for pkg in $ofed_old_pkg; do
             if rpm ${rpmopt} -q ${pkg} &>/dev/null; then
-                yum --tolerant --quiet ${yumopt} -y remove $pkg;
+                yum --tolerant --quiet ${yumopt} -y remove $pkg &>/dev/null;
                 RETVAL=$?;
                 if [ $RETVAL -ne 0 ]; then
                     WARN=1;
@@ -132,6 +131,13 @@ uninst_os_ib() {
         # Cleanup chroot after executing bash
         /bin/rm -f ${chroot_path}/dev/null;
         /bin/rm -f ${chroot_path}/root/uninstall.sh;
+    else
+        # Remove any and all conflicting OFED RPMs. This may take a couple
+        # runs to get rid of everything.
+        for i in 0 1; do
+            yes | ${ofed_source}/uninstall.sh &>/dev/null;
+            sleep 1;
+        done
     fi
 
     if [ $WARN -eq 0 ]; then
@@ -290,8 +296,6 @@ Warewulf::ICR::OFED::config_ib0();
 config_services() {
     ib_opensm_service='opensmd';
     ib_openib_service='openibd';
-
-    wwprint " + Configuring OFED Services\n";
 
     # Unload cxgb3i to avoid issues stopping openibd service
     /sbin/modprobe -r cxgb3i;
@@ -486,8 +490,8 @@ config_ib0_chroot() {
         -e 's/^\(NETMASK=\).*/\1%{NETDEVS::IB0::NETMASK}/' \
         ${node_ib0_file_path};
 
-    wwsh --noask file import ${node_ib0_file_path} --path=${ibcfg_file} --name=${node_ib0_file};
-    wwsh --noask file set ${node_ib0_file} --origin=UNDEF;
+    wwsh --noask file import ${node_ib0_file_path} --path=${ibcfg_file} --name=${node_ib0_file}  &>/dev/null;
+    wwsh --noask file set ${node_ib0_file} --origin=UNDEF  &>/dev/null;
 
     # Test to see if file is in Datastore
     if ! wwtest wwsh file list ${node_ib0_file}; then
