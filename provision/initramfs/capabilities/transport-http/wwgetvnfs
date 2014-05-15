@@ -15,27 +15,30 @@ cd ${NEWROOT:-/}
 
 while true; do
     for master in `echo $WWMASTER | sed -e 's/,/ /g'`; do
-#        # This pipeline always returns true. Would be super nice to check for return value of
-#        # wget without disrupting the pipeline! Please... somoene... fixme!
-#        wget -O - "http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR" | gunzip 2>/dev/null | cpio -uidm --quiet 2>/dev/null
 
-        mkfifo /tmp/vnfs-download
-
-        gunzip < /tmp/vnfs-download | cpio -uidm --quiet &
-
-        wget -O /tmp/vnfs-download http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR
-        WGETEXIT=$?
-
-        wait
-
-        rm -f /tmp/vnfs-download
-
-        # This is a cheesy way to see if the above wget worked... Ewww, I know. Please FIXME!
-        if [ -f "$NEWROOT/sbin/init" ]; then
-            exit 0
+        rm -f /tmp/vnfs-download 2>/dev/null
+        if ! mkfifo /tmp/vnfs-download 2>/dev/null; then
+            echo "ERROR: Could not create the fifo!"
+            exit 1
         fi
+
+        gunzip < /tmp/vnfs-download 2>/dev/null | cpio -uidm --quiet 2>/dev/null &
+        GZIP_PID=$!
+
+        if wget -O /tmp/vnfs-download http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR; then
+            wait
+            echo
+            # This is a cheesy way to see if the above wget worked... Ewww, I know...
+            # But it does work.
+            if [ -f "$NEWROOT/sbin/init" ]; then
+                exit 0
+            fi
+        elif [ -n "$GZIP_PID" ]; then
+            kill $GZIP_PID
+        fi
+
+
     done
-    echo -n "." 1>&2
     throttled_sleep
 done
 echo
