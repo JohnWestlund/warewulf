@@ -82,7 +82,7 @@ setup()
     my $self = shift;
     my $datadir = &Warewulf::ACVars::get("datadir");
     my $tftpdir = Warewulf::Provision::Tftp->new()->tftpdir();
-    my @tftpfiles = ("pxelinux.0", "lpxelinux.0", "ldlinux.c32", "chain.c32", "libcom32.c32", "libutil.c32");
+    my @tftpfiles = ("pxelinux.0", "lpxelinux.0", "ldlinux.c32");
 
     if ($tftpdir) {
         foreach my $f (@tftpfiles) {
@@ -223,6 +223,8 @@ update()
                     next;
                 }
 
+		my $bootlocal = $nodeobj->get("bootlocal");
+
                 &dprint("Creating pxelinux config at: $tftproot/warewulf/pxelinux.cfg/$config\n");
                 if (!open(PXELINUX, "> $tftproot/warewulf/pxelinux.cfg/$config")) {
                     &eprint("Could not open PXELinux config: $!\n");
@@ -230,15 +232,20 @@ update()
                 }
                 print PXELINUX "# Configuration for Warewulf node: $hostname\n";
                 print PXELINUX "# Warewulf data store ID: $db_id\n";
-                if ($nodeobj->get("bootlocal")) {
+                if ($bootlocal) {
                     print PXELINUX "DEFAULT bootlocal\n";
                 } else {
                     print PXELINUX "DEFAULT bootstrap\n";
                 }
                 print PXELINUX "LABEL bootlocal\n";
-                print PXELINUX "KERNEL chain.c32\n";
-                print PXELINUX "APPEND hd0\n";
 
+
+		if ($bootlocal) {
+		    &dprint("$hostname: LOCALBOOT set to: $bootlocal\n");
+                    print PXELINUX "LOCALBOOT $bootlocal\n";
+		} else {
+		    print PXELINUX "LOCALBOOT 0\n";
+		}
                 print PXELINUX "LABEL bootstrap\n";
                 print PXELINUX "SAY Now booting $hostname with Warewulf bootstrap ($bootstrapname)\n";
                 print PXELINUX "KERNEL bootstrap/$bootstrapid/kernel\n";

@@ -94,7 +94,7 @@ help()
     $h .= "         --preshell      Start a shell on the node before provisioning (boolean)\n";
     $h .= "         --postshell     Start a shell on the node after provisioning (boolean)\n";
     $h .= "         --postnetdown   Shutdown the network after provisioning (boolean)\n";
-    $h .= "         --bootlocal     Boot the node from the local disk (do not provision)\n";
+    $h .= "         --bootlocal     Boot the node from the local disk (\"exit\" or \"normal\")\n";
     $h .= "         --console       Set a specific console for the kernel command line\n";
     $h .= "         --kargs         Define the kernel arguments (assumes \"quiet\" if UNDEF)\n";
     $h .= "         --pxelinux      Define a custom PXELINUX/boot image to use\n";
@@ -360,7 +360,7 @@ exec()
                 uc($opt_bootlocal) eq "FALSE" or
                 uc($opt_bootlocal) eq "NO" or
                 uc($opt_bootlocal) eq "N" or
-                $opt_bootlocal == 0
+                $opt_bootlocal eq "0"
             ) {
                 foreach my $obj ($objSet->get_list()) {
                     my $name = $obj->name() || "UNDEF";
@@ -369,15 +369,20 @@ exec()
                     $persist_bool = 1;
                 }
                 push(@changes, sprintf("   UNDEF: %-20s\n", "BOOTLOCAL"));
-            } else {
+            } elsif (uc($opt_bootlocal) eq "EXIT" or
+ 		uc($opt_bootlocal) eq "NORMAL"
+	    ) {
                 foreach my $obj ($objSet->get_list()) {
                     my $name = $obj->name() || "UNDEF";
-                    $obj->bootlocal(1);
+                    $obj->bootlocal(uc($opt_bootlocal));
                     &dprint("Enabling bootlocal for node name: $name\n");
                     $persist_bool = 1;
                 }
-                push(@changes, sprintf("     SET: %-20s = %s\n", "BOOTLOCAL", 1));
-            }
+                push(@changes, sprintf("     SET: %-20s = %s\n", "BOOTLOCAL", uc($opt_bootlocal)));
+            } else {
+		&eprint("Invalid value specified, acceptable values are \"UNDEF\", \"NORMAL\", or \"EXIT\" for bootlocal!\n");
+        	return();	
+	    }
         }
 
         if (@opt_master) {

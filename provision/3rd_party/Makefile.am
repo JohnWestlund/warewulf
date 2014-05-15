@@ -1,6 +1,6 @@
 SUBDIRS = GPL BSD
 
-SYSLINUXTARGETS = lpxelinux.0 pxelinux.0 chain.c32 ldlinux.c32 libutil.c32 libcom32.c32
+SYSLINUXTARGETS = lpxelinux.0 pxelinux.0 ldlinux.c32
 
 MAINTAINERCLEANFILES = Makefile.in
 
@@ -18,15 +18,6 @@ syslinuxprepare:
 		tar xjf $(SYSLINUX_SOURCE) -C _work/ ;\
 	fi
 	touch prepare
-
-chain.c32: syslinuxprepare
-	cp _work/$(SYSLINUX_DIR)/bios/com32/chain/chain.c32 .
-
-libutil.c32: syslinuxprepare
-	cp _work/$(SYSLINUX_DIR)/bios/com32/libutil/libutil.c32 .
-
-libcom32.c32: syslinuxprepare
-	cp _work/$(SYSLINUX_DIR)/bios/com32/lib/libcom32.c32 .
 
 lpxelinux.0: syslinuxprepare
 	cp _work/$(SYSLINUX_DIR)/bios/core/lpxelinux.0 .

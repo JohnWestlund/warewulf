@@ -378,20 +378,26 @@ postshell()
 }
 
 
-=item bootlocal($bool)
+=item bootlocal($value)
 
-Set or return the bootlocal boolean
+Set or return bootlocal:
 
+NORMAL - LOCALBOOT type  0 (zero) : Perform a normal local boot.
+EXIT   - LOCALBOOT type -1 (minus one) : Cause the boot loader to report 
+         failure to the BIOS, which, on recent BIOSes, should mean that the 
+         next boot device in the boot sequence should be activated. 
 =cut
 
 sub
 bootlocal()
 {
-    my ($self, $bool) = @_;
+    my ($self, $value) = @_;
 
-    if (defined($bool)) {
-        if ($bool) {
-            $self->set("bootlocal", 1);
+    if (defined($value)) {
+        if ($value eq "NORMAL") {
+            $self->set("bootlocal", 0);
+        } elsif ($value eq "EXIT") {
+            $self->set("bootlocal", -1);
         } else {
             $self->del("bootlocal");
         }
