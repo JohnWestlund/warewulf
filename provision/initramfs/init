@@ -101,7 +101,7 @@ ifup() {
                     fi
                 fi
 
-                if [ -n "$WWPOSTNETDOWN" ]; then
+                if [ -z "$WWPOSTNETDOWN" ]; then
                     # Debian based /etc/network/interfaces
                     echo "# This was created by the Warewulf bootstrap" > /tmp/interfaces
                     echo "auto lo" >> /tmp/interfaces
@@ -160,7 +160,7 @@ ifup() {
                 msg_gray "($IPADDR/$NETMASK)"
                 wwsuccess
 
-                if [ -n "$WWPOSTNETDOWN" ]; then
+                if [ -z "$WWPOSTNETDOWN" ]; then
                     # DEB
                     echo "# This was created by the Warewulf bootstrap" > /tmp/interfaces
                     echo "auto lo" >> /tmp/interfaces
