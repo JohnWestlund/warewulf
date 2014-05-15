@@ -141,7 +141,7 @@ inst_pkg() {
     cd - &>/dev/null;
 
     # Remove packages only needed at install time
-    yum $yumopt --tolerant --quiet remove -y $build_dependencies &>/dev/null;
+#    yum $yumopt --tolerant --quiet remove -y $build_dependencies &>/dev/null;
 
     return $RETVAL;
 }
