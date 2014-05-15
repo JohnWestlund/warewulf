@@ -47,6 +47,9 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                             KERNEL=${KERNEL##boot/}
                         fi
                     fi
+                    if [ -z ${WWKARGS} ]; then
+                        WWKARGS="quiet"
+                    fi
 
                     echo "# This file was written by Warewulf bootstrap (capability setup-filesystems)" > $NEWROOT/boot/grub/device.map
                     echo "(hd0) $WWBOOTLOADER" >> $NEWROOT/boot/grub/device.map
@@ -57,7 +60,11 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                     echo "root (hd0,0)" >>$NEWROOT/boot/grub/grub.conf
                     echo "" >>$NEWROOT/boot/grub/grub.conf
                     echo "title $OSVERSION - $KERNELVERSION" >>$NEWROOT/boot/grub/grub.conf
-                    echo "    kernel /$KERNEL ro root=$ROOTDEV rhgb quiet" >>$NEWROOT/boot/grub/grub.conf
+                    if [ -n $WWCONSOLE ]; then
+                        echo "    kernel /$KERNEL ro root=$ROOTDEV rhgb ${WWKARGS} console=${WWCONSOLE}" >>$NEWROOT/boot/grub/grub.conf
+                    else
+                        echo "    kernel /$KERNEL ro root=$ROOTDEV rhgb ${WWKARGS}" >>$NEWROOT/boot/grub/grub.conf
+                    fi
                     echo "    initrd /$INITRD" >>$NEWROOT/boot/grub/grub.conf
 
                     if [ -f "/tmp/mtab" ]; then
