@@ -21,6 +21,9 @@ sort -r /tmp/mptab | while read mp dev type perms opts; do
     if [ "x$mp" == "x/" ]; then
         echo "$dev $mp $type $opts 0 0" > $NEWROOT/etc/mtab
     else
+        if [ "x$mp" == "xnone" ]; then
+	    continue
+        fi
         if ! umount $NEWROOT/$mp; then
             mount -o remount,ro $NEWROOT/$mp
         fi
