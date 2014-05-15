@@ -54,11 +54,12 @@ cleanup() {
 }
 
 # Check if the user defined MIC cards for this node, otherwise skip
-# Short circuit if sentence seems not to work in busybox
-if [[ -z "$WWMICCOUNT" ]]; then 
+if [ -z $WWMICCOUNT ]; then
     wwlogger "No MIC cards defined."
     exit 1;
-elif [[ "$WWMICCOUNT" -eq 0 ]]; then
+fi
+
+if [ $WWMICCOUNT -eq 0 ]; then
     wwlogger "No MIC cards defined."
     exit 1;
 fi
@@ -128,13 +129,13 @@ DEFROUTE="yes"
 GATEWAYDEF="br0"
 EOF
 
-cat > $NEWROOT/etc/sysconfig/network-scripts/ifcfg-eth0 <<-EOF
-DEVICE=eth0
+cat > $NEWROOT/etc/sysconfig/network-scripts/ifcfg-$WWNETDEV <<-EOF
+DEVICE=$WWNETDEV
 TYPE=Ethernet
 BRIDGE=br0
 ONBOOT=yes
 BOOTPROTO=none
-NAME="System eth0"
+NAME="System $WWNETDEV"
 NM_CONTROLLED="no"
 EOF
 
