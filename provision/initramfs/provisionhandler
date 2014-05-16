@@ -22,7 +22,7 @@ if [ -d "/warewulf/provision/" ]; then
             msg_white " * $NAME "
             usleep 250000
             echo -ne $GRAY
-            sh $i
+            sh -x $i 2> /var/log/provision/$NAME.log
             RETVAL=$?
             echo -ne $NORMAL
             if [ $RETVAL -eq 0 ]; then

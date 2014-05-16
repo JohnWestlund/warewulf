@@ -22,23 +22,25 @@ while true; do
             exit 1
         fi
 
-        gunzip < /tmp/vnfs-download 2>/dev/null | cpio -uidm --quiet 2>/dev/null &
-        GZIP_PID=$!
+        #gunzip < /tmp/vnfs-download 2>/dev/null | cpio -uidm --quiet 2>/dev/null &
+        gunzip < /tmp/vnfs-download | tar -xf - &
 
-        if wget -O /tmp/vnfs-download http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR; then
-            wait
+        wget -O /tmp/vnfs-download http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR 2>&1
+        WGETEXIT=$?
+
+        wait
+        if [ -f "$NEWROOT/sbin/init" ]; then
             echo
-            # This is a cheesy way to see if the above wget worked... Ewww, I know...
-            # But it does work.
-            if [ -f "$NEWROOT/sbin/init" ]; then
-                exit 0
-            fi
-        elif [ -n "$GZIP_PID" ]; then
-            kill $GZIP_PID
+            exit 0
         fi
 
-
+#        ( wget -O - "http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR" | gunzip | tar -xf - ) 2>&1
+#        if [ -f "$NEWROOT/sbin/init" ]; then
+#            echo
+#            exit 0
+#        fi
     done
+    echo -n "."
     throttled_sleep
 done
 echo

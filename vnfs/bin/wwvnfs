@@ -369,6 +369,7 @@ vnfs_create_file($)
             chown($uid, $gid, "$tmpdir/$path");
             chmod($mode & 07777, "$tmpdir/$path");
             utime($atime, $mtime, "$tmpdir/$path");
+            system("chcon --reference=$opt_chroot/$path $tmpdir/$path");
             $link_map{"$dev-$ino"} = "$tmpdir/$path";
         }
     }
@@ -425,7 +426,8 @@ if (-d $opt_chroot) {
         find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
 
         &nprint("Building and compressing the final image\n");
-        system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
+        #system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
+        system("(cd $tmpdir; tar --xattrs --selinux -cf - . ) | $gzip_bin $gzip_opts > $output");
         &nprint("Cleaning temporary files\n");
         system("rm -rf $tmpdir");
 
