@@ -98,6 +98,8 @@ help()
     $h .= "         --console       Set a specific console for the kernel command line\n";
     $h .= "         --kargs         Define the kernel arguments (assumes \"quiet\" if UNDEF)\n";
     $h .= "         --pxelinux      Define a custom PXELINUX/boot image to use\n";
+    $h .= "         --selinux       Boot node with SELinux support? (valid options are: UNDEF,\n";
+    $h .= "                         ENABLED, and ENFORCED)\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "\n";
@@ -181,6 +183,7 @@ exec()
     my $opt_kargs;
     my $opt_console;
     my $opt_pxelinux;
+    my $opt_selinux;
     my $return_count;
     my $objSet;
     my @changes;
@@ -209,6 +212,7 @@ exec()
         'postnetdown=s' => \$opt_postnetdown,
         'bootlocal=s'   => \$opt_bootlocal,
         'l|lookup=s'    => \$opt_lookup,
+        'selinux=s'     => \$opt_selinux,
     );
 
     $command = shift(@ARGV);
@@ -551,6 +555,27 @@ exec()
             }
         }
 
+        if ($opt_selinux) {
+            if ($opt_selinux =~ /^(disabled|enabled|enforced)$/i) {
+                $opt_selinux = $1;
+
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->selinux($opt_selinux);
+                    &dprint("Setting selinux to: $opt_selinux\n");
+                    $persist_bool = 1;
+                }
+                if (uc($opt_selinux) eq "UNDEF") {
+                    push(@changes, sprintf("     DEL: %-20s\n", "SELINUX"));
+                } else {
+                    push(@changes, sprintf("     SET: %-20s = %s\n", "SELINUX", $opt_selinux));
+                }
+
+            } else {
+                &eprint("Invalid option for SELinux support!\n");
+            }
+        }
+
         if ($persist_bool) {
             if ($command ne "new" and $term->interactive()) {
                 print "Are you sure you want to make the following changes to ". $object_count ." node(s):\n\n";
@@ -614,6 +639,7 @@ exec()
             printf("%15s: %-16s = %s\n", $name, "POSTSHELL", $o->postshell() ? "TRUE" : "FALSE");
             printf("%15s: %-16s = %s\n", $name, "CONSOLE", $o->console() || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "PXELINUX", $o->pxelinux() || "UNDEF");
+            printf("%15s: %-16s = %s\n", $name, "SELINUX", $o->selinux() || "UNDEF");
             printf("%15s: %-16s = \"%s\"\n", $name, "KARGS", $kargs);
             if ($o->get("filesystems")) {
                 printf("%15s: %-16s = %s\n", $name, "FILESYSTEMS", join(",", $o->get("filesystems")));

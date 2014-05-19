@@ -378,6 +378,53 @@ postshell()
 }
 
 
+=item selinux($value)
+
+Set or return SELinux support
+
+DISABLED    No SELinux support (default)
+ENABLED     Enable but don't enforce
+ENFORCED    Enable and enforce.
+
+note: to enable or enforce you will need to have a valid policy file
+created in the booting VNFS at /etc/selinux/targeted/policy/policy.24.
+
+=cut
+
+sub
+selinux()
+{
+    my ($self, $value) = @_;
+    my $newval;
+
+    if ( defined($value) ) {
+        if ( uc($value) eq "DISABLED" ) {
+            $self->del("selinux");
+        } elsif ( uc($value) eq "ENABLED" ) {
+            $self->set("selinux", 0);
+        } elsif ( uc($value) eq "ENFORCED" ) {
+            $self->set("selinux", 1);
+        } else {
+            &eprint("Can not set SELINUX value to: $value\n");
+        }
+    }
+
+    $newval = $self->get("selinux");
+    if ( ! defined($newval) ) {
+        return "DISABLED" ;
+    } elsif ( $newval == 0 ) {
+        return "ENABLED" ;
+    } elsif ( $newval == 1 ) {
+        return "ENFORCED" ;
+    } else {
+        &eprint("Unknown value of SELinux ($newval), deleting...\n");
+        $self->del("selinux");
+        return "DISABLED";
+    }
+
+}
+
+
 =item bootlocal($value)
 
 Set or return bootlocal:

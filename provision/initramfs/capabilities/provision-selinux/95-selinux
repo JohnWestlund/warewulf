@@ -15,7 +15,9 @@ fi
 if [ -n "$WWSELINUX" ]; then
     if [ "$WWSELINUX" -ge 0 ]; then
         if chroot $NEWROOT /bin/sh -c "/sbin/load_policy -i"; then
-            echo $WWSELINUX > $NEWROOT/selinux/enforce
+            if chroot $NEWROOT /bin/sh -c "/sbin/restorecon -R /"; then
+                echo $WWSELINUX > $NEWROOT/selinux/enforce
+            fi
         else
             echo 0 > $NEWROOT/selinux/enforce
             echo 1 > $NEWROOT/selinux/disable
