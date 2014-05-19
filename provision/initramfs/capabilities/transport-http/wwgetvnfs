@@ -22,8 +22,8 @@ while true; do
             exit 1
         fi
 
-        #gunzip < /tmp/vnfs-download 2>/dev/null | cpio -uidm --quiet 2>/dev/null &
-        gunzip < /tmp/vnfs-download | tar -xf - &
+        gunzip < /tmp/vnfs-download | cpio -uidm --quiet &
+        #gunzip < /tmp/vnfs-download | tar -xf - &
 
         wget -O /tmp/vnfs-download http://$master/WW/vnfs?hwaddr=$WWINIT_HWADDR 2>&1
         WGETEXIT=$?
