@@ -7,9 +7,17 @@ trap "/bin/rm -f ${PIPE}; exit" EXIT;
 if [ ! -p ${PIPE} ]; then
     mkfifo -m 0660 ${PIPE};
     chown root:warewulf ${PIPE};
+else
+    echo "Pipe ${PIPE} already exists.";
+    exit 1;
 fi
 
 while true; do
-    wwsh < ${PIPE} 1>/dev/null;
+    while read inp; do
+        # Block what commands can be passed
+        if ! echo $inp | egrep -q "delete" 2>/dev/null 1>/dev/null; then
+            wwsh $inp 1>/dev/null;
+        fi
+    done < ${PIPE};
 done
 
