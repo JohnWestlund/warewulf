@@ -1,0 +1,116 @@
+#!/bin/sh
+## 
+## Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
+## 
+## Warewulf Copyright (c) 2003-2011, The Regents of the University of
+## California, through Lawrence Berkeley National Laboratory (subject to
+## receipt of any required approvals from the U.S. Dept. of Energy).
+## All rights reserved.
+##
+#########################
+## Copyright (c) 2013, Intel(R) Corporation #{
+##
+## Redistribution and use in source and binary forms, with or without 
+## modification, are permitted provided that the following conditions are met:
+##
+##    * Redistributions of source code must retain the above copyright notice, 
+##      this list of conditions and the following disclaimer.
+##    * Redistributions in binary form must reproduce the above copyright 
+##      notice, this list of conditions and the following disclaimer in the 
+##      documentation and/or other materials provided with the distribution.
+##    * Neither the name of Intel(R) Corporation nor the names of its 
+##      contributors may be used to endorse or promote products derived from 
+##      this software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+## POSSIBILITY OF SUCH DAMAGE.
+#########################}
+##
+## 89-mic.init
+## Basic configuration files to get MIC working in a cluster setup. 
+
+#INIT: ALL
+#INIT: MIC
+
+# Some sanity checking
+if [ ! -f "$WWFUNCTIONS" ]; then
+    wwprint "ERROR: Could not load Warewulf functions - $WWFUNCTIONS";
+    exit 255;
+fi
+. ${WWFUNCTIONS};
+
+if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/mic.functions" ]; then
+    wwprint "ERROR: Could not locate MIC wwinit functions!";
+    exit 255;
+fi
+. ${WAREWULF_SYSCONFDIR}/warewulf/wwinit/mic.functions;
+
+# Check if a previous module created a chroot and defined its path.
+# If so, use it
+if [ -f  "${WWTMPDIR}/CHROOTDIR" ]; then
+   . ${WWTMPDIR}/CHROOTDIR; 
+fi
+
+# In case CHROOTDIR was passed at execution time
+CHROOTDIR=${CHROOTDIR:-}
+
+if [[ ! -z "$CHROOTDIR" && ! -d "$CHROOTDIR" ]]; then
+    wwprint " ! ERROR: Invalid CHROOT path" error;
+    reply_error;
+    exit 255;
+fi
+
+if [ ! -f "${CHROOTDIR}/sbin/init" ]; then
+    wwprint " ! ERROR: ${CHROOTDIR}/root/yum-ww.conf not found\n" error;
+    wwprint "         chroot may be corrupt" error;
+    reply_error;
+    return 255;
+fi
+
+# Figure out if we even have an 'InfiniBand' device showing up.
+# Use OFEDFORCE to force the InfiniBand*  components install behavior 
+# regardless of what is detected by lspci:
+# OFEDFORCE=0 ; InfiniBand* components will not be installed
+# OFEDFORCE=1 ; InfiniBand* components will be installed
+
+if [ ! -z $OFEDFORCE ];then 
+    OFED_FLAG=$OFEDFORCE;
+elif lspci | grep -i -e 'InfiniBand' -e 'Mellanox' -e 'QLogic' &>/dev/null ; then
+    OFED_FLAG=1;
+fi
+
+# root is requrired
+wwreqroot
+
+wwprint "Installing and configuring Intel(R) MPSS package\n";
+
+# Install the Intel(R) Manycore Platform Software Stack
+inst_mpss;
+
+# Enable the required services in the chroot
+enable_mic_services;
+
+# Install the Warewulf mic-node package in the chroot
+inst_ww_mic_node;
+
+# Set the users environment for MIC cards
+set_ssh_keys;
+
+# Configure the bootstrap to include the MIC module
+set_mic_module;
+
+exit 0;
+
+# NOTE: bootstrap and VNFS images should be updated after running
+# this initialization file
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

@@ -1,0 +1,161 @@
+#!/bin/sh
+#
+# Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
+# 
+# Warewulf Copyright (c) 2003-2011, The Regents of the University of
+# California, through Lawrence Berkeley National Laboratory (subject to
+# receipt of any required approvals from the U.S. Dept. of Energy).
+# All rights reserved.
+# 
+#########################
+# Copyright (c) 2013 Intel Corporation #{
+#
+# Redistribution and use in source and binary forms, with or without 
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright notice, 
+#       this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright 
+#       notice, this list of conditions and the following disclaimer in the 
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of Intel Corporation nor the names of its contributors 
+#       may be used to endorse or promote products derived from this software 
+#       without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+# POSSIBILITY OF SUCH DAMAGE.
+#########################}
+
+[ -f /etc/functions ] && . /etc/functions
+
+# Expected path for MIC stuff
+micdir="/opt/intel/mic";
+
+# Expected location for the wwfirsbtoot file to configure the MIC
+# cards
+michost_wwfb="/usr/libexec/warewulf/wwfirstboot/99-michost.wwfb";
+
+# We may need to do this in multiple places where we exit
+# so that the umount script doesn't fail.
+cleanup() {
+    # Clean up $NEWROOT
+    chroot $NEWROOT umount -a -t nfs
+    umount $NEWROOT/sys
+    umount $NEWROOT/proc
+}
+
+# Check if the user defined MIC cards for this node, otherwise skip
+if [ -z $WWMICCOUNT ]; then
+    wwlogger "No MIC cards defined."
+    exit 1;
+fi
+
+if [ $WWMICCOUNT -eq 0 ]; then
+    wwlogger "No MIC cards defined."
+    exit 1;
+fi
+
+#XXX: /sys is required for micctrl, mount /proc just to be nice.
+mount -t proc proc $NEWROOT/proc
+mount -t sysfs none $NEWROOT/sys
+
+# /opt *may* be NFS mounted...
+chroot $NEWROOT mount -a -t nfs
+
+# In the Warewulf bootstrap $NEWROOT should always be defined
+# as the location where the VNFS image is being extracted. The
+# default value is: /newroot
+if [ -n "$NEWROOT" ]; then
+    # Verify that MIC stuff is available in NEWROOT
+    if ! chroot ${NEWROOT} ls -ld ${micdir} &>/dev/null; then
+        wwlogger "Could not find: ${NEWROOT}${micdir}";
+        cleanup;
+        exit 2;
+    fi
+
+    # Verify that the michost.wwfb is available in NEWROOT
+    if ! chroot ${NEWROOT} ls -l ${michost_wwfb} &>/dev/null; then
+        wwlogger "Could not find: ${NEWROOT}${michost_wwfb}";
+        cleanup;
+        exit 2;
+    fi
+else
+    wwlogger "NEWROOT is not defined";
+    cleanup;
+    exit 2;
+fi
+
+# Some sanity checks
+if [[ -z "$WWIPADDR" || -z "$WWNETMASK" ]]; then
+    wwlogger "Networking information is not defined";
+    cleanup;
+    exit 2;
+fi
+
+# Configure the bridge with the data available for the provisioning 
+# interface
+NODEIP=$WWIPADDR;
+PREFIX=`ipcalc -p $NODEIP $WWNETMASK | cut -f 2 -d '='`;
+MASTERIP=$WWMASTER;
+
+#If MTU was defined, use it. Otherwise default to 1500
+if [ ! -z $WWMTU ]; then
+    MTU=$WWMTU;
+else
+    MTU=1500;
+fi
+
+cat > $NEWROOT/etc/sysconfig/network-scripts/ifcfg-br0 <<-EOF
+DEVICE=br0
+TYPE=Bridge
+ONBOOT=yes
+DELAY=0
+NM_CONTROLLED="no"
+BOOTPROTO=none
+IPADDR=$NODEIP
+PREFIX=$PREFIX
+GATEWAY=$MASTERIP
+MTU=$MTU
+DEFROUTE="yes"
+GATEWAYDEF="br0"
+EOF
+
+cat > $NEWROOT/etc/sysconfig/network-scripts/ifcfg-$WWNETDEV <<-EOF
+DEVICE=$WWNETDEV
+TYPE=Ethernet
+BRIDGE=br0
+ONBOOT=yes
+BOOTPROTO=none
+NAME="System $WWNETDEV"
+NM_CONTROLLED="no"
+EOF
+
+# Combine our variables to simplify MIC cards configuration
+WWIP=`echo $WW_IPADDR | tr ',' ' '`;
+WWND=`echo $WWNETDEVS | tr ',' ' '`;
+varcnt=`echo $WWND | tr ' ' '\n' | wc -l`;
+
+
+wwlogger "Copying networking information into ${NEWROOT}${michost_wwfb}";
+# Transfer all the data required for MIC cards initialization
+# to be done in 99-michost.wwfb
+sed -i -e "s/^WWMICCOUNT=$/WWMICCOUNT=$WWMICCOUNT/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^NODEIP=$/NODEIP=$NODEIP/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^MASTERIP=$/MASTERIP=$MASTERIP/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^MTU=$/MTU=$MTU/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^PREFIX=$/PREFIX=$PREFIX/" ${NEWROOT}${michost_wwfb};
+sed -i -e "s/^WW__NETDEVLIST=$/WW__NETDEVLIST=\"$WW__NETDEVLIST\"/" ${NEWROOT}${michost_wwfb};
+
+cleanup;
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
+
