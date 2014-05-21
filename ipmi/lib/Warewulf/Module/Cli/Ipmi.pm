@@ -359,7 +359,7 @@ exec()
         }
         if ($opt_noautoconfig) {
             foreach my $o ($objSet->get_list()) {
-                $o->ipmi_autoconfig();
+                $o->ipmi_autoconfig(0);
             }
             push(@changes, sprintf("   UNDEF: %-20s\n", "IPMI_AUTOCONFIGURE"));
             $persist_bool = 1;

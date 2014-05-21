@@ -178,15 +178,13 @@ ipmi_autoconfig()
     my ($self, $value) = @_; 
     my $key = "ipmi_autoconfig";
 
-    if ($value) {
-        if ($value eq "0") {
-            $self->del($key);
+    if ($value eq "0") {
+        $self->del($key);
+    } elsif ($value eq "1") {
+        if ($self->ipmi_ipaddr() and $self->ipmi_netmask() and $self->ipmi_username() and $self->ipmi_password()) {
+            $self->set($key, "1");
         } else {
-            if ($self->ipmi_ipaddr() and $self->ipmi_netmask() and $self->ipmi_username() and $self->ipmi_password()) {
-                $self->set($key, "1");
-            } else {
-                &eprint("Could not set ipmi_autoconfig() because requirements not met\n");
-            }
+            &eprint("Could not set ipmi_autoconfig() because requirements not met\n");
         }
     }
     return $self->get($key);
