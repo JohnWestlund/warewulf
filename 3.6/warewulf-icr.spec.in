@@ -1,0 +1,57 @@
+%{!?_rel:%{expand:%%global _rel 0.r%(test "@SVNVERSION@" != "0000" && echo "@SVNVERSION@" || svnversion | sed 's/[^0-9].*$//' | grep '^[0-9][0-9]*$' || git svn find-rev `git show -s --pretty=format:%h` || echo 0000)}}
+%define debug_package %{nil}
+
+Summary: Intel Cluster Ready specific configurations for Warewulf
+Name: warewulf-icr
+Version: @PACKAGE_VERSION@
+Release: %{_rel}%{?dist}
+License: US Dept. of Energy (BSD-like)
+Group: System Environment/Clustering
+URL: http://warewulf.lbl.gov/
+Source: %{name}-%{version}.tar.gz
+ExclusiveOS: linux
+Requires: warewulf-common warewulf-provision warewulf-provision-server warewulf-vnfs
+BuildRequires: warewulf-common
+Conflicts: warewulf < 3
+BuildRoot: %{?_tmppath}%{!?_tmppath:/var/tmp}/%{name}-%{version}-%{release}-root
+
+%description
+Warewulf >= 3 is a set of utilities designed to better enable
+utilization and maintenance of clusters or groups of computers.
+
+This package contains scripts and configuration files that will
+enable you to build clusters compliant with the Intel Cluster Ready
+specification.
+
+
+%prep
+%setup
+
+
+%build
+%configure
+%{__make} %{?mflags}
+
+
+%install
+%{__make} install DESTDIR=$RPM_BUILD_ROOT %{?mflags_install}
+
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%files
+%defattr(-, root, root)
+%doc AUTHORS COPYING ChangeLog INSTALL NEWS README TODO
+%{perl_vendorlib}/Warewulf/*
+%{perl_vendorlib}/Warewulf/Event/CLCK_Nodelist.pm
+%attr(0755, root, warewulf) %dir %{_sysconfdir}/warewulf/wwinit/
+%attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/ofed.functions
+%attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/icr.functions
+%attr(0444, root, warewulf) %{_sysconfdir}/warewulf/wwinit/IntelIB.functions
+%{_libexecdir}/warewulf/wwinit
+%{_libexecdir}/warewulf/wwmkchroot
+
+
+%changelog

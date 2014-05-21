@@ -1,0 +1,230 @@
+#!/bin/sh
+#
+# Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
+# 
+# Warewulf Copyright (c) 2003-2014, The Regents of the University of
+# California, through Lawrence Berkeley National Laboratory (subject to
+# receipt of any required approvals from the U.S. Dept. of Energy).
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# (1) Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+# 
+# (2) Redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution.
+# 
+# (3) Neither the name of the University of California, Lawrence Berkeley
+# National Laboratory, U.S. Dept. of Energy nor the names of its contributors
+# may be used to endorse or promote products derived from this software
+# without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# 
+# You are under no obligation whatsoever to provide any bug fixes, patches,
+# or upgrades to the features, functionality or performance of the source
+# code ("Enhancements") to anyone; however, if you choose to make your
+# Enhancements available either publicly, or directly to Lawrence Berkeley
+# National Laboratory, without imposing a separate written license agreement
+# for such Enhancements, then you hereby grant the following license: a
+# non-exclusive, royalty-free perpetual license to install, use, modify,
+# prepare derivative works, incorporate into other computer software,
+# distribute, and sublicense such enhancements or derivative works thereof,
+# in binary and source code form.
+#
+## Copyright (c) 2014, Intel(R) Corporation
+##
+## Redistribution and use in source and binary forms, with or without 
+## modification, are permitted provided that the following conditions are met:
+##
+##    * Redistributions of source code must retain the above copyright notice, 
+##      this list of conditions and the following disclaimer.
+##    * Redistributions in binary form must reproduce the above copyright 
+##      notice, this list of conditions and the following disclaimer in the 
+##      documentation and/or other materials provided with the distribution.
+##    * Neither the name of Intel(R) Corporation nor the names of its contributors 
+##      may be used to endorse or promote products derived from this software 
+##      without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+## POSSIBILITY OF SUCH DAMAGE.
+##
+
+# Helper functions for the wwinit ofed module
+
+# Intel IB package installer
+inst_cmd='./INSTALL';
+
+# Install options:
+# -f : do not update firmware
+# --no32bit: skip 32 bit libraries
+# -i iba, ipoib, psm: components to install
+inst_opts='-f  --no32bit  -i iba -i ipoib -i mpi -i psm_mpi -i udapl';
+# Open subnet manager, only install in the head node
+opensm_opt=' -i opensm';
+
+# Intel IB's folder name
+iibdir='';
+# Path at which Intel IB is untared. 
+iib_base_dir='';
+
+# Dependencies required to build ofa_kernel rpm
+build_dependencies="gcc kernel-devel redhat-rpm-config rpm-build ";
+
+# Install the packages required for building OFED
+inst_iib_dep() {
+    local RETVAL='';
+    if [[ ! -z $1 && -d $1 && -x $1/sbin/init ]]; then
+        chroot_path=$1;
+    fi
+    
+    local yumopt='';
+    if [ ! -z $chroot_path ]; then
+        yumopt="--config=${chroot_path}/root/yum-ww.conf --installroot=${chroot_path}";
+    fi
+
+    local dependencies="dmidecode glibc libgfortran.x86_64 libstdc++.x86_64 \
+    libsysfs pciutils tcl tcsh tk sysfsutils";
+
+    yum $yumopt --tolerant --quiet install -y $dependencies  $build_dependencies &>/dev/null;
+
+    RETVAL=$?;
+
+    if [ $RETVAL -ne 0 ]; then
+        reply_error;
+    else
+        reply_ok;
+    fi
+
+    return $RETVAL;
+}
+
+# Install the Intel IB package 
+inst_pkg() {
+   
+    local RETVAL='';
+    # INSTALL requires to be executed from is path
+    cd ${iib_base_dir} &>/dev/null;
+
+    # Install 
+    ${inst_cmd} ${inst_opts} ${opensm_opt} &>/dev/null;
+    RETVAL=$?;
+
+    if [ $RETVAL -ne 0 ]; then
+        reply_error;
+    else
+        reply_ok;
+    fi
+
+    cd - &>/dev/null;
+
+    # Remove packages only needed at install time
+#    yum $yumopt --tolerant --quiet remove -y $build_dependencies &>/dev/null;
+
+    return $RETVAL;
+}
+
+# Install the Intel IB package in the chroot
+inst_pkg_chroot() {
+
+    local RETVAL='';
+    # local
+    yumopt="--config=${chroot_path}/root/yum-ww.conf --installroot=${chroot_path}";
+
+    # Sanity checks to ensure it is a chroot
+    if [[ ! -z $1 && -d $1 && -x $1/sbin/init ]]; then
+        CHROOTDIR=$1;
+    else
+        wwprint " \n! ERROR: Invalid CHROOT path" error;
+        reply_error;
+        exit 255;
+    fi
+
+    # The installer queries the CPU architecture
+    cp /proc/cpuinfo $chroot_path/proc/ ;
+
+    # Temporarily copy the installer to the chroot.
+    cp -a ${iib_base_dir} $chroot_path/tmp/ ;
+
+    # Install. The command needs to be executed from the containing folder
+    chroot_inst_cmd="cd /tmp/${iibdir}/; ${inst_cmd} ${inst_opts}" ;
+    /usr/sbin/chroot ${CHROOTDIR} /bin/bash -c "$chroot_inst_cmd" &>/dev/null; 
+    RETVAL=$?;
+
+    if [ $RETVAL -ne 0 ]; then
+        reply_error;
+    else
+        reply_ok;
+    fi
+
+    # OFED 1.5.4.x requires kernel-ib rpms to be re installed in the chroot
+    # to generate the /etc/init/* scripts.
+    kernel_ver=$(uname -r|sed -e 's/-/_/');
+    kernel_ib_rpm=$(find  ${iib_base_dir} -name "kernel-ib*" \
+    |grep $kernel_ver |grep -v deve);
+
+    rpm --force --root=${CHROOTDIR} -ivh ${kernel_ib_rpm} &>/dev/null;
+
+    # Remove packages only needed at install time
+    yum $yumopt --tolerant --quiet remove -y $build_dependencies &>/dev/null;
+
+    # clean the chroot
+    /bin/rm -rf $chroot_path/tmp/${iibdir} $chroot_path/proc/cpuinfo;
+
+    return $RETVAL;
+}
+
+# Extract the IntelIB package. Package is passed
+# as a parameter, or try and be smart and find the package in $HOME
+extract_iib_pkg() {
+
+    if [ ! -z $1 ]; then
+        pkg_file=$1;
+    else
+        pkg_file=$(/bin/ls -1 $HOME/IntelIB-*.tgz 2>/dev/null | sort -V | tail -1);
+    fi
+
+    tmpdir=$(mktemp -d /tmp/INTELIB_ICR-XXXXXXXXXX);
+    # Uncompress the package 
+    tar -xzf $pkg_file -C $tmpdir;
+    if [ $? -ne 0 ]; then
+        reply_error;
+        /bin/rm -rf $tmpdir;
+        return 255;
+    fi
+
+    iibdir=`basename $pkg_file .tgz`;
+    iib_base_dir="${tmpdir}/${iibdir}";
+    OFEDplus_basedir=$(ls "${iib_base_dir}" |grep OFED);
+
+    # ofed_source variable is used to uninstall, done by uninst_os_ib in 
+    # ofed.functions.
+    ofed_source="${iib_base_dir}/${OFEDplus_basedir}";
+
+    reply_ok;
+    return 0;
+}
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

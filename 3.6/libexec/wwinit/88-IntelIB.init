@@ -1,0 +1,307 @@
+#!/bin/sh
+#
+# Warewulf Copyright (c) 2001-2003 Gregory M. Kurtzer
+# 
+# Warewulf Copyright (c) 2003-2014, The Regents of the University of
+# California, through Lawrence Berkeley National Laboratory (subject to
+# receipt of any required approvals from the U.S. Dept. of Energy).
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# (1) Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
+# 
+# (2) Redistributions in binary form must reproduce the above copyright
+# notice, this list of conditions and the following disclaimer in the
+# documentation and/or other materials provided with the distribution.
+# 
+# (3) Neither the name of the University of California, Lawrence Berkeley
+# National Laboratory, U.S. Dept. of Energy nor the names of its contributors
+# may be used to endorse or promote products derived from this software
+# without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+# 
+# You are under no obligation whatsoever to provide any bug fixes, patches,
+# or upgrades to the features, functionality or performance of the source
+# code ("Enhancements") to anyone; however, if you choose to make your
+# Enhancements available either publicly, or directly to Lawrence Berkeley
+# National Laboratory, without imposing a separate written license agreement
+# for such Enhancements, then you hereby grant the following license: a
+# non-exclusive, royalty-free perpetual license to install, use, modify,
+# prepare derivative works, incorporate into other computer software,
+# distribute, and sublicense such enhancements or derivative works thereof,
+# in binary and source code form.
+#
+## Copyright (c) 2014, Intel Corporation
+##
+## Redistribution and use in source and binary forms, with or without 
+## modification, are permitted provided that the following conditions are met:
+##
+##    * Redistributions of source code must retain the above copyright notice, 
+##      this list of conditions and the following disclaimer.
+##    * Redistributions in binary form must reproduce the above copyright 
+##      notice, this list of conditions and the following disclaimer in the 
+##      documentation and/or other materials provided with the distribution.
+##    * Neither the name of Intel Corporation nor the names of its contributors 
+##      may be used to endorse or promote products derived from this software 
+##      without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+## POSSIBILITY OF SUCH DAMAGE.
+##
+
+#INIT:ALL
+#INIT:IntelIB
+#INIT: INTELIB
+
+if [ ! -f "$WWFUNCTIONS" ]; then
+    echo "ERROR: Could not load Warewulf functions - $WWFUNCTIONS";
+    exit 255;
+fi
+. $WWFUNCTIONS;
+
+if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/IntelIB.functions" ]; then
+    echo "ERROR: Could not load IntelIB wwinit functions!";
+    exit 255;
+fi
+. $WAREWULF_SYSCONFDIR/warewulf/wwinit/IntelIB.functions;
+
+if [ ! -f "$WAREWULF_SYSCONFDIR/warewulf/wwinit/ofed.functions" ]; then
+    echo "ERROR: Could not load IntelIB wwinit functions!";
+    exit 255;
+fi
+. $WAREWULF_SYSCONFDIR/warewulf/wwinit/ofed.functions;
+
+# Check if a previous module created a chroot and defined its path.
+# If so, use it
+if [ -f  "${WWTMPDIR}/CHROOTDIR" ]; then
+   . ${WWTMPDIR}/CHROOTDIR; 
+fi
+
+# In case CHROOTDIR was passed at execution time
+CHROOTDIR=${CHROOTDIR:-}
+
+# Some sanity checking
+if [[ -z "$CHROOTDIR" || ! -d "$CHROOTDIR" ]]; then
+    wwprint " ! ERROR: Invalid CHROOT path" error;
+    reply_error;
+    exit 255;
+fi
+
+if [ ! -f "${CHROOTDIR}/sbin/init" ]; then
+    wwprint " ! ERROR: ${CHROOTDIR}/sbin/init not found,\n" error;
+    wwprint "         chroot may be corrupted" error;
+    reply_error;
+    exit 255;
+fi
+
+# Make sure we're the root user
+wwreqroot
+
+# Default Return
+RETVAL=0;
+
+# Variables
+OFEDPKG=${OFEDPKG:-}
+
+# Figure out if we even have an 'InfiniBand' device showing up.
+# Set OFEDFORCE to continue, even if nothing shows up from lspci
+if [ -z $OFEDFORCE ];then 
+    if ! lspci | grep -i -e 'InfiniBand' -e 'QLogic' &>/dev/null ; then
+        wwprint "WARNING: No InfiniBand device seen from lspci. Exiting Intel IB OFED+ setup.\n" warn;
+        exit 255;
+    fi
+fi
+
+wwprint "Intel IB OFED+ install starting.\n";
+
+if [ -z $OFEDPKG ]; then
+    OFEDPKG=$(/bin/ls -1 $HOME/IntelIB-*.tgz 2>/dev/null | sort -V | tail -1);
+    # Detect early if the package file is not available
+    if [[ -z "$OFEDPKG" || ! -f "$OFEDPKG" ]]; then
+        wwprint " ! Intel IB OFED+ Package not found." error;
+        reply_error;
+        cleanup
+        exit 255;
+    fi
+    wwprint " + Package $(msg_green $OFEDPKG) found\n";
+fi
+
+
+# Extract Intel IB OFED+ Package
+wwprint " + Extracting Intel IB OFED+ Package";
+if ! extract_iib_pkg $OFEDPKG ; then
+    wwprint "\nERROR: Failed to extract Intel IB OFED+ package" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Remove any base OS Packages that may conflict (ofed.functions)
+wwprint " + Removing conflicting OS packages";
+if ! uninst_os_ib; then
+    wwprint "\nERROR: Failed removing packages..." error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Install Dependencies
+wwprint " + Installing Intel IB OFED+ dependencies";
+if ! inst_iib_dep; then
+    wwprint "\nERROR: Failed to install dependencies..." error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Install package
+wwprint " note: The next step may take some minutes...\n" yellow
+wwprint " + Installing Intel IB OFED+";
+if ! inst_pkg; then
+    wwprint "\nERROR: Failed to install IntelIB" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Configure IB0 on Head Node (ofed.functions)
+wwprint " + Configuring IB0 device on Head Node";
+if ! config_ib0; then
+    wwprint "\nERROR: Failed to configure ib0 device" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Configure Services (ofed.functions)
+wwprint " + Configure Intel IB OFED+ Services";
+if ! wwaction config_services; then
+    wwprint "\nERROR: Failed to configure IntelIB services" error;
+    reply_error;
+    cleanup
+    exit 255;
+fi
+
+# Disable YUM updates of packages (ofed.functions)
+wwprint " + Disabling YUM updates of related packages";
+if ! wwaction dis_yum_update; then
+    wwprint "\nWARNING: Failed to configure excludes in yum.conf" warn;
+    reply_warn;
+    RETVAL=1;
+fi
+
+# Configure SSHD service (ofed.functions)
+wwprint " + Configuring SSHD to bypass RLIMIT_MEMLOCK errors";
+if  wwaction sshd_config; then
+    wwprint " + Restarting sshd" warn;
+    # This *should* be fine to do even if we're ssh'd into the machine. The
+    # forked sshd we're connected to just won't have the new settings until
+    # we login again
+    service sshd restart &>/dev/null;
+    reply_ok;
+else
+    wwprint "\nWARNING: Failed to modify SSHD configuration" warn;
+    reply_warn;
+    RETVAL=1;
+fi
+
+
+#XXX: For now, only do these if we have a CHROOTDIR defined.
+if [[ ! -z $CHROOTDIR  ]]; then
+    # Uninstall OS Packages in the  CHROOTDIR (ofed.functions)
+    wwprint " + Removing conflicting OS packages from chroot";
+    if ! uninst_os_ib "${CHROOTDIR}"; then
+        wwprint "\nERROR: Failed to remove possibly conflicting RPM packages";
+        reply_error;
+        cleanup
+        exit 255;
+    fi
+
+    wwprint " + Installing Intel IB OFED+ dependencies in chroot";
+    if ! inst_iib_dep "${CHROOTDIR}"; then
+        wwprint "\nERROR: Failed to install dependencies..." error;
+        reply_error;
+        cleanup
+        exit 255;
+    fi
+
+    # Install packages into CHROOTDIR
+    wwprint " note: The next step may take some minutes...\n" yellow
+    wwprint " + Installing Intel IB OFED+ in the chroot";
+    if ! inst_pkg_chroot "${CHROOTDIR}"; then
+        wwprint "\nERROR: Failed to install IntelIB in the chroot" error;
+        reply_error;
+        cleanup
+        exit 255;
+    fi
+
+    # Configure SSHD in the CHROOTDIR (ofed.functions)
+    wwprint " + Configuring SSHD in the chroot";
+    if ! sshd_config "${CHROOTDIR}"; then
+        wwprint "\nWARNING: Failed to modify SSHD configuration" warn;
+        reply_warn;
+        RETVAL=1;
+    fi
+fi
+
+# Configure bootstrap.conf to include new IntelIB modules (ofed.functions)
+wwprint " + Configuring bootstrap.conf for Intel IB OFED+ modules";
+
+# OFED drivers are left in different path according to the version
+ofed_ver=$(ofed_info | grep -e "OFED-[0-9]"|sed -e 's/OFED-//' -e 's/://')
+ofed_ver_maj=${ofed_ver%%.*};
+
+if !  config_bootstrap; then
+    wwprint "\nWARNING: Failed to modify bootstrap.conf file" warn;
+    reply_warn;
+    RETVAL=1;
+else
+    reply_ok;
+fi
+
+# Modify provision settings to include an ifcfg-ib0 file on the nodes
+# (ofed.functions)
+wwprint " + Configuring InfiniBand Adapter ifcfg-ib0 file in datastore";
+if ! config_ib0_chroot; then
+    wwprint "\nWARNING: Failed to create ifcfg-ib0 file in datastore" warn;
+    reply_warn;
+    RETVAL=1;
+fi
+
+#  Clean temporary folder (ofed.functions)
+wwprint " + Cleaning...";
+if !  cleanup; then
+    wwprint "\nWARNING: Failed to do cleanup of /tmp" warn;
+    reply_warn;
+    RETVAL=1;
+else
+    reply_ok;
+fi
+
+
+exit $RETVAL
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
