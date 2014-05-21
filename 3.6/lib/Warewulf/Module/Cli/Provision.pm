@@ -650,6 +650,9 @@ exec()
             if ($o->get("diskpartition")) {
                 printf("%15s: %-16s = %s\n", $name, "DISKPARTITION", join(",", $o->get("diskpartition")));
             }
+            if ($o->get("bootloader")) {
+                printf("%15s: %-16s = %s\n", $name, "BOOTLOADER", join(",", $o->get("bootloader")));
+            }
             printf("%15s: %-16s = %s\n", $name, "BOOTLOCAL", $o->bootlocal() ? "TRUE" : "FALSE");
         }
 
