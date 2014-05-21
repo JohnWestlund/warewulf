@@ -34,12 +34,17 @@ if [ -n "$WWIPMI_IPADDR" -a -n "$WWIPMI_NETMASK" ]; then
     for channel in ${WWIPMI_LANCHANNEL:-1 2 3 4 5 6}; do
         if ipmitool lan print $channel >/dev/null 2>&1; then
             RETVAL=0
-            # Nobody seems to know what these RAW commands do, but multiple
-            # vendors have been known to reference one/some/all
-            ipmitool raw 0x6 0x40 0x1 0x42 0x44                                 >/dev/null
-            ipmitool raw 0x6 0x40 0x1 0x82 0x84                                 >/dev/null
-            ipmitool raw 0xc 0x21 0x1 0x1 0x1                                   >/dev/null
-            ipmitool raw 0xc 1 1 0xc0 0                                         >/dev/null
+            # Set non-volatile channel access to: enable PEF Alerting, 
+            # enable per-message auth, enable user level auth, and to always
+            # be available. Also set non-volatile channel privilege level 
+            # limit to ADMINISTRATOR.
+            ipmitool raw 0x6 0x40 0x${channel} 0x42 0x44                        >/dev/null
+            # Set volatile (active) channel access to: enable PEF Alerting, enable per-message auth, 
+            # enable user level auth, and to always be available. Also set volatile (active) channel  
+            # privledge level limit to ADMINISTRATOR.
+            ipmitool raw 0x6 0x40 0x${channel} 0x82 0x84                        >/dev/null
+            # Enable SOL, and SOL payload on channel
+            ipmitool raw 0xc 0x21 0x${channel} 0x1 0x1                          >/dev/null
 
             # Setting basic network information
             ipmitool lan set $channel ipsrc static                              >/dev/null || RETVAL=2
