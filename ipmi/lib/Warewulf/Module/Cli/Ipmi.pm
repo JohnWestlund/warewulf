@@ -110,10 +110,8 @@ help()
     $h .= "         --password      Define the IPMI password for this node\n";
     $h .= "         --proto         Define the IPMI protocol for this node (defaults to lan)\n";
     $h .= "         --autoconfig    Automatically try and configure this node's IPMI settings\n";
-    $h .= "                         on boot (if no password is set for the node, one will be\n";
-    $h .= "                         randomly generated)\n";
-    $h .= "         --noautoconfig  Remove the autoconfig flag so the node doesn't get configured\n";
-    $h .= "                         automatically\n";
+    $h .= "                         on boot (boolean 1/0) - note: if no password is set for the\n";
+    $h .= "                         node, one will be randomly generated\n";
     $h .= "     -d, --delay         Delay/pad the IPMI commands (very useful for throttling boots)\n";
     $h .= "     -f, --fanout        Change the fanout for parallel IPMI commands (default: 8)\n";
     $h .= "\n";
@@ -211,7 +209,7 @@ exec()
         'username=s'    => \$opt_username,
         'password=s'    => \$opt_password,
         'proto=s'       => \$opt_proto,
-        'autoconfig'    => \$opt_autoconfig,
+        'autoconfig=s'  => \$opt_autoconfig,
         'noautoconfig'  => \$opt_noautoconfig,
         'l|lookup=s'    => \$opt_lookup,
         'd|delay=s'     => \$opt_padding,
@@ -328,20 +326,36 @@ exec()
                 print "IPMI protocol $opt_proto is not supported.\n";
             }
         }
-        if ($opt_autoconfig) {
+        if (defined($opt_autoconfig)) {
             my $set_username;
             my $set_password;
-            foreach my $o ($objSet->get_list()) {
-                if ($o->ipmi_ipaddr() and $o->ipmi_netmask()) {
-                    if (! $o->ipmi_username()) {
-                        $o->ipmi_username("wwipmi");
-                        $set_username = 1;
+            if ( uc($opt_autoconfig) eq "UNDEF" or $opt_autoconfig == 0 ) {
+                foreach my $o ($objSet->get_list()) {
+                    $o->ipmi_autoconfig(undef);
+                }
+                push(@changes, sprintf("   UNDEF: %-20s\n", "IPMI_AUTOCONFIGURE"));
+                $persist_bool = 1;
+            } else {
+                my $ipmi_persist_bool;
+                foreach my $o ($objSet->get_list()) {
+                    if ($o->ipmi_ipaddr() and $o->ipmi_netmask()) {
+                        if (! $o->ipmi_username()) {
+                            $o->ipmi_username("wwipmi");
+                            $set_username = 1;
+                        }
+                        if (! $o->ipmi_password()) {
+                            $o->ipmi_password(&rand_string(8));
+                            $set_password = 1;
+                        }
+                        $o->ipmi_autoconfig(1);
+                        $ipmi_persist_bool = 1;
+                    } else {
+                        &eprint("The IPMI network is not properly configured for this node!\n");
+                        &nprint("You can set the network using the wwsh command:\n\n");
+                        &nprint("    ipmi set --ipaddr=x.x.x.x --netmask=x.x.x.x [node]\n\n");
                     }
-                    if (! $o->ipmi_password()) {
-                        $o->ipmi_password(&rand_string(8));
-                        $set_password = 1;
-                    }
-                    $o->ipmi_autoconfig(1);
+                }
+                if ($ipmi_persist_bool) {
                     push(@changes, sprintf("     SET: %-20s\n", "AUTOCONFIG"));
                     if ($set_username) {
                         push(@changes, sprintf("     SET: %-20s = %s\n", "USERNAME", "wwipmi"));
@@ -350,10 +364,6 @@ exec()
                         push(@changes, sprintf("     SET: %-20s = %s\n", "PASSWORD", "?"x8));
                     }
                     $persist_bool = 1;
-                } else {
-                    &eprint("The IPMI network is not properly configured for this node!\n");
-                    &nprint("You can set the network using the wwsh command:\n\n");
-                    &nprint("    ipmi set --ipaddr=x.x.x.x --netmask=x.x.x.x [node]\n\n");
                 }
             }
         }

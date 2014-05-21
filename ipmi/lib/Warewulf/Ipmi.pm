@@ -175,16 +175,18 @@ note: This will take a boolean true (!=0) or false (0).
 sub
 ipmi_autoconfig()
 {
-    my ($self, $value) = @_; 
+    my ($self, @value) = @_; 
     my $key = "ipmi_autoconfig";
 
-    if ($value eq "0") {
-        $self->del($key);
-    } elsif ($value eq "1") {
-        if ($self->ipmi_ipaddr() and $self->ipmi_netmask() and $self->ipmi_username() and $self->ipmi_password()) {
-            $self->set($key, "1");
+    if (exists($value[0])) {
+        if (! $value[0]) {
+            $self->del($key);
         } else {
-            &eprint("Could not set ipmi_autoconfig() because requirements not met\n");
+            if ($self->ipmi_ipaddr() and $self->ipmi_netmask() and $self->ipmi_username() and $self->ipmi_password()) {
+                $self->set($key, "1");
+            } else {
+                &eprint("Could not set ipmi_autoconfig() because requirements not met\n");
+            }
         }
     }
     return $self->get($key);
