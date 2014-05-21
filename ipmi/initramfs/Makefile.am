@@ -2,14 +2,14 @@ all: ipmitool
 
 top_srcdir = @top_srcdir@
 
-IPMITOOL_VERSION = 1.8.11
-IPMITOOL_SOURCE = $(top_srcdir)/3rd_party/BSD/ipmitool-$(IPMITOOL_VERSION).tar.gz
+IPMITOOL_VERSION = 1.8.14
+IPMITOOL_SOURCE = $(top_srcdir)/3rd_party/BSD/ipmitool-$(IPMITOOL_VERSION).tar.bz2
 
 ipmitool:
 	@ if [ ! -d "_work/ipmitool/ipmitool-$(IPMITOOL_VERSION)" ]; then \
 	    echo "Preparing to build ipmitool" ;\
 	    mkdir -p _work/ipmitool;\
-	    tar xzf $(srcdir)/$(IPMITOOL_SOURCE) -C _work/ipmitool/ ;\
+	    tar xjf $(srcdir)/$(IPMITOOL_SOURCE) -C _work/ipmitool/ ;\
 	fi
 	@ if [ ! -f "_work/ipmitool/ipmitool-$(IPMITOOL_VERSION)/src/ipmitool" ]; then \
 	    echo "Building ipmitool" ;\
