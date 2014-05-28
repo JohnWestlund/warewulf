@@ -28,7 +28,8 @@ use POSIX;
 my $sysconfdir = Warewulf::ACVars::get('SYSCONFDIR');
 my $config = Warewulf::Config->new("vnfs.conf");
 my $randstring = &rand_string("12");
-my $output = "/tmp/$randstring.vnfs";
+my $build_directory = ( $config->get("build directory") || "/var/tmp" ) . "/";
+my $output = "$build_directory/$randstring.vnfs";
 my $command = "$0 ". join(" ", @ARGV);
 
 # Get our gzip command
@@ -297,7 +298,7 @@ if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
 
 &iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
 
-my $tmpdir = "/var/tmp/wwvnfs.". &rand_string(16);
+my $tmpdir = "$build_directory/wwvnfs." . &rand_string(16);
 umask("0000");
 
 sub
