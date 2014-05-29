@@ -9,11 +9,11 @@
 
 
 . /etc/functions
-
+umask 027
 
 if [ -d "/warewulf/provision/" ]; then
     if [ ! -d /var/log/provision ]; then
-        mkdir -p /var/log/provision
+        mkdir -p /var/log/warewulf/provision
     fi
     for i in `find /warewulf/provision/ -type f | sort -n`; do
         if [ -x "$i" -a -f "$i" ]; then
@@ -22,7 +22,7 @@ if [ -d "/warewulf/provision/" ]; then
             msg_white " * $NAME "
             usleep 250000
             echo -ne $GRAY
-            sh -x $i 2> /var/log/provision/$NAME.log
+            sh -x $i 2> /var/log/warewulf/provision/$NAME.log
             RETVAL=$?
             echo -ne $NORMAL
             if [ $RETVAL -eq 0 ]; then
