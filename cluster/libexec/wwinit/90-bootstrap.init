@@ -24,12 +24,14 @@ RETVAL=1
 
 KVERSION=`uname -r`
 
-wwprint "Creating bootstrap for $KVERSION:\n"
-if wwrun wwbootstrap $KVERSION; then
-    if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf" ]; then
-        sed -i -e "s/^.*bootstrap[ ]*=.*/bootstrap = $KVERSION/" $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf
+wwprint "Checking for bootstrap:"
+if ! wwtest wwsh bootstrap list; then
+    if wwrun wwbootstrap $KVERSION; then
+        if [ -f "$WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf" ]; then
+            sed -i -e "s/^.*bootstrap[ ]*=.*/bootstrap = $KVERSION/" $WAREWULF_SYSCONFDIR/warewulf/defaults/provision.conf
+        fi
+        RETVAL=1
     fi
-    RETVAL=1
 else
     exit 255
 fi
