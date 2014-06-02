@@ -76,10 +76,16 @@
 #INIT: VNFS
 
 if [ ! -f "$WWFUNCTIONS" ]; then
-    wwprint "ERROR: Could not load Warewulf functions - $WWFUNCTIONS";
-    exit 255;
+    wwprint "ERROR: Could not load Warewulf functions - $WWFUNCTIONS"
+    exit 255
 fi
 . ${WWFUNCTIONS};
+
+if [ -z "$CHROOOTDIR" ]; then
+    wwprint "CHROOTDIR is not defined, run 'wwvnfs' by hand."
+    reply_skipped
+    exit 0
+fi
 
 # Make sure we're the root user
 wwreqroot
@@ -87,7 +93,7 @@ wwreqroot
 # Check if a previous module created a chroot and defined its path.
 # If so, use it
 if [ -f  "${WWTMPDIR}/CHROOTDIR" ]; then
-   . ${WWTMPDIR}/CHROOTDIR; 
+   . ${WWTMPDIR}/CHROOTDIR;
 fi
 
 # In case CHROOTDIR was passed at execution time
@@ -95,16 +101,16 @@ CHROOTDIR=${CHROOTDIR:-}
 
 # Some sanity checking
 if [[ -z "$CHROOTDIR" || ! -d "$CHROOTDIR" ]]; then
-    wwprint " ! ERROR: Invalid CHROOT path" error;
-    reply_error;
-    exit 255;
+    wwprint " ! ERROR: Invalid CHROOT path" error
+    reply_error
+    exit 255
 fi
 
 if [ ! -f "${CHROOTDIR}/sbin/init" ]; then        
-    wwprint " ! ERROR: ${CHROOTDIR}/sbin/init not found,\n" error;
-    wwprint "         chroot may be corrupted" error;
-    reply_error;
-    exit 255;
+    wwprint " ! ERROR: ${CHROOTDIR}/sbin/init not found,\n" error
+    wwprint "         chroot may be corrupted" error
+    reply_error
+    exit 255
 fi
 
 VNFS_NAME=$(basename ${CHROOTDIR});
@@ -112,8 +118,8 @@ VNFS_NAME=$(basename ${CHROOTDIR});
 wwprint "Building the VNFS image and importing into Warewulf:\n"
 if wwrun wwvnfs -y --hybridpath=${CHROOTDIR} --chroot ${CHROOTDIR}; then
     if [ -f "/etc/warewulf/defaults/provision.conf" ]; then
-        sed -i -e "s/^.*vnfs[ ]*=.*/vnfs = $VNFS_NAME/" /etc/warewulf/defaults/provision.conf;
+        sed -i -e "s/^.*vnfs[ ]*=.*/vnfs = $VNFS_NAME/" /etc/warewulf/defaults/provision.conf
     fi
 else 
-    exit 255;
+    exit 255
 fi
