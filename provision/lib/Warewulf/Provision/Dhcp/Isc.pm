@@ -231,6 +231,7 @@ persist()
         }
         &dprint("Evaluating node: $nodename (object ID: $db_id)\n");
         $dhcpd_contents .= "   # Evaluating Warewulf node: $nodename (DB ID:$db_id)\n";
+        $nodename =~ s/\./_/g;
         my @bootservers = $n->get("bootserver");
         if (! @bootservers or scalar(grep { $_ eq $ipaddr} @bootservers)) {
             my $clustername = $n->cluster();
@@ -282,7 +283,7 @@ persist()
 
                 if ($node_testnetwork ne $network) {
                     &iprint("Skipping DHCP config for $nodename-$devname (on a different network)\n");
-                    $dhcpd_contents .= "   # Skipping $nodename-$devname: Not on boot network\n";
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: Not on boot network ($node_testnetwork)\n";
                     next;
                 }
 
@@ -294,13 +295,13 @@ persist()
                 }
                 if (exists($seen{"HWADDR"}) and exists($seen{"HWADDR"}{"$hwaddr"})) {
                     my $redundant_node = $seen{"HWADDR"}{"$hwaddr"};
-                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate HWADDR\n";
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate HWADDR ($hwaddr)\n";
                     &iprint("Skipping DHCP config for $nodename-$devname (HWADDR already seen in $redundant_node)\n");
                     next;
                 }
                 if (exists($seen{"IPADDR"}) and exists($seen{"IPADDR"}{"$node_ipaddr"})) {
                     my $redundant_node = $seen{"IPADDR"}{"$node_ipaddr"};
-                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate IPADDR\n";
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate IPADDR ($node_ipaddr)\n";
                     &iprint("Skipping DHCP config for $nodename-$devname (IPADDR $node_ipaddr already seen in $redundant_node)\n");
                     next;
                 }
@@ -309,7 +310,6 @@ persist()
                     &dprint("Adding a host entry for: $nodename-$devname\n");
 
                     $dhcpd_contents .= "   # Adding host entry for $nodename-$devname\n";
-                    $nodename =~ s/\./_/g;
                     $dhcpd_contents .= "   host $nodename-$devname {\n";
                     $dhcpd_contents .= "      option host-name $hostname;\n";
                     if ($pxelinux_file) {
