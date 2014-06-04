@@ -229,8 +229,8 @@ persist()
             &eprint("No DB ID associated with this node object object: $hostname/$nodename:$n\n");
             next;
         }
-        $nodename =~ s/\./_/g;
         &dprint("Evaluating node: $nodename (object ID: $db_id)\n");
+        $dhcpd_contents .= "   # Evaluating Warewulf node: $nodename (DB ID:$db_id)\n";
         my @bootservers = $n->get("bootserver");
         if (! @bootservers or scalar(grep { $_ eq $ipaddr} @bootservers)) {
             my $clustername = $n->cluster();
@@ -270,31 +270,37 @@ persist()
 
                 if (! $hwaddr) {
                     &dprint("Skipping DHCP config for $nodename-$devname (no defined HWADDR)\n");
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: No defined HWADDR\n";
                     next;
                 }
 
                 if (! $node_ipaddr) {
                     &dprint("Skipping DHCP config for $nodename-$devname (no defined IPADDR)\n");
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: No defined IPADDR\n";
                     next;
                 }
 
                 if ($node_testnetwork ne $network) {
                     &iprint("Skipping DHCP config for $nodename-$devname (on a different network)\n");
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: Not on boot network\n";
                     next;
                 }
 
                 if (exists($seen{"NODESTRING"}) and exists($seen{"NODESTRING"}{"$nodename-$devname"})) {
                     my $redundant_node = $seen{"NODESTRING"}{"$nodename-$devname"};
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate nodename-netdev\n";
                     &iprint("Skipping DHCP redundant entry for $nodename-$devname (already seen in $redundant_node)\n");
                     next;
                 }
                 if (exists($seen{"HWADDR"}) and exists($seen{"HWADDR"}{"$hwaddr"})) {
                     my $redundant_node = $seen{"HWADDR"}{"$hwaddr"};
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate HWADDR\n";
                     &iprint("Skipping DHCP config for $nodename-$devname (HWADDR already seen in $redundant_node)\n");
                     next;
                 }
                 if (exists($seen{"IPADDR"}) and exists($seen{"IPADDR"}{"$node_ipaddr"})) {
                     my $redundant_node = $seen{"IPADDR"}{"$node_ipaddr"};
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: duplicate IPADDR\n";
                     &iprint("Skipping DHCP config for $nodename-$devname (IPADDR $node_ipaddr already seen in $redundant_node)\n");
                     next;
                 }
@@ -302,7 +308,8 @@ persist()
                 if ($nodename and $node_ipaddr and $hwaddr) {
                     &dprint("Adding a host entry for: $nodename-$devname\n");
 
-                    $dhcpd_contents .= "   # Node entry for Warewulf data store ID: $db_id\n";
+                    $dhcpd_contents .= "   # Adding host entry for $nodename-$devname\n";
+                    $nodename =~ s/\./_/g;
                     $dhcpd_contents .= "   host $nodename-$devname {\n";
                     $dhcpd_contents .= "      option host-name $hostname;\n";
                     if ($pxelinux_file) {
@@ -328,7 +335,8 @@ persist()
                     $seen{"IPADDR"}{"$node_ipaddr"} = "$nodename-$devname";
 
                 } else {
-                    &dprint("Skipping node '$nodename-$devname' due to insufficient information\n");
+                    $dhcpd_contents .= "   # Skipping $nodename-$devname: insufficient configuration\n";
+                    &dprint("Skipping node $nodename-$devname: insufficient information\n");
                 }
             }
         }
