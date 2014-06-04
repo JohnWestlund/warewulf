@@ -269,13 +269,13 @@ persist()
                 my $node_testnetwork = $netobj->calc_network($node_ipaddr, $node_netmask);
 
                 if (! $hwaddr) {
-                    &dprint("Skipping DHCP config for $nodename-$devname (no defined HWADDR)\n");
+                    &iprint("Skipping DHCP config for $nodename-$devname (no defined HWADDR)\n");
                     $dhcpd_contents .= "   # Skipping $nodename-$devname: No defined HWADDR\n";
                     next;
                 }
 
                 if (! $node_ipaddr) {
-                    &dprint("Skipping DHCP config for $nodename-$devname (no defined IPADDR)\n");
+                    &iprint("Skipping DHCP config for $nodename-$devname (no defined IPADDR)\n");
                     $dhcpd_contents .= "   # Skipping $nodename-$devname: No defined IPADDR\n";
                     next;
                 }
