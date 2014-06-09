@@ -372,29 +372,33 @@ exec()
 
         } else {
             if ($opt_hwaddr) {
-                $opt_hwaddr = lc($opt_hwaddr);
-                if ($opt_hwaddr =~ /^((?:[0-9a-f]{2}:){5,7}[0-9a-f]{2})$/) {
-                    my $show_changes;
-                    foreach my $o ($objSet->get_list()) {
-                        my $nodename = $o->name();
-                        if (! $opt_netdev) {
-                            my @devs = $o->netdevs_list();
-                            if (scalar(@devs) == 1) {
-                                $opt_netdev = shift(@devs);
-                            } else {
-                                &eprint("Option --hwaddr requires the --netdev option for: $nodename\n");
-                                return undef;
+                if ($objSet->count() == 1) {
+                    $opt_hwaddr = lc($opt_hwaddr);
+                    if ($opt_hwaddr =~ /^((?:[0-9a-f]{2}:){5,7}[0-9a-f]{2})$/) {
+                        my $show_changes;
+                        foreach my $o ($objSet->get_list()) {
+                            my $nodename = $o->name();
+                            if (! $opt_netdev) {
+                                my @devs = $o->netdevs_list();
+                                if (scalar(@devs) == 1) {
+                                    $opt_netdev = shift(@devs);
+                                } else {
+                                    &eprint("Option --hwaddr requires the --netdev option for: $nodename\n");
+                                    return undef;
+                                }
                             }
+                            $o->hwaddr($opt_netdev, $1);
+                            $persist_count++;
+                            $show_changes = 1;
                         }
-                        $o->hwaddr($opt_netdev, $1);
-                        $persist_count++;
-                        $show_changes = 1;
-                    }
-                    if ($show_changes) {
-                        push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "$opt_netdev.HWADDR", $opt_hwaddr));
+                        if ($show_changes) {
+                            push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "$opt_netdev.HWADDR", $opt_hwaddr));
+                        }
+                    } else {
+                        &eprint("Option 'hwaddr' has invalid characters\n");
                     }
                 } else {
-                    &eprint("Option 'hwaddr' has invalid characters\n");
+                    &eprint("Can not set HWADDR on more then 1 node!\n");
                 }
             }
             if ($opt_hwprefix) {
@@ -578,19 +582,23 @@ exec()
         }
 
         if ($opt_name) {
-            if (uc($opt_name) eq "UNDEF") {
-                &eprint("You must define the name you wish to reference the node as!\n");
-            } elsif ($opt_name =~ /^([a-zA-Z0-9\-_]+)$/) {
-                $opt_name = $1;
-                foreach my $obj ($objSet->get_list()) {
-                    my $nodename = $obj->get("name") || "UNDEF";
-                    $obj->nodename($opt_name);
-                    &dprint("Setting new name for node $nodename: $opt_name\n");
-                    $persist_count++;
+            if ($objSet->count() == 1) {
+                if (uc($opt_name) eq "UNDEF") {
+                    &eprint("You must define the name you wish to reference the node as!\n");
+                } elsif ($opt_name =~ /^([a-zA-Z0-9\-_]+)$/) {
+                    $opt_name = $1;
+                    foreach my $obj ($objSet->get_list()) {
+                        my $nodename = $obj->get("name") || "UNDEF";
+                        $obj->nodename($opt_name);
+                        &dprint("Setting new name for node $nodename: $opt_name\n");
+                        $persist_count++;
+                    }
+                    push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "NAME", $opt_name));
+                } else {
+                    &eprint("Option 'name' has invalid characters\n");
                 }
-                push(@changes, sprintf("%8s: %-20s = %s\n", "SET", "NAME", $opt_name));
             } else {
-                &eprint("Option 'name' has invalid characters\n");
+                &eprint("Can not rename more then 1 node at a time!\n");
             }
         }
 
