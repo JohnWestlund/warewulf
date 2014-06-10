@@ -334,6 +334,11 @@ exec()
     } elsif ($command eq "set" or $command eq "new") {
         &dprint("Entered 'set' codeblock\n");
 
+        if (! @ARGV) {
+            &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+            return undef;
+        }
+
         if ($opt_netdev) {
             if ($opt_netdev =~ /^([a-z0-9]+[0-9]+)$/) {
                 $opt_netdev = $1;

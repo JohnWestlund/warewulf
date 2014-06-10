@@ -234,6 +234,12 @@ exec()
         &eprint("You must provide a command!\n\n");
         print $self->help();
     } elsif ($command eq "set") {
+
+        if (! @ARGV) {
+            &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+            return undef;
+        }
+
         if ($opt_bootstrap) {
             if (uc($opt_bootstrap) eq "UNDEF") {
                 foreach my $obj ($objSet->get_list()) {

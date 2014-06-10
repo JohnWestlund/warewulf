@@ -424,6 +424,11 @@ exec()
             my @changes;
             my @objlist;
 
+            if (! @ARGV) {
+                &eprint("To make changes, you must provide a list of files to operate on.\n");
+                return undef;
+            }
+
             $object_count = $objSet->count();
             @objlist = $objSet->get_list();
 
