@@ -11,10 +11,8 @@
 . /etc/functions
 umask 027
 
-mkdir -p /var/log/warewulf/provision/
-
 if [ -d "/warewulf/provision/" ]; then
-    if [ ! -d /var/log/provision ]; then
+    if [ ! -d /var/log/warewulf/provision ]; then
         mkdir -p /var/log/warewulf/provision
     fi
     for i in `find /warewulf/provision/ -type f | sort -n`; do
