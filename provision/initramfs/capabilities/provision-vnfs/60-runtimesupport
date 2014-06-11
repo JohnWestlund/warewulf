@@ -30,7 +30,6 @@ if [ -z "$WWMASTER" ]; then
 fi
 
 mkdir -p $NEWROOT${WWBOOTSTRAPLOGS:-/var/log} >/dev/null 2>&1
-cat /var/log/messages >> $NEWROOT${WWBOOTSTRAPLOGS:-/var/log}/messages
 mv /var/log/warewulf $NEWROOT${WWBOOTSTRAPLOGS:-/var/log}/
 
 

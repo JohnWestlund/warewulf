@@ -264,10 +264,10 @@ else
 fi
 export WWINIT_HWADDR
 
-mkdir -p /var/log/
+mkdir -p /var/log/warewulf
 msg_white "Starting syslogd: "
 if [ -n "$WWMASTER" ]; then
-    if syslogd -O /var/log/messages -R $WWMASTER -L; then
+    if syslogd -O /var/log/warewulf/messages -R $WWMASTER -L; then
         wwsuccess
     else
         wwfailure
