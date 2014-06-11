@@ -7,6 +7,10 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 
+if [ -n "$SET_X" ]; then
+    set -x
+fi
+
 if [ -f /warewulf/transports/http/functions ]; then
     . /warewulf/transports/http/functions
 elif [ -f ./functions ]; then
