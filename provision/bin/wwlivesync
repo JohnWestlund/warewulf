@@ -26,16 +26,18 @@ my $db = Warewulf::DataStore->new();
 my $pcmd = Warewulf::ParallelCmd->new();
 my $livesync_config = Warewulf::Config->new("livesync.conf");
 my $opt_lookup = "name";
-my @skiplist = $livesync_config->get("skip list");
 my $fanout = $livesync_config->get("max sync") || 8;
 my $timeout = $livesync_config->get("timeout") || 3600;
 my $logdir = $livesync_config->get("logdir") || "/var/log/wwlivesync";
-my $skiplist_excludes_opts = "--exclude='/proc/' --exclude='/sys/' ";
+my $excludes_opts = "--exclude='/proc/' --exclude='/sys/' ";
+my @skiplist;
+my $sync_path;
 my $opt_help;
 my $opt_debug;
 my $opt_verbose;
 my $opt_quiet;
 my $opt_show;
+my @opt_syncfiles;
 
 
 Getopt::Long::Configure ("bundling");
@@ -46,6 +48,7 @@ GetOptions(
     'd|debug'       => \$opt_debug,
     'v|verbose'     => \$opt_verbose,
     'q|quiet'       => \$opt_quiet,
+    'f|files=s'     => \@opt_syncfiles,
     'show'          => \$opt_show,
     'logdir=s'      => \$logdir,
 );
@@ -83,6 +86,7 @@ if ($opt_help) {
     print "     compatibility.\n\n";
     print "\nOPTIONS:\n\n";
     print "   -l, --lookup        Identify nodes by specified property (default: \"name\")\n";
+    print "   -f, --files         Pass a list of files to sync instead of the entire VNFS\n";
     print "       --show          Just print what it would do instead of actually do it\n";
     print "       --logdir        Directory of per-node logs ($logdir)\n";
     print "       --verbose       Increase verbosity level\n";
@@ -118,14 +122,26 @@ $pcmd->wtime(0);
 $pcmd->ktime($timeout);
 $pcmd->fanout($fanout);
 
-foreach my $exclude (@skiplist) {
-    $skiplist_excludes_opts .= " --exclude='$exclude'";
+if ( @opt_syncfiles ) {
+    &iprint("Syncing list of files\n");
+    foreach my $p ( split(",", join(",", @opt_syncfiles)) ) {
+        if ( $p =~ /^\/.+/ ) {
+            &dprint("Adding path to sync: (.)$p\n");
+            $sync_path .= ".$p ";
+        } else {
+            &dprint("Adding path to sync: $p\n");
+            $sync_path .= "$p ";
+        }
+    }
+} else {
+    &iprint("Syncing entire VNFS\n");
+    $sync_path = ".";
 }
 
 
 foreach my $o ($objSet->get_list()) {
     my ($name, $vnfs_name, $vnfsid, $vnfs, $vnfs_config, @excludes, $chroot,
-        $excludes_opts, $cmd, @exclude, @hybridize);
+        $cmd, @exclude, @hybridize);
 
     $name = $o->name();
     $vnfsid = $o->vnfsid();
@@ -157,6 +173,7 @@ foreach my $o ($objSet->get_list()) {
     @exclude = $vnfs_config->get("exclude");
     @excludes = $vnfs_config->get("excludes");
     @hybridize = $vnfs_config->get("hybridize");
+    @skiplist = ( $vnfs_config->get("livesync skiplist"), $vnfs_config->get("skip list"), $livesync_config->get("skip list") );
     $chroot = $vnfs->chroot() || $vnfs_config->get("chroot");
     $vnfs_rsync = $vnfs_config->get("rsync") || "/usr/bin/rsync";
 
@@ -170,11 +187,27 @@ foreach my $o ($objSet->get_list()) {
         next;
     }
 
-    foreach my $exclude (@exclude, @excludes, @hybridize) {
+    if ( -f "$chroot/etc/fstab" ) {
+        open(FSTAB, "$chroot/etc/fstab");
+        while ( my $line = <FSTAB> ) {
+            chomp $line;
+            my @f = split(/\s+/, $line);
+            if ( exists($f[1]) and $f[1] =~ /^(\/.+)$/ ) {
+                if ( $1 ne "/" ) {
+                    &dprint("Automatically excluding: $1\n");
+                    $excludes_opts .= " --exclude='$1'";
+                }
+            }
+        }
+        close FSTAB;
+    }
+
+    foreach my $exclude (@skiplist, @exclude, @excludes, @hybridize) {
+        &dprint("Excluding: $exclude\n");
         $excludes_opts .= " --exclude='$exclude'";
     }
 
-    $cmd = "cd $chroot; rsync -Havx $excludes_opts $skiplist_excludes_opts . $name:/ > $logdir/$name.log 2>&1 && echo done || echo fail";
+    $cmd = "cd $chroot; rsync -HavxR $excludes_opts $sync_path $name:/ > $logdir/$name.log 2>&1 && echo done || echo fail";
 
     if ($opt_show) {
         print "$cmd\n";
