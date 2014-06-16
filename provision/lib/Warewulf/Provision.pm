@@ -130,9 +130,10 @@ fileids()
     my ($self, @strings) = @_;
     my $key = "fileids";
 
-    if (@strings) {
+    if (scalar(@_) > 1) {
         my $name = $self->get("name");
         my @new;
+
         foreach my $string (@strings) {
             if ($string =~ /^([0-9]+)$/) {
                 &dprint("Object $name set $key += '$1'\n");
@@ -143,7 +144,6 @@ fileids()
             $self->set($key, @new);
         }
     }
-
     return($self->get($key));
 }
 
@@ -175,53 +175,40 @@ kargs()
     my ($self, @strings) = @_;
     my $key = "kargs";
 
-    if (@strings) {
+    if (scalar(@_) > 1) {
         my $name = $self->get("name");
         my @new;
-        if (uc($strings[0]) eq "UNDEF") {
+
+        if (!defined($strings[0]) || (uc($strings[0]) eq "UNDEF")) {
             $self->del($key);
             return $self->get($key);
         } else {
             foreach my $string (@strings) {
-                my @kargs = split(/\s+/,$string); # pre-emptively split
+                my @kargs = split(/\s+/, $string); # pre-emptively split
                 foreach my $karg (@kargs) {
-                    &dprint("Object $name set $key +=' $karg'\n");
-                    push(@new,$karg);
+                    &dprint("Object $name set $key += ' $karg'\n");
+                    push(@new, $karg);
                 }
             }
-            $self->set($key,@new);
+            $self->set($key, @new);
         }
     }
-
     return $self->get($key);
 }
 
 
 =item pxelinux()
 
-Set or return the pxelinux file to use for this node.
+Set or return the PXELinux file to use for this node.
 
 =cut
 
 sub 
 pxelinux()
 {
-    my ($self, $string) = @_;
-    my $key = "pxelinux";
+    my $self = shift;
 
-    if (defined($string)) {
-        my $name = $self->get("name");
-        my @new;
-        if (uc($string) eq "UNDEF") {
-            $self->del($key);
-        } elsif ($string =~ /^([a-zA-Z0-9\.]+)$/) {
-            $self->set($key,$1);
-        } else {
-            &eprint("Invalid characters to set $key = '$string'\n")
-        }
-    }
-
-    return $self->get($key);
+    return $self->prop("pxelinux", qr/^([a-zA-Z0-9\.]+)$/, @_);
 }
 
 =item fileidadd(@fileids)
@@ -247,8 +234,7 @@ fileidadd()
             }
         }
     }
-
-    return($self->get($key));
+    return $self->get($key);
 }
 
 
@@ -266,11 +252,12 @@ fileiddel()
 
     if (@strings) {
         my $name = $self->get("name");
+
         $self->del($key, @strings);
         &dprint("Object $name del $key -= @strings\n");
     }
 
-    return($self->get($key));
+    return $self->get($key);
 }
 
 
@@ -287,12 +274,13 @@ master()
     my $key = "master";
     my @masters;
 
-    if (@strings) {
-        if (uc($strings[0]) eq "UNDEF") {
+    if (scalar(@_) > 1) {
+        if (!defined($strings[0]) || (uc($strings[0]) eq "UNDEF")) {
             &dprint("Object $name del $key\n");
             $self->del($key);
         } else {
             my $name = $self->get("name");
+
             foreach my $string (@strings) {
                 if ($string =~ /^(\d+\.\d+\.\d+\.\d+)$/) {
                     push(@masters, $1);
@@ -304,7 +292,6 @@ master()
             $self->set($key, @masters);
         }
     }
-
     return $self->get($key);
 }
 
