@@ -199,12 +199,17 @@ exec()
         'g|gid=s'       => \$opt_gid,
         'interpreter=s' => \$opt_interpreter,
     );
+    if (! $opt_program) {
+        if (exists($ENV{"EDITOR"})) {
+            $opt_program = $ENV{"EDITOR"};
+        }
+    }
     if ($opt_program) {
-        if ($opt_program =~ /^"?([-\w\s\.\/\'\"]+?)"?$/) {
+        if ($opt_program =~ /^\"?([[:print:]]+)\"?$/) {
             $opt_program = $1;
         } else {
-            &eprint("Program name contains illegal characters: $program\n");
-            return undef;
+            &eprint("Invalid program name.  Using built-in default.\n");
+            undef $opt_program;
         }
     }
 
@@ -238,13 +243,6 @@ exec()
                 return undef;
             }
 
-            if ($path =~ /^([a-zA-Z0-9\.\-_\/]+?)\/?$/) {
-                $path = $1;
-            } else {
-                &eprint("Destination path contains illegal characters: $path\n");
-                return undef;
-            }
-
             if (! -d $path) {
                 if ($ocount == 1) {
                     $path = dirname($path);
@@ -273,7 +271,7 @@ exec()
                 $obj->file_export($target);
             }
         } else {
-            &eprint("USAGE: file export [file name sources...] [destination]\n");
+            &eprint("USAGE: file export [file object names...] [destination]\n");
         }
 
     } elsif ($command eq "import") {
@@ -285,47 +283,42 @@ exec()
             return undef;
         }
         foreach my $path (@ARGV) {
-            if ($path =~ /^([^\'\"\`]+)$/) {
-                my @statinfo;
+            my @statinfo;
 
-                $path = $1;
-                @statinfo = stat($path);
-                if (-f _) {
-                    my ($mode, $uid, $gid) = @statinfo[(2, 4, 5)];
-                    my $name = (($opt_name) ? ($opt_name) : (basename($path)));
-                    my $objSet;
-                    my $obj;
+            @statinfo = stat($path);
+            if (-f _) {
+                my ($mode, $uid, $gid) = @statinfo[(2, 4, 5)];
+                my $name = (($opt_name) ? ($opt_name) : (basename($path)));
+                my $objSet;
+                my $obj;
 
-                    $objSet = $db->get_objects("file", $opt_lookup, $name);
+                $objSet = $db->get_objects("file", $opt_lookup, $name);
 
-                    if ($objSet->count() > 0) {
-                        my $oname;
+                if ($objSet->count() > 0) {
+                    my $oname;
 
-                        $obj = $objSet->get_object(0);
-                        $oname = $obj->name() || "UNDEF";
-                        if (! $term->yesno("Overwrite existing file object \"$oname\" in the data store?")) {
-                            &nprint("Not importing \"$name\"\n");
-                            return undef;
-                        }
-                    } else {
-                        &dprint("Creating a new Warewulf file object\n");
-                        $obj = Warewulf::File->new();
-                        $obj->name($name);
-                        &dprint("Persisting the new Warewulf file object with name: $name\n");
-                        $db->persist($obj);
+                    $obj = $objSet->get_object(0);
+                    $oname = $obj->name() || "UNDEF";
+                    if (! $term->yesno("Overwrite existing file object \"$oname\" in the data store?")) {
+                        &nprint("Not importing \"$name\"\n");
+                        return undef;
                     }
-                    $obj->file_import($path);
-                    $obj->mode((defined($opt_mode)) ? (oct($opt_mode)) : ($mode));
-                    $obj->uid((defined($opt_uid)) ? ($opt_uid) : ($uid));
-                    $obj->gid((defined($opt_gid)) ? ($opt_gid) : ($gid));
-                    $obj->path((defined($opt_path)) ? ($opt_path) : ($path));
-                    $obj->origin((scalar(@opt_origin) ? (split(",", join(",", @opt_origin))) : ($path)));
-                    $db->persist($obj);
                 } else {
-                    &eprintf("\"$path\" not found -- %s\n", "$!" || "not a regular file");
+                    &dprint("Creating a new Warewulf file object\n");
+                    $obj = Warewulf::File->new();
+                    $obj->name($name);
+                    &dprint("Persisting the new Warewulf file object with name: $name\n");
+                    $db->persist($obj);
                 }
+                $obj->file_import($path);
+                $obj->mode((defined($opt_mode)) ? (oct($opt_mode)) : ($mode));
+                $obj->uid((defined($opt_uid)) ? ($opt_uid) : ($uid));
+                $obj->gid((defined($opt_gid)) ? ($opt_gid) : ($gid));
+                $obj->path((defined($opt_path)) ? ($opt_path) : ($path));
+                $obj->origin((scalar(@opt_origin) ? (split(",", join(",", @opt_origin))) : ($path)));
+                $db->persist($obj);
             } else {
-                &eprint("Filename \"$path\" contains illegal characters; ignoring.\n");
+                &eprintf("\"$path\" not found -- %s\n", "$!" || "not a regular file");
             }
         }
     } else {
@@ -355,13 +348,11 @@ exec()
         if ($command eq "delete") {
             my $object_count = $objSet->count();
             if ($term->interactive()) {
-                print "Are you sure you want to delete $object_count files(s):\n\n";
                 foreach my $o ($objSet->get_list()) {
                     printf("%8s: %-20s = %s\n", "DEL", "FILE", $o->name());
                 }
                 print "\n";
-                my $yesno = lc($term->get_input("Yes/No> ", "no", "yes"));
-                if ($yesno ne "y" and $yesno ne "yes") {
+                if (!$term->yesno("Are you sure you want to delete $object_count files(s):\n\n")) {
                     &nprint("No update performed\n");
                     return undef;
                 }
@@ -369,15 +360,7 @@ exec()
             $db->del_object($objSet);
 
         } elsif ($command eq "edit") {
-            my $program;
-
-            if ($opt_program) {
-                $program = $opt_program;
-            } elsif (exists($ENV{"EDITOR"}) && $ENV{"EDITOR"} =~ /^([-\w\s\.\/\'\"]+?)$/) {
-                $program = $1;
-            } else {
-                $program = "/bin/vi";
-            }
+            my $program = $opt_program || "/bin/vi";
 
             if ($objSet->count() == 0) {
                 my $rand = &rand_string("16");
@@ -401,16 +384,18 @@ exec()
                 my $obj = $objSet->get_object(0);
                 my $rand = &rand_string("16");
                 my $tmpfile = "/tmp/wwsh.$rand";
+                my ($old_csum, $new_csum);
 
                 $obj->file_export($tmpfile);
-
+                $old_csum = $obj->checksum();
                 &dprint("Running command: $program $tmpfile\n");
                 if (system($program, $tmpfile) == 0) {
-                    if ((! $obj->checksum() or !$obj->size()) or $obj->checksum() ne digest_file_hex_md5($tmpfile)) {
+                    $new_csum = digest_file_hex_md5($tmpfile);
+                    if ($old_csum ne $new_csum) {
                         $obj->file_import($tmpfile);
                         unlink($tmpfile);
                     } else {
-                        &nprint("File unchanged or empty.  Not updating data store.\n");
+                        &nprint("File unchanged.  Not updating data store.\n");
                     }
                 } else {
                     &iprint("Command \"$program\" failed.  Not updating data store.\n");
@@ -488,7 +473,8 @@ exec()
         } elsif ($command eq "sync" or $command eq "resync") {
             foreach my $obj ($objSet->get_list("name")) {
                 my $orig = $obj->origin() || "UNDEF";
-                if ($orig eq "UNDEF" && $obj->name() ne "dynamic_hosts") {
+
+                if (scalar(@ARGV) && ($orig eq "UNDEF") && ($obj->name() ne "dynamic_hosts")) {
                     &nprintf("%-16s :: No ORIGIN defined\n", $obj->name());
                 }
                 $obj->sync();

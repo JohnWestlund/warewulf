@@ -15,9 +15,7 @@ use Warewulf::Util;
 use Warewulf::EventHandler;
 use File::Basename;
 use File::Path;
-use Digest::MD5 qw(md5_hex);
-
-
+use Digest::MD5;
 
 our @ISA = ('Warewulf::Object');
 
@@ -75,7 +73,7 @@ name()
 {
     my $self = shift;
     
-    return $self->prop("name", qr/^([a-zA-Z0-9_\.\-]+)$/, @_);
+    return $self->prop("name", qr/^([[:print:]]+)$/, @_);
 }
 
 
@@ -150,7 +148,10 @@ sub
 checksum()
 {
     my $self = shift;
-    
+
+    if (!scalar(@_) && !defined($self->get("checksum"))) {
+        @_ = (Digest::MD5->new()->hexdigest());
+    }
     return $self->prop("checksum", qr/^([a-z0-9]+)$/, @_);
 }
 
@@ -212,7 +213,7 @@ path()
 {
     my $self = shift;
     
-    return $self->prop("path", qr/^([a-zA-Z0-9_\.\-\/]+)$/, @_);
+    return $self->prop("path", qr/^(\/.+)$/, @_);
 }
 
 
@@ -242,7 +243,7 @@ interpreter()
 {
     my $self = shift;
     
-    return $self->prop("interpreter", qr/^([a-zA-Z0-9\.\/\-_]+)$/, @_);
+    return $self->prop("interpreter", qr/^(\/.+)$/, @_);
 }
 
 
@@ -264,7 +265,7 @@ origin()
         if (defined($strings[0])) {
             my @neworigins;
             foreach my $string (@strings) {
-                if ($string =~ /^([a-zA-Z0-9_\.\-\/]+)$/) {
+                if ($string =~ /^(\/.+)$/) {
                     &dprint("Object $name set $key += '$1'\n");
                     push(@neworigins, $1);
                 } else {
@@ -278,7 +279,7 @@ origin()
         }
     }
 
-    return($self->get($key));
+    return $self->get($key);
 }
 
 
@@ -296,59 +297,52 @@ sync()
 {
     my ($self) = @_;
     my $name = $self->name();
-    
+    my ($event, $event_name);
+
     if ($self->origin()) {
-        my $data;
+        my $db = Warewulf::DataStore->new();
+        my $binstore = $db->binstore($self->id());
+        my ($total_len, $cur_len, $start) = (0, 0, 0);
+        my ($data, $digest);
 
         &dprint("Syncing file object: $name\n");
-
         foreach my $origin ($self->origin()) {
-            if ($origin =~ /^(\/[a-zA-Z0-9\-_\/\.]+)$/) {
-                if (-f $origin) {
-                    if (open(FILE, $origin)) {
-                        &dprint("   Including file to sync: $origin\n");
-                        while(my $line = <FILE>) {
-                            $data .= $line;
-                        }
-                        close FILE;
-                    } else {
-                        &wprint("Could not open origin path ($origin) for file object '$name'\n");
+            if (-f $origin) {
+                if (open(FILE, $origin)) {
+                    &dprint("   Including file to sync: $origin\n");
+                    while(my $line = <FILE>) {
+                        $data .= $line;
                     }
+                    close FILE;
+                } else {
+                    &wprint("Could not open origin path ($origin) for file object '$name'\n");
                 }
             }
-
         }
 
-        if ($data) {
-            my $db = Warewulf::DataStore->new();
-            my $binstore = $db->binstore($self->id());
-            my $total_len = length($data);
-            my $cur_len = 0;
-            my $start = 0;
+        &dprint("Persisting file object '$name' origin(s)\n");
+        $total_len = length($data);
+        $digest = Digest::MD5->new()->add($data);
 
-            &dprint("Persisting file object '$name' origin(s)\n");
+        while ($total_len > $cur_len) {
+            my $buffer = substr($data, $start, $db->chunk_size());
 
-            while($total_len > $cur_len) {
-                my $buffer = substr($data, $start, $db->chunk_size());
-                $binstore->put_chunk($buffer);
-                $start += $db->chunk_size();
-                $cur_len += length($buffer);
-                &dprint("Chunked $cur_len of $total_len\n");
-            }
-
-            $self->checksum(md5_hex($data));
-            $self->size($total_len);
-            $db->persist($self);
+            $binstore->put_chunk($buffer);
+            $start += $db->chunk_size();
+            $cur_len += length($buffer);
+            &dprint("Chunked $cur_len of $total_len\n");
         }
-
+        $self->checksum($digest->hexdigest());
+        $self->size($total_len);
+        $db->persist($self);
     } else {
         &dprint("Skipping file object '$name' as it has no origin paths set\n");
     }
 
     # Trigger file::$name.sync event for special behaviors
     # (i.e. warewulf-provision's dynamic_hosts)
-    my $event = Warewulf::EventHandler->new();
-    my $event_name = "file::$name.sync";
+    $event = Warewulf::EventHandler->new();
+    $event_name = "file::$name.sync";
     $event->handle($event_name, ());
     &dprint("Triggered event $event_name\n");
 }
@@ -368,102 +362,116 @@ sub
 file_import()
 {
     my ($self, $path) = @_;
-
     my $id = $self->id();
+    local *FILE;
 
     if (! $id) {
         &eprint("This object has no ID!\n");
-        return();
+        return undef;
+    } elsif (! $path) {
+        return undef;
     }
 
-    if ($path) {
-        if ($path =~ /^([a-zA-Z0-9_\-\.\/]+)$/) {
-            if (-f $path) {
-                my $db = Warewulf::DataStore->new();
-                my $binstore = $db->binstore($id);
-                my $format;
-                my $import_size = 0;
-                my $buffer;
-                my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = stat($path);
+    if ($path =~ /^(\/.+)$/) {
+        $path = $1;
+        if (-f $path) {
+            my $db = Warewulf::DataStore->new();
+            my $binstore = $db->binstore($id);
+            my $import_size = 0;
+            my ($format, $buffer, $digest);
 
-                if (open(FILE, $path)) {
-                    while(my $length = sysread(FILE, $buffer, $db->chunk_size())) {
-                        if ($import_size == 0) {
-                            if ($buffer =~ /^#!\/bin\/sh/) {
-                                $format = "shell";
-                            } elsif ($buffer =~ /^#!\/bin\/bash/) {
-                                $format = "bash";
-                            } elsif ($buffer =~ /^#!\/[a-zA-Z0-9\/_\.]+\/perl/) {
-                                $format = "perl";
-                            } elsif ($buffer =~ /^#!\/[a-zA-Z0-9\/_\.]+\/python/) {
-                                $format = "python";
-                            } else {
-                                $format = "data";
-                            }
+            if (open(FILE, $path)) {
+                my $length;
+
+                $digest = Digest::MD5->new();
+                while ($length = sysread(FILE, $buffer, $db->chunk_size())) {
+                    if ($import_size == 0) {
+                        if ($buffer =~ /^#!\/bin\/sh/) {
+                            $format = "shell";
+                        } elsif ($buffer =~ /^#!\/bin\/bash/) {
+                            $format = "bash";
+                        } elsif ($buffer =~ /^#!\/[a-zA-Z0-9\/_\.]+\/perl/) {
+                            $format = "perl";
+                        } elsif ($buffer =~ /^#!\/[a-zA-Z0-9\/_\.]+\/python/) {
+                            $format = "python";
+                        } else {
+                            $format = "data";
                         }
-                        &dprint("Chunked $length bytes of $path\n");
-                        $binstore->put_chunk($buffer);
-                        $import_size += $length;
                     }
-                    close FILE;
-
-                    if ($import_size) {
-                        $self->size($import_size);
-                        $self->checksum(digest_file_hex_md5($path));
-                        $self->format($format);
-                        $db->persist($self);
-                    } else {
-                        &eprint("Could not import file!\n");
-                    }
-                } else {
-                    &eprint("Could not open file: $!\n");
+                    &dprint("Chunked $length bytes of $path\n");
+                    $binstore->put_chunk($buffer);
+                    $digest->add($buffer);
+                    $import_size += $length;
                 }
+                if (!defined($length) && (! $import_size)) {
+                    eprint("Unable to import $path:  $!\n");
+                    return undef;
+                }
+                close FILE;
+
+                $self->size($import_size);
+                $self->checksum($digest->hexdigest());
+                $self->format($format);
+                $db->persist($self);
+                return $import_size;
             } else {
-                &eprint("File not found: $path\n");
+                &eprint("Could not open file: $!\n");
             }
         } else {
-            &eprint("Invalid characters in file name: $path\n");
+            &eprint("File not found: $path\n");
         }
+    } else {
+        &eprint("Import filename contains illegal characters.\n");
     }
+    return undef;
 }
 
 
+=item file_export($path)
 
-=item file_export($file)
-
-Export the data from a file object to a location on the file system.
+Export the data from a File object to a location on the filesystem.
 
 =cut
 
 sub
 file_export()
 {
-    my ($self, $file) = @_;
+    my ($self, $path) = @_;
+    my $db = Warewulf::DataStore->new();
+    my $binstore = $db->binstore($self->id());
+    local *FILE;
 
-    if ($file and $file =~ /^([a-zA-Z0-9\._\-\/]+)$/) {
-        $file = $1;
-        my $db = Warewulf::DataStore->new();
-        if (! -f $file) {
-            my $dirname = dirname($file);
-
-            if (! -d $dirname) {
-                mkpath($dirname);
-            }
+    if (! $path) {
+        &eprint("Cannot export file to empty path.\n");
+        return undef;
+    }
+    if ($path =~ /^(\/.+)$/) {
+        $path = $1;
+        if (! -f $path) {
+            mkpath(dirname($path), 0, 0755);
         }
 
-        my $binstore = $db->binstore($self->id());
-        if (open(FILE, "> $file")) {
-            while(my $buffer = $binstore->get_chunk()) {
-                print FILE $buffer;
-            }
-            close FILE;
-        } else {
-            &eprint("Could not open file for writing: $!\n");
+        if (!open(FILE, '>' . $path)) {
+            &eprint("Could not open file $path for writing:  $!\n");
+            return undef;
         }
+        while (my $buffer = $binstore->get_chunk()) {
+            if (!defined(syswrite(FILE, $buffer))) {
+                &eprint("Error writing data to file $path:  $!\n");
+                close(FILE);
+                return undef;
+            }
+        }
+        if (!close(FILE)) {
+            &eprint("Error closing file $path after write:  $!\n");
+            return undef;
+        }
+        return 0;
+    } else {
+        &eprint("Export filename contains illegal characters.\n");
+        return undef;
     }
 }
-
-
 
 
 =back
