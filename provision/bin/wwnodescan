@@ -28,6 +28,8 @@ my $opt_netdev;
 my $opt_vnfs;
 my $opt_bootstrap;
 my $opt_groups;
+my $opt_cluster;
+my $opt_domain;
 my $opt_help;
 my $opt_autoconfig;
 my $opt_maxnodes;
@@ -110,10 +112,12 @@ GetOptions(
     'n|netdev=s'    => \$opt_netdev,
     'V|vnfs=s'      => \$opt_vnfs,
     'b|bootstrap=s' => \$opt_bootstrap,
+    'c|cluster=s'   => \$opt_cluster,
+    'domain=s'      => \$opt_domain,
     'g|groups=s'    => \$opt_groups,
     'f|file=s'      => \$opt_scriptfile,
     'l|listen=s'    => \$opt_listen,
-    'c|tcpdump=s'   => \$opt_tcpdump,
+    'C|tcpdump=s'   => \$opt_tcpdump,
     'T|tshark=s'    => \$opt_tshark,
 );
 
@@ -236,6 +240,17 @@ if ($opt_autoconfig && $opt_maxnodes == 0) {
     }
 }
 
+if ($opt_cluster) {
+    # -c used to set $opt_tcpdump.  Now it's -C for $opt_tcpdump and -c for $opt_cluster.
+    # Help in the transition by detecting and warning of mistakes when possible.
+    if ((-x $opt_cluster) || (index($opt_cluster, ' '))) {
+        # They must've meant -C, so fix it.
+        $opt_tcpdump = $opt_cluster;
+        undef $opt_cluster;
+        &wprint("Invalid value for -c/--cluster:  \"$opt_tcpdump\"  Assuming you meant -C/--tcpdump.\n");
+    }
+}
+
 # The --tcpdump option can take just an executable or an entire command line.  We
 # only want to modify the command if it wasn't specified at all or if only a path
 # to an executable was specified (i.e., it does not contain a space).
@@ -348,19 +363,18 @@ while (my $line = <CAPTURE>) {
     }
     if ($line =~ /[^:]((([[:xdigit:]]{2}:){5}|([[:xdigit:]]{2}:){19})[[:xdigit:]]{2})([^:]|$)/) {
         my $hwaddr = $1;
-        my $hwprefix;
+        my ($cluster, $domain) = ("", "");
+        my ($node, $name, $ip, $hwprefix);
         
         if ($opt_infiniband && length($hwaddr) == 59) {
             $hwprefix = substr($hwaddr,0,35);
             $hwaddr = substr($hwaddr,-23);
             &dprint("Found Infiniband Port GUID $hwaddr and prefix $hwprefix\n");
-        } elsif($opt_infiniband) {
+        } elsif ($opt_infiniband) {
             &dprint("Looking for an 20-byte IB Hardware address, but found $hwaddr. Ignoring.\n");
             next;
         }
         
-        my ($node, $name, $ip);
-
         if (exists($seen{$hwaddr})) {
             &dprint("Already handled node with hardware address $hwaddr.  Ignoring.\n");
             next;
@@ -512,13 +526,60 @@ while (my $line = <CAPTURE>) {
                 exit(1);
             }
         }
+        if (index($name, '.')) {
+            if ($opt_cluster) {
+                if ($opt_domain) {
+                    &eprintf("Node name (\"%s\") cannot contain dots if both cluster (%s) and domain (%s) are given.\n",
+                             $name, $opt_cluster, $opt_domain);
+                } else {
+                    # We have a cluster but no domain.  Suffix must be the domain.
+                    ($domain = $name) =~ s/^[^\.]+\.//;
+                }
+            } elsif ($opt_domain) {
+                # We have a domain but no cluster.  Suffix must be the cluster.
+                if ($name =~ /^([^\.]+)\.([^\.]+)$/) {
+                    ($name, $cluster) = ($1, $2);
+                } else {
+                    &eprint("Detected invalid cluster name suffix on node name \"$name\" (contains dots).\n");
+                }
+            } else {
+                # Neither cluster name nor domain name specified.  Try to detect heuristically.
+                if ($name =~ /^([^\.]+)\.([^\.]+)$/) {
+                    # Single dot.  Assume <nodename>.<cluster>
+                    ($name, $cluster) = ($1, $2);
+                } elsif ($name =~ /^([^\.]+)\.([^\.]+\.[^\.]+)$/) {
+                    # Two dots.  Assume <nodename>.<domain>
+                    ($name, $domain) = ($1, $2);
+                } elsif ($name =~ /^([^\.]+)\.([^\.]+)\.(.+)$/) {
+                    # Three or more dots.  Assume <nodename>.<cluster>.<domain>
+                    ($name, $cluster, $domain) = ($1, $2, $3);
+                } else {
+                    # I don't believe this is actually reachable, but just in case....
+                    &eprint("Node name \"$name\" contains unparseable dotted notation.  Removing all suffixes.\n");
+                }
+            }
+            if (index($name, '.')) {
+                # If name still contains dots, remove them.  There was an error above.
+                $name =~ s/\..+$//g;
+            }
+            &wprint("Auto-detected \"$name\", cluster \"$cluster\", domain \"$domain\"\n");
+        }
+        # Values from CLI override all above logic.
+        if ($opt_cluster) {
+            $cluster = $opt_cluster;
+        }
+        if ($opt_domain) {
+            $domain = $opt_domain;
+        }
 
         if ($opt_scriptfile) {
             my $entry;
 
-            $entry = sprintf("node new %s --netdev=%s --ipaddr=%s --hwaddr=%s%s%s%s%s%s",
+            $entry = sprintf("node new %s --netdev=%s --ipaddr=%s --hwaddr=%s%s%s%s%s%s%s%s",
                              $name, $opt_netdev, $ip, $hwaddr,
                              (($opt_netmask) ? (" --netmask=$opt_netmask") : ("")),
+                             (($cluster) ? (" --cluster=$cluster") : ("")),
+                             (($domain) ? (" --domain=$domain") : ("")),
                              (($opt_groups) ? (" --groups=$opt_groups") : ("")),
                              (($hwprefix) ? (" --hwprefix=$hwprefix") : ("")),
                              (($bootstrapid) ? (" -s bootstrapid=$bootstrapid") : ("")),
@@ -539,7 +600,7 @@ while (my $line = <CAPTURE>) {
         } else {
             my $new_node = Warewulf::Node->new();
 
-            $new_node->nodename($name);
+            $new_node->name($name, ($cluster || undef), ($domain || undef));
             $new_node->set("bootstrapid", $bootstrapid);
             $new_node->set("vnfsid", $vnfsid);
             if (!($new_node->hwaddr($opt_netdev, $hwaddr)
