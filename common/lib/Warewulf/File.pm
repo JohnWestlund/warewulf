@@ -413,7 +413,7 @@ file_import()
     my $db = Warewulf::DataStore->new();
     my $binstore = $db->binstore($id);
     my ($import_size, $format) = (0, "");
-    my ($format, $buffer, $digest);
+    my ($buffer, $digest);
     local *FILE;
 
     if (! $id) {
