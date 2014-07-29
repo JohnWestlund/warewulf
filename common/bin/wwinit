@@ -24,6 +24,7 @@ eval `wwconfig -sea`
 WWINITDIR="$WAREWULF_LIBEXECDIR/warewulf/wwinit"
 WWFUNCTIONS="$WAREWULF_SYSCONFDIR/warewulf/functions"
 WWTMPDIR=`mktemp -d -t wwinit.XXXXXXXXX`
+SHELL="/bin/bash"
 
 export WWINITDIR WWFUNCTIONS WWTMPDIR
 
