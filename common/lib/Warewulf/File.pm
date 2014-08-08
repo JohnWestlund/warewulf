@@ -540,6 +540,7 @@ file_export()
             &eprint("Error closing file $path after write:  $!\n");
             return undef;
         }
+        chmod $self->mode(), $path;
         return 0;
     } else {
         &eprint("Export filename contains illegal characters.\n");
