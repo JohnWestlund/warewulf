@@ -78,7 +78,7 @@ name()
 }
 
 
-=item mode($string)
+=item mode($bits)
 
 Set the numeric permission "mode" of this file (e.g. 0644).
 
@@ -90,7 +90,7 @@ mode()
     my $self = shift;
     #my $validator = sub {
     #    if ($_[0] =~ /^(\d+)$/) {
-    #        return ($1 & 07777);
+    #        return S_IMODE($1);
     #    } else {
     #        return 0;
     #    };
@@ -98,7 +98,7 @@ mode()
     #return $self->prop("mode", $validator, @_);
 
     # The below basically does the same thing as the above, just faster.
-    return $self->prop("mode", sub { return (keys %{ +{$_[0] & 07777,1} })[0] || 0; }, @_);
+    return $self->prop("mode", sub { return (keys %{ +{S_IMODE($_[0]),1} })[0] || 0; }, @_);
 }
 
 
@@ -137,6 +137,30 @@ modestring()
         $str .= (($mode & S_IXOTH) ? ('x') : ('-'));
     }
     return $str;
+}
+
+
+=item filetype($bits)
+
+Set the numeric file type of this file (e.g. 020000).
+
+=cut
+
+sub
+filetype()
+{
+    my $self = shift;
+    #my $validator = sub {
+    #    if ($_[0] =~ /^(\d+)$/) {
+    #        return S_IFMT($1);
+    #    } else {
+    #        return 0;
+    #    };
+
+    #return $self->prop("filetype", $validator, @_);
+
+    # The below basically does the same thing as the above, just faster.
+    return $self->prop("filetype", sub { return (keys %{ +{S_IFMT($_[0]),1} })[0] || 0; }, @_);
 }
 
 
