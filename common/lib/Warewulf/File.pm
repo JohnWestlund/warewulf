@@ -131,7 +131,7 @@ modestring()
     }
     $str .= (($mode & S_IROTH) ? ('r') : ('-'));
     $str .= (($mode & S_IWOTH) ? ('w') : ('-'));
-    if ($mode & S_ISTXT) {
+    if ($mode & S_ISVTX) {
         $str .= (($mode & S_IXOTH) ? ('t') : ('T'));
     } else {
         $str .= (($mode & S_IXOTH) ? ('x') : ('-'));
