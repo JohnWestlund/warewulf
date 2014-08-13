@@ -546,7 +546,7 @@ file_export()
     if ($path =~ /^(\/.+)$/) {
         $path = $1;
         if (! -f $path) {
-            mkpath(dirname($path), 0, 0755);
+            mkpath(dirname($path), 0, 0750);
         }
 
         if (!open(FILE, '>' . $path)) {
@@ -564,7 +564,7 @@ file_export()
             &eprint("Error closing file $path after write:  $!\n");
             return undef;
         }
-        chmod $self->mode(), $path;
+        #chmod $self->mode(), $path;
         return 0;
     } else {
         &eprint("Export filename contains illegal characters.\n");
