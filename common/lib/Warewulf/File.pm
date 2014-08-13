@@ -363,9 +363,10 @@ sync()
 
         &dprint("Syncing file object: $name\n");
         foreach my $origin ($self->origin()) {
-            my @statinfo = ((S_ISLNK($origin)) ? (lstat($origin)) : (stat($origin)));
+            my $filetype = $self->filetype();
+            my @statinfo = ((S_ISLNK($filetype)) ? (lstat($origin)) : (stat($origin)));
 
-            if (S_ISREG($self->filetype()) && -f _) {
+            if (S_ISREG($filetype) && -f _) {
                 if (open(FILE, $origin)) {
                     &dprint("   Including file to sync: $origin\n");
                     while (my $line = <FILE>) {
@@ -375,15 +376,15 @@ sync()
                 } else {
                     &wprint("Could not open origin path ($origin) for file object '$name'\n");
                 }
-            } elsif (S_ISLNK($self->filetype())) {
+            } elsif (S_ISLNK($filetype)) {
                 if (-l _) {
                     $data = readlink($origin);
                 } else {
                     $data = $origin;
                 }
-            } elsif (S_ISBLK($self->filetype()) && -b _) {
+            } elsif (S_ISBLK($filetype) && -b _) {
                 $data = $statinfo[6];
-            } elsif (S_ISCHR($self->filetype()) && -c _) {
+            } elsif (S_ISCHR($filetype) && -c _) {
                 $data = $statinfo[6];
             } else {
                 $data = "";
