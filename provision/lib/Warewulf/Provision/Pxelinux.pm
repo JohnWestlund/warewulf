@@ -232,7 +232,7 @@ update()
                 }
                 print PXELINUX "# Configuration for Warewulf node: $hostname\n";
                 print PXELINUX "# Warewulf data store ID: $db_id\n";
-                if ($bootlocal) {
+                if (defined($bootlocal)) {
                     print PXELINUX "DEFAULT bootlocal\n";
                 } else {
                     print PXELINUX "DEFAULT bootstrap\n";
@@ -240,7 +240,7 @@ update()
                 print PXELINUX "LABEL bootlocal\n";
 
 
-		if ($bootlocal) {
+		if (defined($bootlocal)) {
 		    &dprint("$hostname: LOCALBOOT set to: $bootlocal\n");
                     print PXELINUX "LOCALBOOT $bootlocal\n";
 		} else {
