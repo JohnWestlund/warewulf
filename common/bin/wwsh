@@ -6,7 +6,7 @@
 # through Lawrence Berkeley National Laboratory (subject to receipt of any
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
-# $Id: wwsh 1480 2013-11-25 23:30:11Z mej $
+# $Id$
 #
 
 use Getopt::Long;
@@ -123,7 +123,7 @@ if (exists($ENV{"HOME"}) and $ENV{"HOME"} =~ /^([a-zA-Z0-9\/\._\-]+)$/) {
 $events->eventloader();
 $events->handle("WWSH.START");
 
-if (exists($ARGV[0]) and -f $ARGV[0]) {
+if ((scalar(@ARGV) == 1) && (-f $ARGV[0])) {
     &iprint("Running non-interactively from file\n");
     $term->interactive(0);
     open(INPUT, $ARGV[0]);
