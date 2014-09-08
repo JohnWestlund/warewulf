@@ -87,6 +87,7 @@ if (! $fileid) {
         }
         print map { $metadata{$_} } sort { $a <=> $b } keys(%metadata);
     }
+    exit(0);
 } elsif ($fileid =~ /^([0-9]+)$/ ) {
     $fileid = $1;
 } else {
