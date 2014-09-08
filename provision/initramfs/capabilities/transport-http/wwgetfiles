@@ -82,7 +82,7 @@ while true; do
                             rm -f "$NEWROOT/$path.ww$timestamp"
                             mknod -m $mode "$NEWROOT/$path.ww$timestamp" p
                         elif [ "$ftype" = "s" ]; then
-                            # NOT ACTUALLY SUPPORTED!
+                            : # NOT ACTUALLY SUPPORTED!
                         else
                             chmod $mode "$NEWROOT/$path"
                         fi
