@@ -84,7 +84,7 @@ while true; do
                         elif [ "$ftype" = "s" ]; then
                             : # NOT ACTUALLY SUPPORTED!
                         else
-                            chmod $mode "$NEWROOT/$path"
+                            chmod $mode "$NEWROOT/$path.ww$timestamp"
                         fi
                         mv "$NEWROOT/$path.ww$timestamp" "$NEWROOT/$path"
                         chown $uid "$NEWROOT/$path"
