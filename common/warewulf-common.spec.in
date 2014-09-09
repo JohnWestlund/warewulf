@@ -11,7 +11,15 @@ ExclusiveOS: linux
 Conflicts: warewulf <= 2.9
 BuildArch: noarch
 BuildRoot: %{?_tmppath}/%{name}-%{version}-%{release}-root
-Requires: mysql-server perl-DBD-MySQL
+
+%if %{rhel} >= 7
+PreReq: mariadb-server
+Requires: perl-DBD-MySQL
+%else
+PreReq: mysql-server
+Requires: perl-DBD-MySQL
+%endif
+
 
 %description
 Warewulf >= 3 is a set of utilities designed to better enable
@@ -42,8 +50,12 @@ groupadd -r warewulf >/dev/null 2>&1 || :
 if [ $1 -eq 2 ] ; then
     %{_bindir}/wwsh object canonicalize >/dev/null 2>&1 || :
 fi
+%if %{rhel} >= 7
+sudo systemctl start mariadb
+%else
 service mysqld start >/dev/null 2>&1 || :
 chkconfig mysqld on >/dev/null 2>&1 || :
+%endif
 
 
 %clean

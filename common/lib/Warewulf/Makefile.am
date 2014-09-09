@@ -1,4 +1,4 @@
-SUBDIRS =  HTML DataStore Module DSO Event System
+SUBDIRS =  DataStore Module DSO Event System
 
 perlmodsdir = ${PERL_VENDORLIB}/Warewulf
 
