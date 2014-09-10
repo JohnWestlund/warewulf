@@ -11,13 +11,12 @@ ExclusiveOS: linux
 Conflicts: warewulf <= 2.9
 BuildArch: noarch
 BuildRoot: %{?_tmppath}/%{name}-%{version}-%{release}-root
+Requires: perl-DBD-MySQL
 
 %if %{rhel} >= 7
 PreReq: mariadb-server
-Requires: perl-DBD-MySQL
 %else
 PreReq: mysql-server
-Requires: perl-DBD-MySQL
 %endif
 
 
@@ -51,7 +50,7 @@ if [ $1 -eq 2 ] ; then
     %{_bindir}/wwsh object canonicalize >/dev/null 2>&1 || :
 fi
 %if %{rhel} >= 7
-sudo systemctl start mariadb
+systemctl start mariadb >/dev/null 2>&1 || :
 %else
 service mysqld start >/dev/null 2>&1 || :
 chkconfig mysqld on >/dev/null 2>&1 || :
