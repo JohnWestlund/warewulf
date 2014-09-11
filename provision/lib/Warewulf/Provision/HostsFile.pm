@@ -22,6 +22,7 @@ use Warewulf::Util;
 use Warewulf::File;
 use Warewulf::DSO::File;
 
+our @ISA = ('Warewulf::File');
 
 =head1 NAME
 
@@ -196,6 +197,10 @@ update_datastore()
     my $name = "dynamic_hosts";
     my $datastore = Warewulf::DataStore->new();
 
+    my $config = Warewulf::Config->new("provision.conf");
+    my $hostfile = $config->get("hostfile") ? $config->get("hostfile") : "/etc/hosts";
+    my @statinfo = lstat($hostfile);
+
     &dprint("Updating data store\n");
 
     my $len = length($hosts);
@@ -211,6 +216,7 @@ update_datastore()
     $fileobj->checksum(md5_hex($hosts));
     $fileobj->path("/etc/hosts");
     $fileobj->format("data");
+    $fileobj->filetype($statinfo[2]);
     $fileobj->size($len);
     $fileobj->uid("0");
     $fileobj->gid("0");
