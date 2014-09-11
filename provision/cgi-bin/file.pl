@@ -81,7 +81,7 @@ if (! $fileid) {
             if ($timestamp && $timestamp >= $obj_ts) {
                 next;
             }
-            $metadata{$obj_ts} .= sprintf("$obj_id $obj_name $obj_uid $obj_gid %c%04o $obj_ts %s\n",
+            $metadata{$obj_ts} .= sprintf("$obj_id $obj_name $obj_uid $obj_gid %s%04o $obj_ts %s\n",
                                           (($obj_ftype eq '-') ? (' ') : ($obj_ftype)),
                                           $obj->mode(), $obj->path() || "NULL");
         }
