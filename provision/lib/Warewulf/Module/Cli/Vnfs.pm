@@ -299,6 +299,11 @@ exec()
             my $persist_count = 0;
             my @changes;
 
+            if (! @ARGV) {
+                &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+                return undef;
+            }
+
             if ($opt_chroot) {
                 if ($opt_chroot =~ /^([a-zA-Z0-9\/\.\-_]+)$/) {
                     if (-d $opt_chroot) {
@@ -328,6 +333,12 @@ exec()
 
         } elsif ($command eq "delete") {
             my $object_count = $objSet->count();
+
+            if (! @ARGV) {
+                &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+                return undef;
+            }
+
             if ($term->interactive()) {
                 print "Are you sure you want to delete $object_count VNFS images(s):\n\n";
                 foreach my $o ($objSet->get_list()) {

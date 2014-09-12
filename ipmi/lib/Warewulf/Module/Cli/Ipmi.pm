@@ -414,6 +414,10 @@ exec()
         }
         $parallel->run();
     } elsif ($command eq "poweroff") {
+        if (! @ARGV) {
+            &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+            return undef;
+        }
 
         my $parallel = Warewulf::ParallelCmd->new();
         $parallel->ktime(15);
@@ -428,6 +432,10 @@ exec()
         }
         $parallel->run();
     } elsif ($command eq "powercycle") {
+        if (! @ARGV) {
+            &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+            return undef;
+        }
 
         my $parallel = Warewulf::ParallelCmd->new();
         $parallel->ktime(15);
@@ -498,6 +506,10 @@ exec()
         }
         $parallel->run();
     } elsif ($command eq "clearsel") {
+        if (! @ARGV) {
+            &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+            return undef;
+        }
 
         my $parallel = Warewulf::ParallelCmd->new();
         $parallel->ktime(15);

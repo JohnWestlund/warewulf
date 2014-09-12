@@ -347,6 +347,12 @@ exec()
 
         if ($command eq "delete") {
             my $object_count = $objSet->count();
+
+            if (! @ARGV) {
+                &eprint("To make changes, you must provide a list of files to operate on.\n");
+                return undef;
+            }
+
             if ($term->interactive()) {
                 foreach my $o ($objSet->get_list()) {
                     printf("%8s: %-20s = %s\n", "DEL", "FILE", $o->name());

@@ -284,6 +284,11 @@ exec()
     if ($command eq "delete") {
         my @changes;
 
+        if (! @ARGV) {
+            &eprint("To make changes, you must provide a list of nodes to operate on.\n");
+            return undef;
+        }
+
         @changes = map { sprintf("%8s: %s %s", "DEL", "NODE", scalar $_->name()); } $objSet->get_list("fqdn", "domain", "cluster", "name");
         if ($self->confirm_changes($term, $object_count, "node(s)", @changes)) {
             $return_count = $db->del_object($objSet);
