@@ -47,7 +47,7 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                             KERNEL=${KERNEL##boot/}
                         fi
                     fi
-                    if [ -z ${WWKARGS} ]; then
+                    if [ -z "${WWKARGS}" ]; then
                         WWKARGS="quiet"
                     fi
 
@@ -60,7 +60,7 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                     echo "root (hd0,0)" >>$NEWROOT/boot/grub/grub.conf
                     echo "" >>$NEWROOT/boot/grub/grub.conf
                     echo "title $OSVERSION - $KERNELVERSION" >>$NEWROOT/boot/grub/grub.conf
-                    if [ -n $WWCONSOLE ]; then
+                    if [ -n "${WWCONSOLE}" ]; then
                         echo "    kernel /$KERNEL ro root=$ROOTDEV rhgb ${WWKARGS} console=${WWCONSOLE}" >>$NEWROOT/boot/grub/grub.conf
                     else
                         echo "    kernel /$KERNEL ro root=$ROOTDEV rhgb ${WWKARGS}" >>$NEWROOT/boot/grub/grub.conf
