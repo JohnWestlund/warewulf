@@ -58,7 +58,7 @@ if (scalar(@nodes) != 1) {
     exit(0);
 }
 
-$node = @nodes[0];
+$node = $nodes[0];
 $nodeName = $node->name();
 if (! $fileid) {
     my @files = $node->get("fileids");
