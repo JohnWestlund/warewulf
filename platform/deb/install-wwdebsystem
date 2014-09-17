@@ -8,24 +8,35 @@
 #
 # There is no warranty of any kind implied or otherwise
 #
-#   Date: 2013-11-14
+#   Date: 2014-9-16
+VERSION='0.3.6.0'
 #########################################################
 
+# uncomment to Not download/compile sources
+#DEBUGMODE="true"
+
+StateBeforeInstall=""
+StateAfterInstall=""
+MULTIARCH_NATIVE=""
 PACKAGELIST=""
 WWDOWNLOAD=""
 CROSSARCH=""
 WWVERSION=""
 WWPREFIX=""
+ARCH_SET=""
 CHOICE=""
 EDITOR=""
-CLUSTERVER="3.5"
+CLUSTERVER="3.6"    # increment this to the most current released version
 FILETYPE='.tar.gz'
 SOURCEDIR="$( pwd )"
+STATEDIR="PackagesStateDir"
 
 TEMPLIST="apache2 libapache2-mod-perl2 tftpd-hpa mysql-server debootstrap \
 isc-dhcp-server tcpdump openssh-client nfs-kernel-server nfs-common \
 rpcbind ntp wget build-essential"
 
+# these need 32 bit specific build library versions
+CROSSARCH_PKGS="libselinux1-dev libsepol1-dev"
 
 check_sqlpw () {
     if $( echo "quit" | mysql -u $1 -p${CHOICE} >/dev/null 2>&1 )
@@ -152,40 +163,60 @@ choose_wwuser () {
 }
 
 
-path_patch () {
-    # provides functionality for non-conventional
-    # installs ie .. --prefix=/usr/local
-
-    # patch broken paths with symlinks
-    if [[ ! -e /etc/apache2/conf.d/warewulf-httpd.conf ]]
+cleanup () {
+    if [[ "${MULTIARCH_NATIVE}" == "false" ]]
     then
-        ln -s ${WWPREFIX}/etc/apache2/conf.d/warewulf-httpd.conf /etc/apache2/conf.d/
-    fi
+        # to ensure propper state even after crash populate var from file
+        StateBeforeInstall=$( cat ${STATEDIR}/apt-pre-state )
 
-    # Band-Aid till the newer init management tools mature and
-    # standards more widely adopted at which time warewulf
-    # will likely evolve to offer better support
-    if [[ "$( which insserv )" != "$(dirname $(which wwsh ))/insserv" ]]
-    then
-        ln -s $( which insserv ) $(dirname $(which wwsh ))/insserv ;
-    fi
+        # list all i386 pkgs installed on the system
+        StateAfterInstall="$(dpkg --get-selections | grep i386 | awk '{print $1}')"
 
-    # make sure warewulf can find our text editor
-    # will edit environment variable for this user
-    if [[ -n "$( which ${EDITOR} )" ]]
-    then
-        if [[ -n "$( grep 'EDITOR' ~/.bashrc )" ]]
+        # save the i386 list to help set system state back to this point
+        printf "${StateAfterInstall}" > ${STATEDIR}/apt-post-state
+
+        # save a list of all pkgs for debugging
+        printf $(dpkg --get-selections) > ${STATEDIR}/all-after
+
+        # make sure not to uninstall any pre-existing pkgs
+        for i in ${StateAfterInstall}
+        do
+            flag="search"
+            for x in ${StateBeforeInstall}
+            do
+                if [[ "${i}x" == "${x}x" ]]
+                then
+                    flag="found"
+                    break
+                fi
+            done
+
+            if [[ "${flag}" != "found" ]]
+            then
+                if [[ -n ${removelist} ]]
+                then
+                    removelist="${removelist} ${i}"
+                else
+                    removelist="${i}"
+                fi
+            fi
+        done
+
+        warn_msg clean_up ;
+        apt-get remove --purge ${removelist} ;
+
+        # then to clean up make sure old == newstate b4 deleting
+        if [[ "$(dpkg --get-selections | grep i386 | awk '{print $1}')" == "${StateBeforeInstall}" ]]
         then
-            # edit file in place
-            # existing environment variable for editor found
-            echo "$( cat ~/.bashrc \
-                        | sed 's/^.*EDITOR.*=.*$/export EDITOR=\"\$\(which \$EDITOR\)\"/')" > ~/.bashrc ;
+            dpkg --remove-architecture i386 ;
+            if [[ -z ${DEBUGMODE} ]]
+            then
+                rm -fR ${STATEDIR} ;
+            fi
+            aptitude update ;
         else
-            echo "export EDITOR=\"$( which ${EDITOR} )\"" >> ~/.bashrc ;
+            warn_msg multiarch ;
         fi
-    else
-        echo
-        echo 'ERROR : No command line text editor found. Warewulf will not be able to offer file editing'
     fi
 }
 
@@ -447,6 +478,106 @@ get_undionly () {
 }
 
 
+mulitarch_state () {
+    MULTIARCH_NATIVE="$(dpkg --print-foreign-architectures)"
+
+    # found additional archs supported
+    if [[ -n ${MULTIARCH_NATIVE} ]]
+    then
+        for i in ${MULTIARCH_NATIVE}
+        do
+            if [[ "${i}" == "i386" ]] && ! [[ -e "${STATEDIR}/multi-arch-enabled" ]]
+            then
+                echo
+                echo "32bit multi-arch is already set so skip setting"
+                MULTIARCH_NATIVE="true"
+                break
+            fi
+        done
+        # then there must be other archs supported other than i386
+        # system must have already been in a multi-arch state
+        if [[ "${MULTIARCH_NATIVE}" != "true" ]]
+        then
+            MULTIARCH_NATIVE="false"
+        fi
+    else
+        MULTIARCH_NATIVE="false"
+    fi
+
+    # i386 support not found so install it
+    if [[ "${MULTIARCH_NATIVE}" == "false" ]]
+    then
+        # add 32bit support to apt
+        dpkg --add-architecture i386 ;
+
+        mkdir ${STATEDIR} ;
+
+        if [[ -e ${STATEDIR}/apt-pre-state ]]
+        then
+            StateBeforeInstall=$( cat ${STATEDIR}/apt-pre-state )
+        else
+            # list all i386 pkgs that may already be installed on the system
+            StateBeforeInstall="$(dpkg --get-selections | grep i386 | awk '{print $1}')"
+            # save the i386 list to help set system state back to this
+            printf "${StateBeforeInstall}" > ${STATEDIR}/apt-pre-state
+
+            # save a list of all pkgs for debugging
+            printf "$(dpkg --get-selections)" > ${STATEDIR}/all-before
+        fi
+
+        # create file to track system state in event of crash or early script termination
+        echo 'this is a stale dir and needs to be deleted' > ${STATEDIR}/multi-arch-enabled
+        echo 'package manager has been set to multi-arch state' >> ${STATEDIR}/multi-arch-enabled
+        echo 'execute the command  sudo dpkg --remove-architecture i386' >> ${STATEDIR}/multi-arch-enabled
+        echo 'This will fail if i386 packages still exist on the system' >> ${STATEDIR}/multi-arch-enabled
+        echo 'then execute the command  sudo aptitude update' >> ${STATEDIR}/multi-arch-enabled
+        echo 'once system is restored delete this entire dir' >> ${STATEDIR}/multi-arch-enabled
+    fi
+}
+
+
+path_patch () {
+    # provides functionality for non-conventional
+    # installs ie .. --prefix=/usr/local
+
+    # patch broken paths with symlinks
+    if [[ ! -e /etc/apache2/conf.d/warewulf-httpd.conf ]]
+    then
+        ln -s ${WWPREFIX}/etc/apache2/conf.d/warewulf-httpd.conf /etc/apache2/conf.d/
+    fi
+
+    # Band-Aid till the newer init management tools mature and
+    # standards more widely adopted at which time warewulf
+    # will likely evolve to offer better support
+    if [[ "$( which insserv )" != "$(dirname $(which wwsh ))/insserv" ]]
+    then
+        ln -s $( which insserv ) $(dirname $(which wwsh ))/insserv ;
+    fi
+
+    # make sure warewulf can find our text editor
+    # will edit environment variable for this user
+    if [[ -n "$( which editor )" ]]
+    then
+        if [[ -n "$( grep 'EDITOR' /etc/bash.bashrc )" ]]
+        then
+            # edit file in place
+            # existing environment variable for editor found
+            sed -i "s,^.*EDITOR.*=.*$,export EDITOR=\"$(which editor)\"," /etc/bash.bashrc ;
+        else
+            echo "export EDITOR=\"$( which editor } )\"" >> /etc/bash.bashrc ;
+        fi
+
+        echo 'Defaults env_keep += "EDITOR"' > 99_keepeditor ;
+        chmod 0440 99_keepeditor ;
+        mv 99_keepeditor /etc/sudoers.d/ ;
+
+    else
+        echo
+        echo 'ERROR : No command line text editor found. Warewulf will not be able to offer file editing'
+    fi
+}
+
+
 scan_packages () {
     echo "Checking: $1"
     if dpkg -s $1 2>&1 | grep Status | grep -v deinstall
@@ -539,19 +670,26 @@ user_input () {
 warn_msg () {
     case "${1}" in
 
+        clean_up)
+            echo
+            echo
+            echo
+            echo "!.ATTENTION.! : The i386 dev packages, we just installed, were only required for"
+            echo "compiling cross arch support into warewulf. These are no longer needed and should"
+            echo "now be removed to return the package manager to its native state. : !.ATTENTION.!"
+            echo
+            ;;
         choose_root)
             echo
             echo "What is the root password for your mysql server?"
             echo "Not the system root user, the the mysql root password."
             echo "The one you may have just created."
             ;;
-
         chosen)
             echo
             echo "You have entered : ${CHOICE}"
             echo "Is this correct..?"
             ;;
-
         config_1)
             echo
             echo '------------------------------------------------'
@@ -566,38 +704,31 @@ warn_msg () {
             echo "Before we can automate this process you will need to"
             echo "enter some information first"
             ;;
-
         config_mysql)
             echo
             echo "Would you like to configure mysql ?"
             ;;
-
         config_tftp)
             echo
             echo "Configuring the tftp server for warewulf"
             ;;
-
         enter_once)
             echo
             echo "Enter the password"
             ;;
-
         enter_twice)
             echo
             echo "Enter the password again"
             ;;
-
         enter_mismatch)
             echo
             echo "ERROR: They do not match try again"
             ;;
-
         compiler_error)
             echo
             echo "ERROR: Warewulf source code failed to compile or install"
             echo
             ;;
-
         choose_dir)
             echo
             echo "Many Debian based tftp daemons have adopted"
@@ -608,7 +739,6 @@ warn_msg () {
             echo "YES = Configure warewulf to use the path /srv/tftp"
             echo " NO = Configure tftpd to use the path /var/lib/tftpboot"
             ;;
-
         crossarch)
             echo
             echo "Additional support can be added if you need to create"
@@ -617,16 +747,19 @@ warn_msg () {
             echo
             echo "Would you like to include cross architecture support ?"
             ;;
-
         editor)
             echo
             echo "Which command line text editor would you like to use ?"
             echo
-            echo "     nano should already be installed by default on Debian."
-            echo "YES = Configure nano as the default system editor for this user."
-            echo " NO = Install and set vi as default system editor for this user."
+            echo "YES = Allow warewulf to use the default system editor even with sudo"
+            echo "      nano should already be installed as the default editor on Debian."
+            echo "       Will Automatically add the following:"
+            echo '          export EDITOR="/usr/bin/editor" ---> /etc/bash.bashrc'
+            echo '          "Defaults env_keep += "EDITOR"  ---> /etc/sudoers.d/99_keepeditor'
+            echo "       NOTE-: THE Addition to /etc/sudoers.d/ :-NOTE"
+            echo
+            echo " NO = Install vi as is the default editor for warewulf."
             ;;
-
         finished)
             echo
             echo "============================================================================"
@@ -636,7 +769,6 @@ warn_msg () {
             echo
             echo 'running "wwinit ALL" to finalize configuration.'
             ;;
-
         intro)
             echo
             echo "The following are some of the required packages warewulf needs."
@@ -644,39 +776,39 @@ warn_msg () {
             echo
             echo "Scan system for required dependencies, and automatically install"
             echo "the required packages."
-
             echo
             ;;
-
         makecheck)
             echo "WARNING: make command not found"
             echo
             echo "Will need to compile Warewulf to run on .deb based distros"
             echo "Would you like to add build-essential to the list of packages ?"
             ;;
-
         missing_sql)
             echo
             echo "Did not find mysql."
             echo "Would you also like to install mysql-server ?"
             ;;
-
+        multiarch)
+            echo
+            echo "WARNING...!!! : Failed to restore system to previous state."
+            echo "WARNING...!!! : Package manager remains in multi-arch state."
+            echo "WARNING...!!! : Look in the PackagesStateDir within this directory."
+            echo
+            ;;
         need_sql)
             echo "Warewulf must have mysql-server installed"
             echo "Are you sure you want to continue without it"
             ;;
-
         need_tftp)
             echo "Warewulf must have tftpd server installed"
             echo "Are you sure you want to continue without it"
             ;;
-
         no_tfpt)
             echo
             echo "tftp server not found"
             echo "Would you like to install tftpd-hpa ?"
             ;;
-
         no_root)
             echo
             echo
@@ -684,7 +816,6 @@ warn_msg () {
             echo
             echo
             ;;
-
         pkgs_selected)
             echo
             echo "Current list of packages to be installed on this system."
@@ -693,14 +824,12 @@ warn_msg () {
             echo
             echo "Download and install the current list of packages."
             ;;
-
         remove_path)
             echo "Eliminate later confusion do you want to"
             echo "Delete the directory ${CHOICE} and every thing in it ?"
             echo
             echo "WARNING: Say NO if you want to keep this directory"
             ;;
-
         root_auth)
             echo
             echo "ERROR: Not a valid mysql root password"
@@ -709,7 +838,6 @@ warn_msg () {
             echo "YES = Use a different password"
             echo " NO = Skip mySQL setup and continue with warewulf system configuration ?"
             ;;
-
         sql_root)
             echo
             echo '----------------------------------------------------'
@@ -722,11 +850,11 @@ warn_msg () {
             echo
             echo "Do You Understand ?"
             ;;
-
         usage)
             echo "install-wwdebsystem [version] [path (optional)]"
             echo
             echo "      -h      Display this message"
+            echo "      -v      Display this installer version"
             echo " version      release version or nightly build date"
             echo "    path      (optional) Path configure will use as --prefix="
             echo "              No path, configure will use default path of /usr/local"
@@ -736,13 +864,14 @@ warn_msg () {
             echo "sudo install-wwdebsystem 2014-02-15 /usr  - will install nightly build to /usr"
             echo
             ;;
-
+        version)
+            echo "$VERSION"
+            ;;
         which_eth)
             echo
             echo "Which ethernet adapter will warewulf use to network nodes ?"
             echo "The default is eth1"
             ;;
-
         wwready)
             echo
             echo '================================================================='
@@ -757,7 +886,6 @@ warn_msg () {
             echo
             echo "Continue with installation...?"
             ;;
-
     esac
 }
 
@@ -776,10 +904,14 @@ which_nic () {
 
 
 ### Argument processing
-while getopts "a:h" opt; do
+while getopts "a:h:v" opt; do
     case $opt in
         h)
             warn_msg usage ;
+            exit
+        ;;
+        v)
+            warn_msg version ;
             exit
         ;;
         a)
@@ -827,8 +959,18 @@ fi
 warn_msg crossarch;
 if user_decide
 then
-    TEMPLIST="${TEMPLIST} gcc-multilib" ;
-    CROSSARCH="true"
+    if [[ "$(dpkg --print-architecture)" == "i386" ]]
+    then
+        echo
+        echo "ERROR: cross architecture only supported on 64-bit systems"
+        echo "WARNING: this appears to be a 32 bit system"
+        echo 'WARNING: cross architecture support -=* DISABLED *=- '
+        echo
+    else
+        TEMPLIST="${TEMPLIST} gcc-multilib libselinux1-dev libsepol1-dev" ;
+        CROSSARCH="true"
+        mulitarch_state ;
+    fi
 fi
 
 # prompt to install needed packages ?
@@ -840,11 +982,24 @@ then
     do
         if ! scan_packages ${i}
         then
+            if [[ "${CROSSARCH}" == "true" ]]
+            then
+                ARCH_SET=':amd64'
+
+                for x in ${CROSSARCH_PKGS}
+                do
+                    if [[ "${x}x" == "${i}x" ]]
+                    then
+                        ARCH_SET=':i386'
+                    fi
+                done
+            fi
+
             if [[ -n ${PACKAGELIST} ]]
             then
-                PACKAGELIST="${PACKAGELIST} ${i}"
+                PACKAGELIST="${PACKAGELIST} ${i}${ARCH_SET}"
             else
-                PACKAGELIST="${i}"
+                PACKAGELIST="${i}${ARCH_SET}"
             fi
         fi
     done
@@ -869,6 +1024,11 @@ then
             aptitude update ;
             apt-get install ${PACKAGELIST} ;
         else
+            echo
+            echo "Cleaning up and reseting system back to default state"
+            echo
+
+            cleanup ;
             echo
             echo "Do Your Homework Then Run This Again"
             echo
@@ -908,7 +1068,7 @@ then
         done
     fi
 
-    if $( wget --spider http://warewulf.lbl.gov )
+    if [[ -z ${DEBUGMODE} ]] && $( wget --spider http://warewulf.lbl.gov )
     then
         for i in ${pkglist}
         do
@@ -922,38 +1082,49 @@ then
     # no nightly builds for cluster package so add it separately
     #  only get this package from full releases
     pkglist="http://warewulf.lbl.gov/downloads/releases/warewulf-cluster/warewulf-cluster-${CLUSTERVER}${FILETYPE}"
-    wget -nc ${pkglist} || wget -nc ${pkglist} || \
-                { echo "ERROR: $1 - Failed to download ${pkglist}" && exit 1; } ;
 
-    for i in $( ls -A | grep '.tar.gz' )
-    do
-        echo
-        echo "Unpacking files"
-        tar -zxf ${i} && rm ${i} ;
-    done
+    if [[ -z ${DEBUGMODE} ]]
+    then
+        wget -nc ${pkglist} || wget -nc ${pkglist} || \
+                    { echo "ERROR: $1 - Failed to download ${pkglist}" && exit 1; } ;
 
-    # make sure 'warewulf-provision' is at end of list so that
-    # crosscompile flags only need be set and forget
-    compilelist="warewulf-common warewulf-cluster warewulf-vnfs warewulf-provision"
+        for i in $( ls -A | grep '.tar.gz' )
+        do
+            echo
+            echo "Unpacking files"
+            tar -zxf ${i} && rm ${i} ;
+        done
 
-    # configure and compile all sources
-    for i in ${compilelist}
-    do
-        cd ${i}* ;
-        ./configure --prefix=${WWPREFIX} ;
+        # make sure 'warewulf-provision' is at end of list so that
+        # crosscompile flags only need be set and forget
+        compilelist="warewulf-common warewulf-cluster warewulf-vnfs warewulf-provision"
 
-        if [[ "${i}" =~ ^.*warewulf-provision ]] && [[ -n ${CROSSARCH} ]]
-        then
-            CFLAGS=-m32
-            LDFLAGS=-m32
-            export CFLAGS
-            export LDFLAGS
-        fi
+        # configure and compile all sources
+        for i in ${compilelist}
+        do
+            cd ${i}* ;
+            ./configure --prefix=${WWPREFIX} ;
 
-        make || ( warn_msg compiler_error && exit 1 ) ;
-        make install || ( warn_msg compiler_error && exit 1 ) ;
-        cd ${SOURCEDIR} ;
-    done
+            if [[ "${i}" =~ ^.*warewulf-provision ]] && [[ -n ${CROSSARCH} ]]
+            then
+                CFLAGS=-m32
+                LDFLAGS=-m32
+                export CFLAGS
+                export LDFLAGS
+            fi
+
+            if ! ( make && make install )
+            then
+                warn_msg compiler_error ;
+                exit 1 ;
+            fi
+
+            cd ${SOURCEDIR} ;
+        done
+    fi
+
+    # clean up cross arch remnants
+    cleanup ;
 
     if [[ "${WWPREFIX}x" == "/x" ]]
     then
