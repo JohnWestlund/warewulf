@@ -494,6 +494,7 @@ file_import()
     } elsif (-l _) {
         my $target = readlink($path);
 
+        $format = "link";
         &dprint("Importing symlink:  $path -> $target\n");
         $binstore->put_chunk($target);
         $digest->add($target);
@@ -501,6 +502,7 @@ file_import()
     } elsif (-b _ || -c _) {
         my ($major, $minor) = ($statinfo[6] >> 8, $statinfo[6] & 0xff);
 
+        $format = "block";
         &dprintf("Importing %s special device $path:  0x%02x (%d), 0x%02x (%d)\n",
                  ((-b _) ? ("block") : ("character")), $major, $major, $minor, $minor);
         $binstore->put_chunk($statinfo[6]);
