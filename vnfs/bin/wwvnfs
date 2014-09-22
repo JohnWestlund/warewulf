@@ -11,6 +11,7 @@ use Warewulf::ACVars;
 use Warewulf::Util;
 use Warewulf::Logger;
 use Warewulf::Config;
+use Warewulf::Timer;
 use File::Basename;
 use File::Copy;
 use File::Path;
@@ -27,9 +28,11 @@ use POSIX;
 
 my $sysconfdir = Warewulf::ACVars::get('SYSCONFDIR');
 my $config = Warewulf::Config->new("vnfs.conf");
+my $timer = Warewulf::Timer->new();
 my $randstring = &rand_string("12");
 my $build_directory = ( $config->get("build directory") || "/var/tmp" ) . "/";
-my $output = "$build_directory/$randstring.vnfs";
+my $cpio_output = "$build_directory/$randstring-cpio.vnfs";
+my $gzip_output = "$build_directory/$randstring-gzip.vnfs";
 my $command = "$0 ". join(" ", @ARGV);
 
 # Get our gzip command
@@ -61,6 +64,9 @@ my %hybridize_map;
 my %link_map;
 my $wwsh_bin;
 my $create_config;
+my $file_pipe;
+my $cpio_time;
+my $gzip_time;
 
 
 Getopt::Long::Configure ("bundling");
@@ -299,7 +305,6 @@ if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
 &iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
 
 my $tmpdir = "$build_directory/wwvnfs." . &rand_string(16);
-umask("0000");
 
 sub
 vnfs_create_file($)
@@ -315,74 +320,21 @@ vnfs_create_file($)
         }
     }
 
+
     &dprint("Evaluating path '$path'\n");
-
     if (exists($exclude_map{"$path"})) {
-        &dprint("Excluding file: $path\n");
-
-        if (exists($hybridize_map{"$path"})) {
-            &iprint("Hybridizing location: $tmpdir/$path\n");
-            symlink("$opt_hybrid/$path", "$tmpdir/$path");
-        }
-
+        &dprint("Excluding: $path\n");
     } else {
-        my ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime) = lstat("$opt_chroot/$path");
+        print $filepipe ".$path\n";
+   }
 
-        if (S_ISLNK($mode)) {
-            my $destination = readlink("$opt_chroot/$path");
-            &dprint("Creating symbolic link: $tmpdir/$path -> $destination\n");
-            if ($destination =~ /^([[:print:]]+)$/) {
-                $destination = $1;
-            } else {
-                &eprint("Link destination '$destination' did not pass untaint check, skipping.\n");
-                return;
-            }
-            symlink($destination, "$tmpdir/$path");
-            # Not setting ownership of symlinks... Yes, this is sucky, but a PITA as the
-            # Perl 'chown' command can not change link ownership, and they don't expose
-            # lchown system call.
-        } elsif (exists($link_map{"$dev-$ino"})) {
-            my $destination = $link_map{"$dev-$ino"};
-            &dprint("Creating hard link: $tmpdir/$path -> $destination\n");
-            if (! link($destination, "$tmpdir/$path")) {
-                &wprint("Could not create hardlink of $tmpdir/$path. Copying file instead.\n");
-                copy("$opt_chroot/$path", "$tmpdir/$path");
-            }
-        } else {
-            if (S_ISDIR($mode)) {
-                &dprint("Creating directory: $tmpdir/$path (mode=$mode, uid=$uid, gid=$gid)\n");
-                mkpath("$tmpdir/$path");
-                if ($dev != $File::Find::topdev) {
-                    # Don't cross filesystem boundaries.  Just create the mountpoint.
-                    $File::Find::prune = 1;
-                }
-            } elsif (S_ISREG($mode)) {
-                &dprint("Copying file: $tmpdir/$path\n");
-                copy("$opt_chroot/$path", "$tmpdir/$path");
-            } elsif (S_ISBLK($mode) or S_ISCHR($mode) or S_ISFIFO($mode) or S_ISSOCK($mode)) {
-                &iprint("Creating special file: $tmpdir/$path\n");
-                syscall(&SYS_mknod, "$tmpdir/$path", $mode, $rdev);
-            } else {
-                # If we got here, we don't know how to deal with this file... Skip it!
-                &eprint("Skipping unknown file type: $opt_chroot/$path\n");
-                return;
-            }
-            chown($uid, $gid, "$tmpdir/$path");
-            chmod($mode & 07777, "$tmpdir/$path");
-            utime($atime, $mtime, "$tmpdir/$path");
-            $link_map{"$dev-$ino"} = "$tmpdir/$path";
-        }
-    }
 }
 
-
+$timer->start();
 &dprint("Starting main conditional\n");
 if (-d $opt_chroot) {
     &dprint("Looking for init at: $opt_chroot/sbin/init\n");
     if (-x "$opt_chroot/sbin/init") {
-        &dprint("Checking to see if the target is a VNFS file\n");
-        my $dirname = dirname($output);
-
         &nprint("Creating VNFS image from $opt_name\n");
 
         sub build_exclude_map {
@@ -419,26 +371,58 @@ if (-d $opt_chroot) {
             }
         }
 
-        &iprint("Creating target chroot at: $tmpdir\n");
-        mkpath($tmpdir);
+        &iprint("Creating VNFS output file is: $cpio_output\n");
 
-        &nprint("Building new chroot...\n");
+        $timer->mark();
+
+        &nprint("Compiling VNFS\n");
+        chdir($opt_chroot);
+        open($filepipe, "| cpio --quiet -o -H newc -O $cpio_output");
+
         find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
 
-        &nprint("Building and compressing the final image\n");
-        system("(cd $tmpdir; find . | cpio --quiet -o -H newc ) | $gzip_bin $gzip_opts > $output");
-        #system("(cd $tmpdir; tar --xattrs --selinux -cf - . ) | $gzip_bin $gzip_opts > $output");
-        &nprint("Cleaning temporary files\n");
-        system("rm -rf $tmpdir");
+        if ( ! close $filepipe ) {
+            &eprint("$!\n");
+            exit 1;
+        }
 
-        if (-f $output) {
+        mkpath($tmpdir);
+
+        &nprint("Compiling hybridization link tree\n");
+        foreach my $p ( keys %hybridize_map ) {
+            my $basedir = dirname("$tmpdir/$p");
+            mkpath($basedir);
+            &iprint("Hybridizing location: $tmpdir/$p\n");
+            symlink("$opt_hybrid/$p", "$tmpdir/$p");
+        }
+
+        &iprint("Working file: $cpio_output\n");
+        system("cd $tmpdir; find . -type l | cpio --quiet -o -A -H newc -O $cpio_output");
+
+        # This doesn't do anything aside from look pretty because the directory is not empty.
+        # Needs to really be a better solution then blindly rm -rf.
+        unlink($tmpdir);
+        $cpio_time = $timer->mark();
+
+        &nprint("Compressing VNFS image\n");
+        &iprint("Working file: $gzip_output\n");
+        system("$gzip_bin $gzip_opts < $cpio_output > $gzip_output");
+
+        unlink($cpio_output);
+
+        $gzip_time = $timer->mark();
+
+        if (-f $gzip_output) {
             if ($opt_output) {
+                if ( -d $opt_output ) {
+                    $opt_output = "$opt_output/$opt_name.vnfs";
+                }
                 my $dirname = dirname($opt_output);
                 if (! -d $dirname) {
                     mkpath($dirname);
                 }
-                &dprint("Moving $output to $opt_output\n");
-                if (move($output, $opt_output)) {
+                &iprint("Moving $gzip_output to $opt_output\n");
+                if (move($gzip_output, $opt_output)) {
                     &nprint("Wrote VNFS image to $opt_output\n");
                 } else {
                     &eprint("Could not move temporary file to final destination!\n");
@@ -446,15 +430,15 @@ if (-d $opt_chroot) {
                 }
             } else {
                 if ($opt_yes) {
-                    system("yes | $wwsh_bin vnfs import $output --chroot='$opt_chroot' --name='$opt_name'");
+                    system("yes | $wwsh_bin vnfs import $gzip_output --chroot='$opt_chroot' --name='$opt_name'");
                 } else {
-                    system("$wwsh_bin vnfs import $output --chroot='$opt_chroot' --name='$opt_name'");
+                    system("$wwsh_bin vnfs import $gzip_output --chroot='$opt_chroot' --name='$opt_name'");
                 }
-                unlink($output);
+                unlink($gzip_output);
                 &nprint("Done.\n");
             }
         } else {
-            &eprint("There was an error creating the output file: $opt_output!\n");
+            &eprint("There was an uncaught error creating the VNFS at $gzip_output!\n");
         }
 
     } else {
@@ -465,6 +449,10 @@ if (-d $opt_chroot) {
     &eprint("Path to chroot is not valid ('$opt_chroot')\n");
     exit 1;
 }
+
+&nprint("Time to build VNFS:    $cpio_time s\n");
+&nprint("Time to compress VNFS: $gzip_time s\n");
+&nprint("Total elapsed time:    ". $timer->elapsed() ." s\n");
 
 
 if ($create_config) {
