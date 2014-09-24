@@ -18,6 +18,7 @@ use File::Path;
 use File::Find;
 use Getopt::Long;
 use Fcntl ':mode';
+use IPC::Open2;
 use POSIX;
 {
     local $^W = 0;
@@ -34,6 +35,7 @@ my $build_directory = ( $config->get("build directory") || "/var/tmp" ) . "/";
 my $cpio_output = "$build_directory/$randstring-cpio.vnfs";
 my $gzip_output = "$build_directory/$randstring-gzip.vnfs";
 my $command = "$0 ". join(" ", @ARGV);
+my $tmpfile = "/tmp/wwvnfs.$randstring";
 
 # Get our gzip command
 my $gzip_cmd = $config->get("gzip command") || "gzip -9";
@@ -66,7 +68,7 @@ my $wwsh_bin;
 my $create_config;
 my $file_pipe;
 my $cpio_time;
-my $gzip_time;
+my $gzip_pipe;
 
 
 Getopt::Long::Configure ("bundling");
@@ -330,6 +332,16 @@ vnfs_create_file($)
 
 }
 
+
+sub padding {
+    my ($nb, $offset) = @_;
+
+    my $align = $offset % $nb;
+    $align ? $nb - $align : 0;
+}
+
+
+
 $timer->start();
 &dprint("Starting main conditional\n");
 if (-d $opt_chroot) {
@@ -371,46 +383,63 @@ if (-d $opt_chroot) {
             }
         }
 
-        &iprint("Creating VNFS output file is: $cpio_output\n");
+        open($gzip_pipe, "| $gzip_bin $gzip_opts > $gzip_output");
 
-        $timer->mark();
+        # Build the hybridization component of the CPIO (not using a temporary
+        # directory, writing CPIO format directly)
+        &nprint("Compiling hybridization link tree\n");
+        my $count = 1;
+        my $current_time = time();
+        foreach my $p ( keys %hybridize_map ) {
+            $p =~ s/^\///;
+            printf $gzip_pipe "%06X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%08X%s%s",
+                460545,                     # MAGIC
+                $count,                     # INODE: This just has to be a unique number on the devmajor
+                0120777,                    # MODE: symbolic link in 0777
+                0,                          # UID
+                0,                          # GID
+                1,                          # NLINK
+                $current_time,              # MTIME
+                length("$opt_hybrid/$p"),   # DATA LENGTH
+                999999,                     # DEVMAJOR
+                0,                          # DEVMINOR
+                0,                          # RDEVMAJOR
+                0,                          # RDEVMINOR
+                length($p) + 1,             # NAME LENGTH (always NUL padded)
+                0,                          # CHECKSUM (not used for newc format)
+                $p ."\0". ("\0" x padding(4, length($p) + 3)),
+                                            # NAME with > 0 NUL
+                "$opt_hybrid/$p" . ("\0" x padding(4, length("$opt_hybrid/$p")));
+                                            # DATA with > 0 NUL
+
+            $count++;
+        }
 
         &nprint("Compiling VNFS\n");
-        chdir($opt_chroot);
-        open($filepipe, "| cpio --quiet -o -H newc -O $cpio_output");
 
+        # Building list of files to archive into CPIO
+        open($filepipe, "> $tmpfile");
         find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
+        close $filepipe;
 
-        if ( ! close $filepipe ) {
+        # Changing directory and calling CPIO
+        chdir($opt_chroot);
+        open($cpio_pipe, "cat $tmpfile | cpio --quiet -o -H newc |");
+
+        # Pulling the CPIO output from the above process and running it through
+        # the gzip pipe.
+        &iprint("Waiting for GZIP to complete...\n");
+        while (<$cpio_pipe>) {
+            print $gzip_pipe $_;
+        }
+
+        if ( ! close $gzip_pipe ) {
             &eprint("$!\n");
             exit 1;
         }
 
-        mkpath($tmpdir);
-
-        &nprint("Compiling hybridization link tree\n");
-        foreach my $p ( keys %hybridize_map ) {
-            my $basedir = dirname("$tmpdir/$p");
-            mkpath($basedir);
-            &iprint("Hybridizing location: $tmpdir/$p\n");
-            symlink("$opt_hybrid/$p", "$tmpdir/$p");
-        }
-
-        &iprint("Working file: $cpio_output\n");
-        system("cd $tmpdir; find . -type l | cpio --quiet -o -A -H newc -O $cpio_output");
-
-        # This doesn't do anything aside from look pretty because the directory is not empty.
-        # Needs to really be a better solution then blindly rm -rf.
-        unlink($tmpdir);
+        unlink($tmpfile);
         $cpio_time = $timer->mark();
-
-        &nprint("Compressing VNFS image\n");
-        &iprint("Working file: $gzip_output\n");
-        system("$gzip_bin $gzip_opts < $cpio_output > $gzip_output");
-
-        unlink($cpio_output);
-
-        $gzip_time = $timer->mark();
 
         if (-f $gzip_output) {
             if ($opt_output) {
@@ -451,7 +480,6 @@ if (-d $opt_chroot) {
 }
 
 &nprint("Time to build VNFS:    $cpio_time s\n");
-&nprint("Time to compress VNFS: $gzip_time s\n");
 &nprint("Total elapsed time:    ". $timer->elapsed() ." s\n");
 
 
