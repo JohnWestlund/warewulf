@@ -18,7 +18,6 @@ use File::Path;
 use File::Find;
 use Getopt::Long;
 use Fcntl ':mode';
-use IPC::Open2;
 use POSIX;
 {
     local $^W = 0;
