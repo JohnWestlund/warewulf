@@ -286,7 +286,7 @@ exec()
             my @statinfo;
 
             @statinfo = lstat($path);
-            if (-f _ || -l _) {
+            if (-e _) {
                 my ($mode, $uid, $gid) = @statinfo[(2, 4, 5)];
                 my $name = (($opt_name) ? ($opt_name) : (basename($path)));
                 my $objSet;
