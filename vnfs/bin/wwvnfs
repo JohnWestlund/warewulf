@@ -29,6 +29,7 @@ use POSIX;
 my $sysconfdir = Warewulf::ACVars::get('SYSCONFDIR');
 my $config = Warewulf::Config->new("vnfs.conf");
 my $timer = Warewulf::Timer->new();
+my $build_directory = ( $config->get("build directory") || "/var/tmp" ) . "/";
 my $randstring = &rand_string("12");
 my $command = "$0 ". join(" ", @ARGV);
 my $tmpfile = "/tmp/wwvnfs.$randstring";
