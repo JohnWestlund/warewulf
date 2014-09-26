@@ -32,6 +32,7 @@ my $timer = Warewulf::Timer->new();
 my $randstring = &rand_string("12");
 my $command = "$0 ". join(" ", @ARGV);
 my $tmpfile = "/tmp/wwvnfs.$randstring";
+my $gzip_output = "$build_directory/$randstring-gzip.vnfs";
 
 # Get our gzip command
 my $gzip_cmd = $config->get("gzip command") || "gzip -9";
