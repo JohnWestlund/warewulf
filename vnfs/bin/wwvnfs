@@ -30,9 +30,6 @@ my $sysconfdir = Warewulf::ACVars::get('SYSCONFDIR');
 my $config = Warewulf::Config->new("vnfs.conf");
 my $timer = Warewulf::Timer->new();
 my $randstring = &rand_string("12");
-my $build_directory = ( $config->get("build directory") || "/var/tmp" ) . "/";
-my $cpio_output = "$build_directory/$randstring-cpio.vnfs";
-my $gzip_output = "$build_directory/$randstring-gzip.vnfs";
 my $command = "$0 ". join(" ", @ARGV);
 my $tmpfile = "/tmp/wwvnfs.$randstring";
 
@@ -304,8 +301,6 @@ if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
 }
 
 &iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
-
-my $tmpdir = "$build_directory/wwvnfs." . &rand_string(16);
 
 sub
 vnfs_create_file($)
