@@ -32,13 +32,13 @@ _wwsh()
             "node")
                 case "${third}" in
                     "list")
-                        COMPREPLY=( $( compgen -W "$(wwsh node -1 list | awk '{print $1}')" -- $cur ) );;
+                        COMPREPLY=( $( compgen -W "$(wwsh node -1 list)" -- $cur ) );;
                 esac
                 ;;
             "vnfs")
                 case "${third}" in
                     "list")
-                        COMPREPLY=( $( compgen -W "$(wwsh vnfs -1 list | awk '{print $1}')" -- $cur ) );;
+                        COMPREPLY=( $( compgen -W "$(wwsh vnfs -1 list)" -- $cur ) );;
                 esac
                 ;;
         esac
