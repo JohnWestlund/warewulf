@@ -1,0 +1,53 @@
+#
+# Copyright (c) 2014, Same license as Warewulf
+#
+
+_wwsh()
+{
+    local cur second third 
+
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+    second=${COMP_WORDS[1]}
+    third=${COMP_WORDS[2]}
+ 
+    # first level commands
+    if [ $COMP_CWORD -eq 1 ]; then
+        COMPREPLY=( $( compgen -W "node vnfs bootstrap object" -- $cur ) )
+
+    elif [ $COMP_CWORD -eq 2 ]; then
+        # Completion for 2nd level subcommands ie "wwsh vnfs"
+
+        case "${second}" in
+            "node")
+                COMPREPLY=( $( compgen -W "new delete list print" -- $cur ) );;
+            "vnfs")
+                COMPREPLY=( $( compgen -W "list import export delete print" -- $cur ) );;
+        esac
+		
+    elif [ $COMP_CWORD -eq 3 ]; then
+        # Completion for 3rd level subcommands ie "wwsh node list" 
+		
+        case "${second}" in
+            "node")
+                case "${third}" in
+                    "list")
+                        COMPREPLY=( $( compgen -W "$(wwsh node -1 list | awk '{print $1}')" -- $cur ) );;
+                esac
+                ;;
+            "vnfs")
+                case "${third}" in
+                    "list")
+                        COMPREPLY=( $( compgen -W "$(wwsh vnfs -1 list | awk '{print $1}')" -- $cur ) );;
+                esac
+                ;;
+        esac
+    fi
+
+    return 0
+}
+
+complete -o filenames -F _wwsh wwsh
+
+# vim: filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
+

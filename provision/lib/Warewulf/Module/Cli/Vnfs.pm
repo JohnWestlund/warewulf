@@ -151,6 +151,7 @@ exec()
     my $opt_lookup = "name";
     my $opt_name;
     my $opt_chroot;
+    my $opt_single;
     my $command;
     my $return_count = 0;
     my $objSet;
@@ -164,6 +165,7 @@ exec()
         'n|name=s'      => \$opt_name,
         'l|lookup=s'    => \$opt_lookup,
         'c|chroot=s'    => \$opt_chroot,
+        '1'             => \$opt_single,
     );
 
     $command = shift(@ARGV);
@@ -353,14 +355,20 @@ exec()
             }
             $return_count = $db->del_object($objSet);
         } elsif ($command eq "list" or $command eq "print") {
-            &nprint("VNFS NAME            SIZE (M) CHROOT LOCATION\n");
-            foreach my $obj ($objSet->get_list("name")) {
-                printf("%-20s %-8.1f %s\n",
-                    $obj->name() || "UNDEF",
-                    ($obj->size() ? ($obj->size()/(1024*1024)) : ("0")),
-                    $obj->chroot() || "UNDEF"
-                );
-                $return_count ++;
+            if ($opt_single) {
+                foreach my $obj ($objSet->get_list("name")) {
+                    printf("%-32s\n", $obj->name() || "UNDEF");
+                }
+            } else {
+                &nprint("VNFS NAME            SIZE (M) CHROOT LOCATION\n");
+                foreach my $obj ($objSet->get_list("name")) {
+                    printf("%-20s %-8.1f %s\n",
+                        $obj->name() || "UNDEF",
+                        ($obj->size() ? ($obj->size()/(1024*1024)) : ("0")),
+                        $obj->chroot() || "UNDEF"
+                    );
+                    $return_count ++;
+                }
             }
         } else {
             &eprint("Invalid command: $command\n");

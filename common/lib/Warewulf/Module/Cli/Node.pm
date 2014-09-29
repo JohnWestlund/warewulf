@@ -185,6 +185,7 @@ exec()
     my $opt_fqdn;
     my $opt_mtu;
     my $opt_enabled;
+    my $opt_single;
     my @opt_print;
     my @opt_groups;
     my @opt_groupadd;
@@ -224,6 +225,7 @@ exec()
         'd|domain=s'    => \$opt_domain,
         'l|lookup=s'    => \$opt_lookup,
         'e|enabled=s'   => \$opt_enabled,
+        '1'             => \$opt_single,
     );
 
     $command = shift(@ARGV);
@@ -295,21 +297,27 @@ exec()
             &nprint("Deleted $return_count nodes.\n");
         }
     } elsif ($command eq "list") {
-        &nprintf("%-19s %-19s %-19s %-19s\n",
-            "NAME",
-            "GROUPS",
-            "IPADDR",
-            "HWADDR"
-        );
-        &nprint("================================================================================\n");
-        foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
-            printf("%-19s %-19s %-19s %-19s\n",
-                &ellipsis(19, ($o->name() || "UNDEF"), "end"),
-                &ellipsis(19, (join(",", $o->groups()) || "UNDEF")),
-                join(",", $o->ipaddr_list()),
-                join(",", $o->hwaddr_list())
+        if ( $opt_single ) {
+            foreach my $o ($objSet->get_list("name")) {
+                printf("%-32s\n", $o->nodename() || "UNDEF");
+            }
+        } else {
+           &nprintf("%-19s %-19s %-19s %-19s\n",
+                "NAME",
+                "GROUPS",
+                "IPADDR",
+                "HWADDR"
             );
-            $return_count++;
+            &nprint("================================================================================\n");
+            foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
+                printf("%-19s %-19s %-19s %-19s\n",
+                    &ellipsis(19, ($o->name() || "UNDEF"), "end"),
+                    &ellipsis(19, (join(",", $o->groups()) || "UNDEF")),
+                    join(",", $o->ipaddr_list()),
+                    join(",", $o->hwaddr_list())
+                );
+                $return_count++;
+            }
         }
     } elsif ($command eq "print") {
         foreach my $o ($objSet->get_list("fqdn", "domain", "cluster", "name")) {
