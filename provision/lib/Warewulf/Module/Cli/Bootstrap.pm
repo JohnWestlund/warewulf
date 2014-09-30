@@ -144,6 +144,7 @@ exec()
     my $term = Warewulf::Term->new();
     my $opt_lookup = "name";
     my $opt_name;
+    my $opt_single;
     my $command;
     my $return_count = 0;
 
@@ -156,6 +157,7 @@ exec()
     GetOptions(
         'n|name=s'      => \$opt_name,
         'l|lookup=s'    => \$opt_lookup,
+        '1'             => \$opt_single,
     );
 
     $command = shift(@ARGV);
@@ -289,13 +291,19 @@ exec()
                 }
                 $return_count = $db->del_object($objSet);
             } elsif ($command eq "list" or $command eq "print") {
-                &nprint("BOOTSTRAP NAME            SIZE (M)\n");
-                foreach my $obj ($objSet->get_list("name")) {
-                    printf("%-25s %-8.1f\n",
-                        $obj->name() || "UNDEF",
-                        $obj->size() ? $obj->size()/(1024*1024) : "0"
-                    );
-                    $return_count ++;
+                if ($opt_single) {
+                    foreach my $obj ($objSet->get_list("name")) {
+                        printf("%-32s\n", $obj->name() || "UNDEF");
+                    }
+                } else {
+                    &nprint("BOOTSTRAP NAME            SIZE (M)\n");
+                    foreach my $obj ($objSet->get_list("name")) {
+                        printf("%-25s %-8.1f\n",
+                            $obj->name() || "UNDEF",
+                            $obj->size() ? $obj->size()/(1024*1024) : "0"
+                        );
+                        $return_count ++;
+                    }
                 }
             } elsif ($command eq "rebuild" or $command eq "build") {
                 foreach my $o ($objSet->get_list("name")) {

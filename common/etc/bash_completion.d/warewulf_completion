@@ -13,22 +13,30 @@ _wwsh()
  
     # first level commands
     if [ $COMP_CWORD -eq 1 ]; then
-        COMPREPLY=( $( compgen -W "node vnfs bootstrap object" -- $cur ) )
+        COMPREPLY=( $( compgen -W "bootstrap node object vnfs" -- $cur ) )
 
     elif [ $COMP_CWORD -eq 2 ]; then
         # Completion for 2nd level subcommands ie "wwsh vnfs"
 
         case "${second}" in
+            "bootstrap")
+                COMPREPLY=( $( compgen -W "export import list print" -- $cur ) );;
             "node")
-                COMPREPLY=( $( compgen -W "new delete list print" -- $cur ) );;
+                COMPREPLY=( $( compgen -W "delete list new print" -- $cur ) );;
             "vnfs")
-                COMPREPLY=( $( compgen -W "list import export delete print" -- $cur ) );;
+                COMPREPLY=( $( compgen -W "delete export import list print" -- $cur ) );;
         esac
 		
     elif [ $COMP_CWORD -eq 3 ]; then
         # Completion for 3rd level subcommands ie "wwsh node list" 
 		
         case "${second}" in
+            "bootstrap")
+                case "${third}" in
+                    "list")
+                        COMPREPLY=( $( compgen -W "$(wwsh bootstrap -1 list)" -- $cur ) );;
+                esac
+                ;;
             "node")
                 case "${third}" in
                     "list")
