@@ -74,6 +74,7 @@ help()
     $h .= "OPTIONS:\n";
     $h .= "\n";
     $h .= "     -n, --name      When importing a bootstrap use this name instead of the file name\n";
+    $h .= "     -1              With list command, output bootstrap name only\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "\n";

@@ -81,6 +81,7 @@ help()
     $h .= "\n";
     $h .= "OPTIONS:\n";
     $h .= "     -l, --lookup        Identify nodes by specified property (default: \"name\")\n";
+    $h .= "     -1                  With list command, output node name only\n";
     $h .= "     -g, --groups        Specify all groups to which this node belongs\n";
     $h .= "         --groupadd      Add node to specified group(s)\n";
     $h .= "         --groupdel      Remove node from specified group(s)\n";

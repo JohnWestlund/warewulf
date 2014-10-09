@@ -80,6 +80,7 @@ help()
     $h .= "\n";
     $h .= "     -n, --name          When importing a VNFS use this name instead of the file name\n";
     $h .= "     -c, --chroot        Define the location of the template chroot\n";
+    $h .= "     -1                  With list command, output VNFS name only\n";
     $h .= "\n";
     $h .= "EXAMPLES:\n";
     $h .= "\n";
