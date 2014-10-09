@@ -7,7 +7,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id: 01-modules.t 714 2012-01-24 18:22:47Z gmk $
+# $Id$
 #
 
 use Test::More;
@@ -29,7 +29,6 @@ my @module_list = (
     "Warewulf::Event",
     "Warewulf::EventHandler",
     "Warewulf::Event::NewObject",
-    "Warewulf::HTML::Page",
     "Warewulf::Logger",
     "Warewulf::Module",
     "Warewulf::Module::Cli",
