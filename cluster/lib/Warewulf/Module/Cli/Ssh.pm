@@ -216,7 +216,7 @@ help()
     $h .= "EXAMPLES:\n";
     $h .= "\n";
     $h .= "     Warewulf> ssh n00[00-49] hostname\n";
-    $h .= "     Warewulf> ssh -l group compute,interactive hostname\n";
+    $h .= "     Warewulf> ssh -l groups compute,interactive hostname\n";
     $h .= "\n";
 
     return($h);
