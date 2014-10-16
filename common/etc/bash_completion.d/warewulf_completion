@@ -13,18 +13,20 @@ _wwsh()
  
     # first level commands
     if [ $COMP_CWORD -eq 1 ]; then
-        COMPREPLY=( $( compgen -W "bootstrap node object vnfs" -- $cur ) )
+        COMPREPLY=( $( compgen -W "node vnfs bootstrap object provision" -- $cur ) )
 
     elif [ $COMP_CWORD -eq 2 ]; then
         # Completion for 2nd level subcommands ie "wwsh vnfs"
 
         case "${second}" in
             "bootstrap")
-                COMPREPLY=( $( compgen -W "export import list print" -- $cur ) );;
+                COMPREPLY=( $( compgen -W "delete rebuild build export import list print help" -- $cur ) );;
             "node")
-                COMPREPLY=( $( compgen -W "delete list new print" -- $cur ) );;
+                COMPREPLY=( $( compgen -W "new set delete list print help" -- $cur ) );;
             "vnfs")
-                COMPREPLY=( $( compgen -W "delete export import list print" -- $cur ) );;
+                COMPREPLY=( $( compgen -W "list import export delete print help" -- $cur ) );;
+            "provision")
+                COMPREPLY=( $( compgen -W "list print set help" -- $cur ) );;
         esac
 		
     elif [ $COMP_CWORD -eq 3 ]; then
@@ -33,20 +35,26 @@ _wwsh()
         case "${second}" in
             "bootstrap")
                 case "${third}" in
-                    "list")
+                    "list"|"print"|"delete"|"rebuild"|"build")
                         COMPREPLY=( $( compgen -W "$(wwsh bootstrap -1 list)" -- $cur ) );;
                 esac
                 ;;
             "node")
                 case "${third}" in
-                    "list")
+                    "list"|"set"|"delete"|"print")
                         COMPREPLY=( $( compgen -W "$(wwsh node -1 list)" -- $cur ) );;
                 esac
                 ;;
             "vnfs")
                 case "${third}" in
-                    "list")
+                    "list"|"print"|"delete")
                         COMPREPLY=( $( compgen -W "$(wwsh vnfs -1 list)" -- $cur ) );;
+                esac
+                ;;
+            "provision")
+                case "${third}" in
+                    "list"|"set"|"print")
+                        COMPREPLY=( $( compgen -W "$(wwsh node -1 list)" -- $cur ) );;
                 esac
                 ;;
         esac
