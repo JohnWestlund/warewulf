@@ -59,6 +59,7 @@ AC_OUTPUT(Makefile
    share/Makefile
    bin/Makefile
    etc/Makefile
+   etc/bash_completion.d/Makefile
    etc/defaults/Makefile
    lib/Makefile
    lib/Warewulf/ACVars.pm

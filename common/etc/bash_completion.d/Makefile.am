@@ -1,8 +1,4 @@
-# This can/should be 600 if you don't want anybody else to see it and thus
-# not be able to communicate with the data store.
-# NOTE: The httpd process must be able to read database.conf for provisioning
-dist_confDATA_INSTALL = ${INSTALL} -m 640
-
+dist_confDATA_INSTALL = ${INSTALL} -m 644
 
 confdir = $(sysconfdir)/bash_completion.d/
 
