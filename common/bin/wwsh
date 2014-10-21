@@ -59,6 +59,23 @@ run_cmd()
     }
 }
 
+sub
+print_help()
+{
+    print "wwsh [wwsh options] [command] [object] [command options]\n";
+    print "-"x78, "\n";
+    print "WWSH OPTIONS:\n";
+    print "  -d|--debug        -- Enable Debug Output\n";
+    print "     --help         -- Print this help\n";
+    print "  -v|--verbose      -- Enable Verbose Output\n";
+    print "  -q|--quiet        -- Enable Quiet Mode\n";
+    print "  -y|--yes|--noask  -- Assume 'Yes' to all questions\n";
+    print "\n\n";
+    print "WWSH COMMANDS:\n";
+    print "  help              -- Print command (module) help\n";
+    print "\n";
+    exit 0;
+}
 
 ######################################################################
 
@@ -66,11 +83,13 @@ my $opt_debug;
 my $opt_verbose;
 my $opt_quiet;
 my $opt_noask;
+my $opt_help;
 
 Getopt::Long::Configure ("bundling", "passthrough");
 
 GetOptions(
     'd|debug'       => \$opt_debug,
+    'help'          => \$opt_help,
     'v|verbose'     => \$opt_verbose,
     'q|quiet'       => \$opt_quiet,
     'noask'         => \$opt_noask,
@@ -80,6 +99,8 @@ GetOptions(
 
 &set_log_level("NOTICE");
 $term = Warewulf::Term->new();
+
+&print_help if $opt_help;
 
 if ($opt_debug) {
     &set_log_level("DEBUG");

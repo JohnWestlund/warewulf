@@ -530,3 +530,7 @@ quick code example would be:
     print "Node is disabled";
   }
 ----------------------------------------------------------------------
+Tue Oct 21 12:34:03-0500 2014                       Jason Stover (jms)
+
+Add --help option to wwsh command. Prints out a basic help.
+----------------------------------------------------------------------
