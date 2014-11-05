@@ -11,6 +11,14 @@ if [ -n "$SET_X" ]; then
     set -x
 fi
 
+# Lock so more than one wwgetfiles cannot be ran
+if [ ! -f /tmp/.wwgetfiles.lock ]; then
+    touch /tmp/.wwgetfiles.lock
+else
+    echo "ERROR: wwgetfiles already running"
+    exit 1
+fi
+
 if [ -f /warewulf/transports/http/functions ]; then
     . /warewulf/transports/http/functions
 elif [ -f ./functions ]; then
@@ -105,4 +113,7 @@ while true; do
     echo -n "." 1>&2
     throttled_sleep
 done
+
+# Remove lock file
+rm -f /tmp/.wwgetfiles.lock
 
