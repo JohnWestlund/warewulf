@@ -12,8 +12,9 @@ if [ -n "$SET_X" ]; then
 fi
 
 # Lock so more than one wwgetfiles cannot be ran
-if [ ! -f /tmp/.wwgetfiles.lock ]; then
-    touch /tmp/.wwgetfiles.lock
+LOCKF=/tmp/.wwgetfile.lock
+if [ ! -f ${LOCKF} ]; then
+    touch ${LOCKF}
 else
     echo "ERROR: wwgetfiles already running"
     exit 1
@@ -115,5 +116,5 @@ while true; do
 done
 
 # Remove lock file
-rm -f /tmp/.wwgetfiles.lock
+rm -f ${LOCKF}
 
