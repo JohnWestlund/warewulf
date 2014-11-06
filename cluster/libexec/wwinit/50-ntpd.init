@@ -24,6 +24,8 @@ if [ -x "/etc/rc.d/init.d/ntpd" ]; then
     SERVICE_NAME="ntpd"
 elif [ -x "/etc/init.d/ntp" ]; then
     SERVICE_NAME="ntp"
+elif [ -e "/usr/lib/systemd/system/ntpd.service" ]; then
+    SERVICE_NAME="ntpd"
 else
     wwprint " ! ERROR: NTP client not found" error;
     reply_error;
