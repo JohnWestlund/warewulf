@@ -236,7 +236,7 @@ exec()
         return undef;
     }
 
-    if (! $command || $command = "help") {
+    if (! $command || $command eq "help") {
         &eprint("You must provide a command!\n\n");
         print $self->help();
         return undef;
