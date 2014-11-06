@@ -278,7 +278,7 @@ if ((! $opt_tshark) || index($opt_tshark, ' ') == -1) {
     if ($opt_tshark) {
         $opt_tshark = "$opt_tshark $default_tshark_params";
     } else {
-        $opt_tshark = "/usr/bin/tshark $default_tshark_params";
+        $opt_tshark = "/usr/sbin/tshark $default_tshark_params";
     }
 } 
 if ($opt_tshark =~ /^([^\`\$]+)$/) {
