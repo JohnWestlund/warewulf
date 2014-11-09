@@ -5,7 +5,7 @@
 # required approvals from the U.S. Dept. of Energy).  All rights reserved.
 #
 #
-# $Id: Rhel.pm 689 2011-12-20 00:34:04Z mej $
+# $Id$
 #
 
 package Warewulf::System::Rhel;
@@ -81,6 +81,22 @@ service($$$)
         } else {
             &dprint("Error running: /etc/init.d/$service $command\n");
         }
+    } 
+    elsif (-e "/usr/lib/systemd/system/$service.service") {
+        $self->{"OUTPUT"} = ();
+        open(SERVICE, "/usr/bin/systemctl $command $service 2>&1|");
+        while(<SERVICE>) {
+            $self->{"OUTPUT"} .= $_;
+        }
+	if ($self->{"OUTPUT"}) {
+            chomp($self->{"OUTPUT"});
+        }
+        if (close SERVICE) {
+            &dprint("Service command ran successfully\n");
+            return(1);
+        } else {
+            &dprint("Error running: /usr/bin/systemctl $command $service\n");
+        } 
     }
     return();
 }
