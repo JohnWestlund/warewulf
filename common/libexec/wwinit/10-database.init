@@ -24,19 +24,37 @@ DATASTORE=`egrep "^database driver\s*=" $WAREWULF_SYSCONFDIR/warewulf/database.c
 
 if [ "$DATASTORE" = "mysql" ]; then
     if [ -f "/etc/redhat-release" ]; then
-        wwprint "Checking /etc/rc.d/init.d/mysqld is installed"
-        if ! wwtest test -f /etc/rc.d/init.d/mysqld; then
-            exit 255
-        fi
+        MAJVER=`lsb_release -rs | cut -f1 -d.`
+        if [ "$MAJVER" -le "6" ]; then
+            wwprint "Checking /etc/rc.d/init.d/mysqld is installed"
+            if ! wwtest test -f /etc/rc.d/init.d/mysqld; then
+                exit 255
+            fi
 
-        wwprint "Confirming mysqld is configured to start at boot:\n"
-        if ! wwrun chkconfig mysqld on; then
-            exit 255
-        fi
+            wwprint "Confirming mysqld is configured to start at boot:\n"
+            if ! wwrun chkconfig mysqld on; then
+                exit 255
+            fi
   
-        wwprint "Checking to see if MySQL needs to be started:\n"
-        if ! wwrun service mysqld start; then
-            exit 255
+            wwprint "Checking to see if MySQL needs to be started:\n"
+            if ! wwrun service mysqld start; then
+                exit 255
+            fi
+        elif [ "$MAJVER" -eq "7" ]; then
+            wwprint "Checking /usr/lib/systemd/system/mariadb.service is installed"
+            if ! wwtest test -f /usr/lib/systemd/system/mariadb.service; then
+                exit 255
+            fi
+
+            wwprint "Confirming MariaDB is configured to start at boot:\n"
+            if ! wwrun /usr/bin/systemctl enable mariadb; then
+                exit 255
+            fi
+
+            wwprint "Checking to see if MariaDB needs to be started:\n"
+            if ! wwrun /usr/bin/systemctl start mariadb; then
+                exit 255
+            fi
         fi
     elif [ -f "/etc/debian_version" ]; then
         wwprint "Checking /etc/init.d/mysql is installed"
