@@ -174,8 +174,12 @@ init()
                         UNIQUE KEY (object_id, field, value),
                         PRIMARY KEY (id)
                     ) ENGINE=INNODB");
+                # XXX: This doesn't make sense... Connecting as MySQL root, you 
+                #  have permissions... and if we're creating the schema as a
+                #  normal user, then we most likely already have select on the
+                #  database. So...??
                 #if ($config->get("database user") and $config->get("database password")) {
-                    $self->{"DBH"}->do("GRANT SELECT ON $db_name.* TO ". $self->{"DBH"}->quote($config->get("database user")) ."\@'localhost' IDENTIFIED BY ". $self->{"DBH"}->quote($config->get("database password")) .";");
+                #    $self->{"DBH"}->do("GRANT SELECT ON $db_name.* TO ". $self->{"DBH"}->quote($config->get("database user")) ."\@'localhost' IDENTIFIED BY ". $self->{"DBH"}->quote($config->get("database password")) .";");
                 #}
             }
 
