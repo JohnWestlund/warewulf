@@ -1,0 +1,364 @@
+# Tests for ww_fs.nhc
+#
+# $Id$
+#
+
+function nhc_fs_mounts_gather_data() {
+    DF_DEV=(
+        [0]="/dev/mapper/vg0-lv_root_ext4"
+        [1]="proc"
+        [2]="sysfs"
+        [3]="/dev/sda1"
+        [4]="bluearc0:/home"
+        [5]="bluearc0:/software"
+    )
+    DF_FREE=(
+        [0]="19747624"
+        [1]="0"
+        [2]="0"
+        [3]="367968"
+        [4]="10998677612"
+        [5]="550155968"
+    )
+    DF_MNTPT=(
+        [0]="/"
+        [1]="/proc"
+        [2]="/sys"
+        [3]="/boot"
+        [4]="/home"
+        [5]="/global/software"
+    )
+    DF_PCT=(
+        [0]="38"
+        [1]="-"
+        [2]="-"
+        [3]="22"
+        [4]="68"
+        [5]="32"
+    )
+    DF_SIZE=(
+        [0]="33027952"
+        [1]="0"
+        [2]="0"
+        [3]="495844"
+        [4]="36124323646"
+        [5]="799277056"
+    )
+    DF_TYPE=(
+        [0]="ext4"
+        [1]="proc"
+        [2]="sysfs"
+        [3]="ext4"
+        [4]="nfs"
+        [5]="nfs"
+    )
+    DF_USED=(
+        [0]="11602608"
+        [1]="0"
+        [2]="0"
+        [3]="102276"
+        [4]="23290830034"
+        [5]="249121088"
+    )
+    DFI_DEV=(
+        [0]="/dev/mapper/vg0-lv_root_ext4"
+        [1]="proc"
+        [2]="sysfs"
+        [3]="/dev/sda1"
+        [4]="bluearc0:/home"
+        [5]="bluearc0:/software"
+    )
+    DFI_IFREE=(
+        [0]="1727102"
+        [1]="0"
+        [2]="0"
+        [3]="127965"
+        [4]="793109988"
+        [5]="15238336"
+    )
+    DFI_MNTPT=(
+        [0]="/"
+        [1]="/proc"
+        [2]="/sys"
+        [3]="/boot"
+        [4]="/home"
+        [5]="/global/software"
+    )
+    DFI_PCT=(
+        [0]="18"
+        [1]="-"
+        [2]="-"
+        [3]="1"
+        [4]="22"
+        [5]="39"
+    )
+    DFI_INODES=(
+        [0]="2097152"
+        [1]="0"
+        [2]="0"
+        [3]="128016"
+        [4]="1004912640"
+        [5]="24977408"
+    )
+    DFI_TYPE=(
+        [0]="ext4"
+        [1]="proc"
+        [2]="sysfs"
+        [3]="ext4"
+        [4]="nfs"
+        [5]="nfs"
+    )
+    DFI_IUSED=(
+        [0]="370050"
+        [1]="0"
+        [2]="0"
+        [3]="51"
+        [4]="211802652"
+        [5]="9739072"
+    )
+    FS_DEV=(
+        [0]="rootfs"
+        [1]="proc"
+        [2]="sysfs"
+        [3]="/dev/sda1"
+        [4]="bluearc0:/home"
+        [5]="bluearc0:/software"
+    )
+    FS_MNTPT=(
+        [0]="/"
+        [1]="/proc"
+        [2]="/sys"
+        [3]="/boot"
+        [4]="/home"
+        [5]="/global/software"
+    )
+    FS_OPTS=(
+        [0]="rw"
+        [1]="rw,nosuid,nodev,noexec,relatime"
+        [2]="rw,seclabel,nosuid,nodev,noexec,relatime"
+        [3]="rw,seclabel,relatime,barrier=1,data=ordered"
+        [4]="rw,relatime,vers=3,hard,proto=tcp,timeo=600,retrans=2,sec=sys"
+        [5]="ro,relatime,vers=3,hard,proto=tcp,timeo=600,retrans=2,sec=sys"
+    )
+    FS_TYPE=(
+        [0]="rootfs"
+        [1]="proc"
+        [2]="sysfs"
+        [3]="ext4"
+        [4]="nfs"
+        [5]="nfs"
+    )
+}
+
+plan $((9+5+3+5+5+4+4+4+2+5+5+10+7+7+10+7+7)) "ww_fs.nhc" && {
+    is "`type -t check_fs_mount 2>&1`" 'function' 'check_fs_mount() loaded properly'
+    is "`type -t check_fs_mount_rw 2>&1`" 'function' 'check_fs_mount_rw() loaded properly'
+    is "`type -t check_fs_mount_ro 2>&1`" 'function' 'check_fs_mount_ro() loaded properly'
+    is "`type -t check_fs_size 2>&1`" 'function' 'check_fs_size() loaded properly'
+    is "`type -t check_fs_free 2>&1`" 'function' 'check_fs_free() loaded properly'
+    is "`type -t check_fs_used 2>&1`" 'function' 'check_fs_used() loaded properly'
+    is "`type -t check_fs_inodes 2>&1`" 'function' 'check_fs_inodes() loaded properly'
+    is "`type -t check_fs_ifree 2>&1`" 'function' 'check_fs_ifree() loaded properly'
+    is "`type -t check_fs_iused 2>&1`" 'function' 'check_fs_iused() loaded properly'
+
+    ### Check old syntax first.  These are the original tests.
+    check_fs_mount /
+    is $? 0 "check_fs_mount() for / (OLD)"
+    check_fs_mount / "" "" ""
+    is $? 0 "check_fs_mount() for / (blank args) (OLD)"
+    check_fs_mount /FAKE/filesystem/NAME
+    is $? 1 "check_fs_mount() for bogus filesystem (OLD)"
+    check_fs_mount /FAKE/filesystem/NAME "" "" ""
+    is $? 1 "check_fs_mount() for bogus filesystem (blank args) (OLD)"
+    check_fs_mount /proc "" proc
+    is $? 0 "check_fs_mount() for /proc, type only (empty 2nd argument) (OLD)"
+
+    check_fs_mount /home bluearc0:/home nfs
+    is $? 0 "check_fs_mount() for NFS (source/type) (OLD)"
+    check_fs_mount /home "" "" "*,vers=3*"
+    is $? 0 "check_fs_mount() for NFS version (glob) (OLD)"
+    check_fs_mount /home "" "" "/(^|,)vers=3(,|\$)/"
+    is $? 0 "check_fs_mount() for NFS version (regex) (OLD)"
+
+    check_fs_mount_ro /global/software
+    is $? 0 "check_fs_mount_ro(), single argument (known good) (OLD)"
+    check_fs_mount_ro /global/software bluearc0:/software
+    is $? 0 "check_fs_mount_ro(), two arguments (known good) (OLD)"
+    check_fs_mount_ro /global/software bluearc0:/software nfs
+    is $? 0 "check_fs_mount_ro(), three arguments (known good) (OLD)"
+    check_fs_mount_ro /global/software master:/global/software nfs
+    is $? 1 "check_fs_mount_ro(), three arguments (2nd bad) (OLD)"
+    check_fs_mount_ro /global/software bluearc0:/software nfs4
+    is $? 1 "check_fs_mount_ro(), three arguments (3rd bad) (OLD)"
+
+    check_fs_mount_rw /boot
+    is $? 0 "check_fs_mount_rw(), single argument (known good) (OLD)"
+    check_fs_mount_rw /boot /dev/sda1
+    is $? 0 "check_fs_mount_rw(), two arguments (known good) (OLD)"
+    check_fs_mount_rw /boot /dev/sda1 ext4
+    is $? 0 "check_fs_mount_rw(), three arguments (known good) (OLD)"
+    check_fs_mount_rw /boot /dev/sdb3 ext4
+    is $? 1 "check_fs_mount_rw(), three arguments (2nd bad) (OLD)"
+    check_fs_mount_rw /boot /dev/sda1 btrfs
+    is $? 1 "check_fs_mount_rw(), three arguments (3rd bad) (OLD)"
+
+    ### Also check the new syntax.
+    check_fs_mount -f /
+    is $? 0 "check_fs_mount() for /"
+    check_fs_mount -f /FAKE/filesystem/NAME
+    is $? 1 "check_fs_mount() for bogus filesystem"
+    check_fs_mount -0 -f /FAKE/filesystem/NAME
+    is $? 0 "check_fs_mount() for bogus filesystem in non-fatal mode"
+    SHELL=: check_fs_mount -r -f /FAKE/filesystem/NAME
+    is $? 1 "check_fs_mount() for bogus filesystem with remount request"
+
+    check_fs_mount -t proc -f /proc
+    is $? 0 "check_fs_mount() for /proc, type only"
+    check_fs_mount -s proc -f /proc
+    is $? 0 "check_fs_mount() for /proc, source only"
+    check_fs_mount -t tmpfs -f /proc
+    is $? 1 "check_fs_mount() for /proc, bad type"
+    check_fs_mount -s canadia -f /proc
+    is $? 1 "check_fs_mount() for /proc, bad source"
+
+    check_fs_mount -s '/bluearc[0-9]/' -t 'nfs*' -f /home -f /global/software
+    is $? 0 "check_fs_mount() for 2 filesystems with regexps and globs"
+    SHELL=: check_fs_mount -o "*,vers=3*" -e true -f /home
+    is $? 0 "check_fs_mount() for NFS version (glob) with action"
+    SHELL=: check_fs_mount -o "/(^|,)vers=3(,|\$)/" -E true -f /global/software
+    is $? 0 "check_fs_mount() for NFS version (regex) with found action"
+    SHELL=: check_fs_mount -r -O ro -f /boot
+    is $? 0 "check_fs_mount() with remount directive and mount options"
+
+    check_fs_mount -F /home
+    is $? 0 "check_fs_mount(), auto-mounted filesystem"
+    check_fs_mount -F /mnt/home
+    is $? 1 "check_fs_mount(), invalid auto-mounted filesystem"
+
+    check_fs_mount_ro -f /global/software
+    is $? 0 "check_fs_mount_ro(), just filesystem"
+    check_fs_mount_ro -s bluearc0:/software /global/software
+    is $? 0 "check_fs_mount_ro(), good source"
+    check_fs_mount_ro -s bluearc0:/software -t nfs /global/software
+    is $? 0 "check_fs_mount_ro(), good source, good type"
+    check_fs_mount_ro -s master:/global/software -t nfs -f /global/software
+    is $? 1 "check_fs_mount_ro(), bad source, good type"
+    check_fs_mount_ro -s bluearc0:/software -t nfs4 -f /global/software
+    is $? 1 "check_fs_mount_ro(), good source, bad type"
+
+    check_fs_mount_rw -f /boot
+    is $? 0 "check_fs_mount_rw(), just filesystem"
+    check_fs_mount_rw -s /dev/sda1 /boot
+    is $? 0 "check_fs_mount_rw(), good source"
+    check_fs_mount_rw -s /dev/sda1 -t ext4 /boot
+    is $? 0 "check_fs_mount_rw(), good source, good type"
+    check_fs_mount_rw -s /dev/sdb3 -t ext4 -f /boot
+    is $? 1 "check_fs_mount_rw(), bad source, good type"
+    check_fs_mount_rw -s /dev/sda1 -t btrfs -f /boot
+    is $? 1 "check_fs_mount_rw(), good source, bad type"
+
+    ### Filesystem size/space checks
+    check_fs_size /boot 100M 1G
+    is $? 0 "check_fs_size() - /boot is between 100M and 1G"
+    check_fs_size /boot 1 2k
+    is $? 1 "check_fs_size() - /boot is not between 1kB and 2kB"
+    check_fs_size /boot 1G 2G
+    is $? 1 "check_fs_size() - /boot is not between 1G and 2G"
+    check_fs_size /boot 1kB
+    is $? 0 "check_fs_size() - /boot 1kB minimum, no maximum"
+    check_fs_size /boot 1Gb
+    is $? 1 "check_fs_size() - /boot 1G minimum"
+    check_fs_size /boot 495844
+    is $? 0 "check_fs_size() - actual size as minimum passes"
+    check_fs_size /boot "" 495844k
+    is $? 0 "check_fs_size() - actual size as maximum passes"
+    check_fs_size /boot "" 1
+    is $? 1 "check_fs_size() - 1kB max only"
+    check_fs_size /boot "" 1G
+    is $? 0 "check_fs_size() - 1G max only"
+    check_fs_size /proc 1G 1G
+    is $? 0 "check_fs_size() on pseudofilesystem passes (with warning)"
+
+    check_fs_free / 1G
+    is $? 0 "check_fs_free() - >1GB free on /"
+    check_fs_free / 19747624
+    is $? 0 "check_fs_free() - Exactly 19747624kB free on /"
+    check_fs_free / 1TB
+    is $? 1 "check_fs_free() - <1TB free on /"
+    check_fs_free /home 10%
+    is $? 0 "check_fs_free() - >10% free on /home"
+    check_fs_free /home 32%
+    is $? 0 "check_fs_free() - Exactly 32% free on /home"
+    check_fs_free /home 90%
+    is $? 1 "check_fs_free() - <90% free on /home"
+    check_fs_free /proc 1G
+    is $? 0 "check_fs_free() on pseudofilesystem passes (with warning)"
+
+    check_fs_used / 30G
+    is $? 0 "check_fs_used() - <30GB used on /"
+    check_fs_used / 11602608
+    is $? 1 "check_fs_used() - Exactly 11602608kB used on /"
+    check_fs_used / 1GB
+    is $? 1 "check_fs_used() - >1GB used on /"
+    check_fs_used /home 95%
+    is $? 0 "check_fs_used() - <95% used on /home"
+    check_fs_used /home 68%
+    is $? 1 "check_fs_used() - Exactly 68% used on /home"
+    check_fs_used /home 2%
+    is $? 1 "check_fs_used() - >2% used on /home"
+    check_fs_used /proc 1G
+    is $? 0 "check_fs_used() on pseudofilesystem passes (with warning)"
+
+    ### Inode checks
+    check_fs_inodes /boot 100k 200000
+    is $? 0 "check_fs_inodes() - /boot has between 100k and 200k inodes"
+    check_fs_inodes /boot 1 2k
+    is $? 1 "check_fs_inodes() - /boot does not have between 1 and 2k inodes"
+    check_fs_inodes /boot 1G 2G
+    is $? 1 "check_fs_inodes() - /boot does not have between 1G and 2G inodes"
+    check_fs_inodes /boot 1k
+    is $? 0 "check_fs_inodes() - /boot 1k minimum, no maximum"
+    check_fs_inodes /boot 1G
+    is $? 1 "check_fs_inodes() - /boot 1G minimum"
+    check_fs_inodes /boot 128016
+    is $? 0 "check_fs_inodes() - actual size as minimum passes"
+    check_fs_inodes /boot "" 128016
+    is $? 0 "check_fs_inodes() - actual size as maximum passes"
+    check_fs_inodes /boot "" 1
+    is $? 1 "check_fs_inodes() - 1k max only"
+    check_fs_inodes /boot "" 1G
+    is $? 0 "check_fs_inodes() - 1G max only"
+    check_fs_inodes /proc 999 999
+    is $? 0 "check_fs_inodes() on pseudofilesystem passes (with warning)"
+
+    check_fs_ifree / 1M
+    is $? 0 "check_fs_ifree() - >1M inodes free on /"
+    check_fs_ifree / 1727102
+    is $? 0 "check_fs_ifree() - Exactly 1727102 inodes free on /"
+    check_fs_ifree / 1T
+    is $? 1 "check_fs_ifree() - <1T inodes free on /"
+    check_fs_ifree /home 10%
+    is $? 0 "check_fs_ifree() - >10% free inodes on /home"
+    check_fs_ifree /home 78%
+    is $? 0 "check_fs_ifree() - Exactly 78% free inodes on /home"
+    check_fs_ifree /home 99%
+    is $? 1 "check_fs_ifree() - <99% free inodes on /home"
+    check_fs_ifree /proc 999
+    is $? 0 "check_fs_ifree() on pseudofilesystem passes (with warning)"
+
+    check_fs_iused / 1G
+    is $? 0 "check_fs_iused() - <1G inodes used on /"
+    check_fs_iused / 370050
+    is $? 1 "check_fs_iused() - Exactly 370050 inodes used on /"
+    check_fs_iused / 370k
+    is $? 1 "check_fs_iused() - >370k inodes used on /"
+    check_fs_iused /home 95%
+    is $? 0 "check_fs_iused() - <95% used inodes on /home"
+    check_fs_iused /home 22%
+    is $? 1 "check_fs_iused() - Exactly 22% used inodes on /home"
+    check_fs_iused /home 2%
+    is $? 1 "check_fs_iused() - >2% used inodes on /home"
+    check_fs_iused /proc 999
+    is $? 0 "check_fs_iused() on pseudofilesystem passes (with warning)"
+
+} ; unplan
