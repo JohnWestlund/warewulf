@@ -1,0 +1,734 @@
+# NHC - Warewulf Process Checks
+#
+# Michael Jennings <mej@lbl.gov>
+# 15 December 2010
+#
+# $Id: ww_ps.nhc 1638 2014-04-09 16:39:03Z mej $
+#
+
+PS_PROCS=( )
+PS_USER=( )
+PS_PPID=( )
+PS_PCPU=( )
+PS_PMEM=( )
+PS_RSS=( )
+PS_VSZ=( )
+PS_TIME=( )
+PS_ARGS=( )
+export PS_PROCS PS_USER PS_PPID PS_PCPU PS_PMEM PS_RSS PS_VSZ PS_TIME PS_ARGS
+
+LOADAVG=( )
+RUNPROCS=0
+TOTPROCS=0
+LASTPID=0
+export LOADAVG RUNPROCS TOTPROCS LASTPID
+
+function nhc_ps_gather_data() {
+    local IFS PS_DATA THIS_PID i
+    local -a LINES LINE
+
+    # We need passwd data to resolve UIDs for users with lengthy userids
+    if [[ ${#PWDATA_USERS[*]} -eq 0 ]]; then
+        nhc_common_load_passwd
+    fi
+
+    # Set default for $RM_DAEMON_MATCH based on configured resource manager.
+    if [[ "$NHC_RM" == "pbs" ]]; then
+        RM_DAEMON_MATCH="${RM_DAEMON_MATCH:-/\bpbs_mom\b/}"
+    elif [[ "$NHC_RM" == "slurm" ]]; then
+        RM_DAEMON_MATCH="${RM_DAEMON_MATCH:-/\bslurmstepd\b/}"
+    elif [[ "$NHC_RM" == "sge" ]]; then
+        RM_DAEMON_MATCH="${RM_DAEMON_MATCH:-/\bsge_execd\b/}"
+    else
+        dbg "Unsupported RM detected in ${FUNCNAME}():  \"$NHC_RM\""
+    fi
+    if [[ ! "test" =~ \btest\b ]]; then
+        # Workaround for lack of \b support in regexp library.
+        RM_DAEMON_MATCH="${RM_DAEMON_MATCH//#\\b/(^|[^A-Za-z0-9])}"
+        RM_DAEMON_MATCH="${RM_DAEMON_MATCH//%\\b/(\$|[^A-Za-z0-9])}"
+    fi
+        
+    # Create array $LINES[] by splitting "ps" output on newlines.
+    IFS=$'\n'
+    LINES=( $(ps axo 'user:32,uid,pid,ppid,pcpu,pmem,rss,vsz,bsdtime,args') )
+    IFS=$' \t\n'
+
+    # Iterate through $LINES[] array to gather process data.
+    for ((i=0; i<${#LINES[*]}; i++)); do
+        # Split each line on whitespace to create $LINE[] array.
+        LINE=( ${LINES[$i]} )
+        if [[ "${LINE[0]}" = "USER" ]]; then
+            continue
+        fi
+        THIS_PID=${LINE[2]}
+        PS_PROCS[${#PS_PROCS[*]}]=$THIS_PID
+        PS_USER[$THIS_PID]=${LINE[0]}
+        PS_UID[$THIS_PID]=${LINE[1]}
+        PS_PPID[$THIS_PID]=${LINE[3]}
+        PS_PCPU[$THIS_PID]=${LINE[4]}
+        PS_PMEM[$THIS_PID]=${LINE[5]}
+        PS_RSS[$THIS_PID]=${LINE[6]}
+        PS_VSZ[$THIS_PID]=${LINE[7]}
+        PS_TIME[$THIS_PID]=${LINE[8]}
+        PS_ARGS[$THIS_PID]="${LINE[*]:9}"
+        if [[ "${PS_USER[$THIS_PID]}" == "${PS_UID[$THIS_PID]}" ]]; then
+            nhc_common_get_userid "${PS_UID[$THIS_PID]}" "PS_USER[$THIS_PID]"
+        fi
+        dbg "Got process $THIS_PID:  ${PS_USER[$THIS_PID]} ${PS_UID[$THIS_PID]} ${PS_PPID[$THIS_PID]} ${PS_PCPU[$THIS_PID]} ${PS_PMEM[$THIS_PID]} ${PS_RSS[$THIS_PID]} ${PS_VSZ[$THIS_PID]} ${PS_TIME[$THIS_PID]} ${PS_ARGS[$THIS_PID]}"
+    done
+    export PS_PROCS PS_USER PS_UID PS_PPID PS_PCPU PS_PMEM PS_RSS PS_VSZ PS_TIME PS_ARGS
+}
+
+function nhc_loadavg_gather_data() {
+    local i
+
+    read -a LOADAVG < /proc/loadavg
+    RUNPROCS="${LOADAVG[3]}"
+    TOTPROCS="${LOADAVG[3]}"
+    LASTPID="${LOADAVG[4]}"
+    unset LOADAVG[3] LOADAVG[4]
+
+    RUNPROCS="${RUNPROCS/\/*}"
+    TOTPROCS="${TOTPROCS/*\/}"
+    for ((i=0; i<${#LOADAVG[*]}; i++)); do
+        LOADAVG[$i]="${LOADAVG[$i]//.*}"
+    done
+}
+
+# Check the lineage (i.e., parent process tree) of a process ($1) for a particular
+# process name ($2).  Returns true if found, false if init (PID 1) is reached.
+function nhc_ps_pid_lineage() {
+    local THIS_PID=$1
+    local PROCNAME=$2
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    while [[ -n "$THIS_PID" && $THIS_PID -ne 1 ]]; do
+        THIS_PID=${PS_PPID[$THIS_PID]}
+        mcheck "${PS_ARGS[$THIS_PID]}" "$PROCNAME" && return 0
+    done
+    return 1
+}
+
+# Do the actual work of looking at process resource consumption.  Used
+# by check_ps_{cpu,mem,physmem}().  Additional parameters are the check
+# name and the type of resource to look at.
+function nhc_ps_check_res() {
+    local NONFATAL=0 FULLMATCH=0 ALL=0 SYSLOG=0 LOG=0 KILL=0 RENICE="" OWNER="" MATCH="" ACTION=""
+    local CHECK="$1" COL="$2" THRESHOLD
+    local THIS_PID THIS_PROG MSG T_MIN T_SEC NUM LIM i
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    shift 2
+    OPTIND=1
+    while getopts ":0falskr:u:m:e:" OPTION ; do
+        case "$OPTION" in
+            0) NONFATAL=1 ;;
+            f) FULLMATCH=1 ;;
+            a) ALL=1 ;;
+            l) LOG=1 ;;
+            s) SYSLOG=1 ;;
+            k) KILL=1 ;;
+            r) RENICE="$OPTARG" ;;
+            u) OWNER="$OPTARG" ;;
+            m) MATCH="$OPTARG" ;;
+            e) ACTION="$OPTARG" ;;
+            :) die 1 "$CHECK:  Option -$OPTARG requires an argument." ; return 1 ;;
+            \?) die 1 "$CHECK:  Invalid option:  -$OPTARG" ; return 1 ;;
+        esac
+    done
+    shift $((OPTIND-1))
+    THRESHOLD="$1"
+    case $COL in
+        1)  THRESHOLD="${THRESHOLD%%%}"
+            if [[ -z "$THRESHOLD" || "${THRESHOLD//[^0-9]}" != "$THRESHOLD" ]]; then
+                die 1 "$CHECK:  Syntax error:  CPU utilization limit required."
+            fi
+            ;;
+        2)  if [[ -z "$THRESHOLD" ]]; then
+                die 1 "$CHECK:  Syntax error:  Memory utilization limit required."
+            elif [[ "${THRESHOLD%%%}" != "$THRESHOLD" ]]; then
+                die 1 "$CHECK:  Syntax error:  Percentage not supported by this check."
+            fi
+            nhc_common_parse_size "$THRESHOLD" THRESHOLD
+            COL=4
+            ;;
+        3)  if [[ -z "$THRESHOLD" ]]; then
+                die 1 "$CHECK:  Syntax error:  Memory utilization limit required."
+            elif [[ "${THRESHOLD%%%}" != "$THRESHOLD" ]]; then
+                COL=2
+                THRESHOLD="${THRESHOLD%%%}"
+            else
+                COL=3
+                nhc_common_parse_size "$THRESHOLD" THRESHOLD
+            fi
+            ;;
+        4)  if [[ -z "$THRESHOLD" ]]; then
+                die 1 "$CHECK:  Syntax error:  CPU time utilization limit required."
+            elif [[ "${THRESHOLD//[0-9MmSs]}" != "" ]]; then
+                die 1 "$CHECK:  Syntax error:  Invalid characters in CPU time limit \"$THRESHOLD\""
+            fi
+            COL=5
+            THRESHOLD="${THRESHOLD//s}"
+            if [[ "${THRESHOLD//*[Mm]}" != "$THRESHOLD" ]]; then
+                T_MIN="${THRESHOLD//[Mm]*}"
+                T_SEC="${THRESHOLD//*[Mm]}"
+                THRESHOLD=$((T_MIN*60+T_SEC))
+            fi
+            ;;
+    esac
+
+    if [[ -z "$MATCH" ]]; then
+        MATCH="*"
+    fi
+    if [[ -n "$OWNER" && "${OWNER//[0-9]}" == "" ]]; then
+        # Owner is a numeric UID, so resolve it to a userid.
+        nhc_common_get_userid $OWNER OWNER
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        if [[ $FULLMATCH == 1 ]]; then
+            THIS_PROG="${PS_ARGS[$THIS_PID]}"
+        else
+            ARGS=( ${PS_ARGS[$THIS_PID]} )
+            THIS_PROG="${ARGS[0]}"
+        fi
+        dbg "Checking $THIS_PID:  \"$MATCH\" vs. \"$THIS_PROG\""
+        if [[ "${MATCH/#\!}" != "$MATCH" ]]; then
+            if mcheck "$THIS_PROG" "${MATCH/#\!}" ; then
+                continue
+            fi
+        elif ! mcheck "$THIS_PROG" "$MATCH" ; then
+            continue
+        fi
+        dbg "Checking $THIS_PID:  \"$OWNER\" vs. \"${PS_USER[$THIS_PID]}\""
+        if [[ -n "$OWNER" ]]; then
+            if [[ "${OWNER/#\!}" != "$OWNER" ]]; then
+                # Owner begins with !.  Negate the check.
+                if [[ "${PS_USER[$THIS_PID]}" == "${OWNER/#\!}" ]]; then
+                    continue
+                fi
+            elif [[ "${PS_USER[$THIS_PID]}" != "$OWNER" ]]; then
+                continue
+            fi
+        fi
+        # We have a matching process with the correct owner.  Now check resource consumption.
+        case $COL in
+            1)  if [[ ${PS_PCPU[$THIS_PID]%%.*} -lt $THRESHOLD ]]; then continue ; fi
+                MSG="$CHECK:  Process \"$THIS_PROG\" ($THIS_PID) using ${PS_PCPU[$THIS_PID]}% CPU (limit $THRESHOLD%)"
+                ;;
+            2)  if [[ ${PS_PMEM[$THIS_PID]%%.*} -lt $THRESHOLD ]]; then continue ; fi
+                MSG="$CHECK:  Process \"$THIS_PROG\" ($THIS_PID) using ${PS_PMEM[$THIS_PID]}% RAM (limit $THRESHOLD%)"
+                ;;
+            3)  if [[ ${PS_RSS[$THIS_PID]} -lt $THRESHOLD ]]; then continue ; fi
+                nhc_common_unparse_size ${PS_RSS[$THIS_PID]} NUM
+                nhc_common_unparse_size $THRESHOLD LIM
+                MSG="$CHECK:  Process \"$THIS_PROG\" ($THIS_PID) using $NUM RAM (limit $LIM)"
+                ;;
+            4)  if [[ ${PS_VSZ[$THIS_PID]} -lt $THRESHOLD ]]; then continue ; fi
+                nhc_common_unparse_size ${PS_RSS[$THIS_PID]} NUM
+                nhc_common_unparse_size $THRESHOLD LIM
+                MSG="$CHECK:  Process \"$THIS_PROG\" ($THIS_PID) using $NUM memory (RAM+swap) (limit $LIM)"
+                ;;
+            5)  T_MIN=${PS_TIME[$THIS_PID]/:*}
+                T_SEC=${PS_TIME[$THIS_PID]/*:}
+                if [[ $((T_MIN*60+T_SEC)) -lt $THRESHOLD ]]; then continue ; fi
+                MSG="$CHECK:  Process \"$THIS_PROG\" ($THIS_PID) has consumed ${PS_TIME[$THIS_PID]} of CPU time (limit ${T_MIN}m${T_SEC}s)"
+                ;;
+        esac
+        # We have a winner.  Or loser, as the case may be.
+        if [[ "$LOG" == "1" ]]; then
+            log $MSG
+        fi
+        if [[ "$SYSLOG" == "1" ]]; then
+            syslog $MSG
+        fi
+        if [[ "$ACTION" != "" ]]; then
+            ${SHELL:-/bin/bash} -c "$ACTION" &
+        fi
+        if [[ "$KILL" == "1" ]]; then
+            [[ "$SHELL" != ":" ]] && kill -9 $THIS_PID
+            MSG="$MSG; killed"
+        elif [[ "$RENICE" != "" ]]; then
+            [[ "$SHELL" != ":" ]] && renice -n "$RENICE" $THIS_PID
+            [[ "${RENICE##-}" == "${RENICE}" ]] && RENICE="+$RENICE"
+            MSG="$MSG; reniced $RENICE"
+        fi
+        if [[ $ALL -ge 1 ]]; then
+            if [[ -n "$MSG" ]]; then
+                log "$MSG ($ALL)"
+            fi
+            ((ALL++))
+            continue
+        elif [[ $NONFATAL == 1 ]]; then
+            if [[ -n "$MSG" ]]; then
+                log "$MSG (non-fatal)"
+            fi
+            return 0
+        fi
+        die 1 "$MSG"
+        return 1
+    done
+    # -a (all) does not necessarily imply -0 (non-fatal)
+    if [[ $ALL -gt 1 ]]; then
+        # We had at least 1 flagged process.  Fail unless we're also non-fatal.
+        if [[ $NONFATAL == 1 ]]; then
+            if [[ -n "$MSG" ]]; then
+                log "$MSG (non-fatal)"
+            fi
+            return 0
+        fi
+        die 1 "$MSG ($((ALL-1)) of $((ALL-1)))"
+        return $((--ALL))
+    fi
+    return 0
+}
+
+# Check to make sure a process ($1) is running.  Includes optional
+# checks for owner ($2) and arguments ($3).
+function check_ps_daemon() {
+    local DAEMON=$1
+    local OWNER=$2
+    local ARGS=$3
+    local THIS_PID i
+
+    test "$ARGS" != "" && DAEMON="$DAEMON $ARGS"
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        dbg "Checking $THIS_PID:  \"$DAEMON\" vs. \"${PS_ARGS[$THIS_PID]}\""
+        if [[ "${PS_ARGS[$THIS_PID]//$DAEMON}" = "${PS_ARGS[$THIS_PID]}" ]]; then
+            continue
+        fi
+        dbg "Checking $THIS_PID:  \"$OWNER\" vs. \"${PS_USER[$THIS_PID]}\""
+        if [[ -n "$OWNER" && "${PS_USER[$THIS_PID]}" != "$OWNER" ]]; then
+            continue
+        fi
+        # We have a matching process with the correct owner.  All is well.
+        return 0
+    done
+
+    # No matching process found.
+    die 1 "$FUNCNAME:  Process $DAEMON ${OWNER:+owned by $OWNER }not running"
+    return 1
+
+    #if ! pgrep ${OWNER:+-u $OWNER} ${ARGS:+-f} "$DAEMON" >/dev/null 2>&1 ; then
+    #    die 1 "$FUNCNAME:  Process $DAEMON ${OWNER:+owned by $OWNER }not running"
+    #fi
+}
+
+# Check to make sure a process ($1) is NOT running (opposite of
+# check_ps_daemon).  Includes optional checks for owner ($2) and
+# arguments ($3).
+function check_ps_blacklist() {
+    local DAEMON=$1
+    local OWNER=$2
+    local ARGS=$3
+    local THIS_PID i
+
+    test "$ARGS" != "" && DAEMON="$DAEMON $ARGS"
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        dbg "Checking $THIS_PID:  \"$DAEMON\" vs. \"${PS_ARGS[$THIS_PID]}\""
+        if [[ "${PS_ARGS[$THIS_PID]//$DAEMON}" = "${PS_ARGS[$THIS_PID]}" ]]; then
+            continue
+        fi
+        dbg "Checking $THIS_PID:  \"$OWNER\" vs. \"${PS_USER[$THIS_PID]}\""
+        if [[ -n "$OWNER" ]]; then
+            if [[ "${OWNER/#\!}" != "$OWNER" ]]; then
+                # Owner begins with !.  Negate the check.
+                if [[ "${PS_USER[$THIS_PID]}" == "${OWNER/#\!}" ]]; then
+                    continue
+                fi
+            elif [[ "${PS_USER[$THIS_PID]}" != "$OWNER" ]]; then
+                continue
+            fi
+        fi
+        # We have a matching process with the specified owner.
+        die 1 "$FUNCNAME:  Process $DAEMON ${OWNER:+owned by $OWNER } running"
+        return 1
+    done
+
+    # No matching process found.
+    return 0
+}
+
+# Check to make sure a service is (or isn't) running.  Syntax:
+#  check_ps_service [-0] [-f] [-S|-r|-c|-s|-k] [-u <user>] [-d <daemon> | -m <match>] [ -e <action> | -E <action> ] <service>
+function check_ps_service() {
+    local SERVICE OWNER MATCH DAEMON NONFATAL=0 FULLMATCH=0 RESTART=0 CYCLE=0 START=0 STOP=0 KILL=0 ACTION FOUND_ACTION
+    local THIS_PID THIS_SVC i MSG
+    local -a ARGS
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    OPTIND=1
+    while getopts ":0Sfrcsku:d:m:e:E:" OPTION ; do
+        case "$OPTION" in
+            0) NONFATAL=1 ;;
+            S) START=1 ;;
+            f) FULLMATCH=1 ;;
+            r) RESTART=1 ;;
+            c) CYCLE=1 ;;
+            s) STOP=1 ;;
+            k) KILL=1 ;;
+            u) OWNER="$OPTARG" ;;
+            d) DAEMON="$OPTARG" ;;
+            m) MATCH="$OPTARG" ;;
+            e) ACTION="$OPTARG" ;;
+            E) FOUND_ACTION="$OPTARG" ;;
+            :) die 1 "$FUNCNAME:  Option -$OPTARG requires an argument." ; return 1 ;;
+            \?) die 1 "$FUNCNAME:  Invalid option:  -$OPTARG" ; return 1 ;;
+        esac
+    done
+    shift $((OPTIND-1))
+    SERVICE="$*"
+    if [[ "$SERVICE" == "" ]]; then
+        die 1 "$FUNCNAME:  Syntax error:  Service name required."
+        return 1
+    fi
+    if [[ "$DAEMON" == "" ]]; then
+        DAEMON="$SERVICE"
+    fi
+    if [[ "$MATCH" == "" ]]; then
+        MATCH="*$DAEMON"
+    fi
+    if [[ -n "$OWNER" && "${OWNER//[0-9]}" == "" ]]; then
+        # Owner is a numeric UID, so resolve it to a userid.
+        nhc_common_get_userid $OWNER OWNER
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        if [[ $FULLMATCH == 1 ]]; then
+            THIS_SVC="${PS_ARGS[$THIS_PID]}"
+        else
+            ARGS=( ${PS_ARGS[$THIS_PID]} )
+            THIS_SVC="${ARGS[0]}"
+        fi
+        dbg "Checking $THIS_PID:  \"$MATCH\" vs. \"$THIS_SVC\""
+        if ! mcheck "$THIS_SVC" "$MATCH" ; then
+            continue
+        fi
+        dbg "Checking $THIS_PID:  \"$OWNER\" vs. \"${PS_USER[$THIS_PID]}\""
+        if [[ -n "$OWNER" ]]; then
+            if [[ "${OWNER/#\!}" != "$OWNER" ]]; then
+                # Owner begins with !.  Negate the check.
+                if [[ "${PS_USER[$THIS_PID]}" == "${OWNER/#\!}" ]]; then
+                    continue
+                fi
+            elif [[ "${PS_USER[$THIS_PID]}" != "$OWNER" ]]; then
+                continue
+            fi
+        fi
+        # We have a matching process with the correct owner.
+        if [[ "$FOUND_ACTION" != "" ]]; then
+            ${SHELL:-/bin/bash} -c "$FOUND_ACTION" &
+        fi
+        if [[ "$STOP" == "1" || "$KILL" == "1" ]]; then
+            # Logic is inverted; we DON'T want this process running, so finding it is a failure.
+            MSG="$FUNCNAME:  Service $SERVICE (process $DAEMON) ${OWNER:+owned by $OWNER }running"
+            if [[ "$KILL" == "1" ]]; then
+                [[ "$SHELL" != ":" ]] && kill -9 $THIS_PID
+                MSG="$MSG; killed process ID $THIS_PID"
+            else
+                # $STOP must be 1
+                ${SHELL:-/bin/bash} -c "/sbin/service $SERVICE stop" &
+                MSG="$MSG; termination in progress"
+            fi
+            if [[ $NONFATAL == 1 ]]; then
+                if [[ -n "$MSG" ]]; then
+                    log "$MSG (non-fatal)"
+                fi
+                return 0
+            fi
+            die 1 "$MSG"
+            return 1
+        fi
+        # All is well.
+        return 0
+    done
+
+    # No matching process found.
+    if [[ "$STOP" == "1" || "$KILL" == "1" ]]; then
+        # Logic is inverted; we DON'T want this process running, so not finding it is a success.
+        return 0
+    fi
+
+    MSG="$FUNCNAME:  Service $SERVICE (process $DAEMON) ${OWNER:+owned by $OWNER }not running"
+    if [[ $START == 1 ]]; then
+        ${SHELL:-/bin/bash} -c "/sbin/service $SERVICE start" &
+        MSG="$MSG; start in progress"
+    elif [[ $RESTART == 1 ]]; then
+        ${SHELL:-/bin/bash} -c "/sbin/service $SERVICE restart" &
+        MSG="$MSG; restart in progress"
+    elif [[ $CYCLE == 1 ]]; then
+        ${SHELL:-/bin/bash} -c "/sbin/service $SERVICE stop ; sleep 2 ; /sbin/service $SERVICE start" &
+        MSG="$MSG; cycle in progress"
+    elif [[ "$ACTION" != "" ]]; then
+        ${SHELL:-/bin/bash} -c "$ACTION" &
+        MSG="$MSG; executed \"$ACTION\""
+    fi
+    if [[ $NONFATAL == 1 ]]; then
+        if [[ -n "$MSG" ]]; then
+            log "$MSG (non-fatal)"
+        fi
+        return 0
+    fi
+    die 1 "$MSG"
+    return 1
+}
+
+# Checks for processes using more than a certain percentage of CPU.
+#  check_ps_cpu [-0] [-f] [-a] [-l] [-s] [-k] [-r <renice>] [-u <user>] [-m <match>] [-e <action>] <threshold>
+function check_ps_cpu() {
+    nhc_ps_check_res $FUNCNAME 1 "$@"
+    return $?
+}
+
+# Checks for processes using more than a certain percentage or absolute
+# quantity of total memory.
+#  check_ps_mem [-0] [-f] [-a] [-l] [-s] [-k] [-r <renice>] [-u <user>] [-m <match>] [-e <action>] <threshold>
+function check_ps_mem() {
+    nhc_ps_check_res $FUNCNAME 2 "$@"
+    return $?
+}
+
+# Checks for processes using more than a certain percentage or absolute
+# quantity of physical memory (RAM).
+#  check_ps_physmem [-0] [-f] [-a] [-l] [-s] [-k] [-r <renice>] [-u <user>] [-m <match>] [-e <action>] <threshold>
+function check_ps_physmem() {
+    nhc_ps_check_res $FUNCNAME 3 "$@"
+    return $?
+}
+
+# Checks for processes using more than a certain number of seconds of
+# CPU time.
+#  check_ps_time [-0] [-f] [-a] [-l] [-s] [-k] [-r <renice>] [-u <user>] [-m <match>] [-e <action>] <threshold>
+function check_ps_time() {
+    nhc_ps_check_res $FUNCNAME 4 "$@"
+    return $?
+}
+
+# Checks all processes to make sure they are owned by users authorized
+# to be running on the node (i.e., root, and owners of current PBS jobs).
+# Arguments to function are actions to take (ignore, log, syslog, die, kill).
+function check_ps_unauth_users() {
+    local ACTIONS="$@"
+    local i THIS_PID THIS_USER THIS_UID THIS_CMD IS_AUTH UNAUTH_MSG
+
+    if [[ -z "$ACTIONS" ]]; then
+        ACTIONS="die"
+    fi
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    if [[ ${#PWDATA_USERS[*]} -eq 0 ]]; then
+        nhc_common_load_passwd
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        THIS_USER="${PS_USER[$THIS_PID]}"
+        THIS_UID="${PS_UID[$THIS_PID]}"
+        THIS_CMD="${PS_ARGS[$THIS_PID]/% *}"
+        nhc_job_user_auth "$THIS_USER" "$THIS_UID"
+        IS_AUTH=$?
+        if [[ $IS_AUTH -eq 0 ]]; then
+            # User is authorized.  Continue.
+            continue
+        fi
+        # User is not authorized.  Take action(s).
+        if [[ -z "$THIS_UID" ]]; then
+            nhc_common_get_uid "$THIS_USER" THIS_UID
+        fi
+        UNAUTH_MSG="$FUNCNAME:  Unauthorized user $THIS_USER ($THIS_UID) running process $THIS_CMD ($THIS_PID)."
+        for ACTION in $ACTIONS ; do
+            case "$ACTION" in
+                log )    log "$UNAUTH_MSG" ;;
+                syslog ) syslog "$UNAUTH_MSG" ;;
+                die )    die 1 "$UNAUTH_MSG" ; return 1 ;;
+                kill )   [[ ${THIS_UID:-0} -gt $MAX_SYS_UID ]] && kill -9 $THIS_PID ;;
+                ignore ) break ;;
+            esac
+        done
+    done
+}
+
+# Check the lineage for all non-system processes to make sure they're children
+# of torque (i.e., pbs_mom).  Arguments are actions (same as above).
+function check_ps_userproc_lineage() {
+    local ACTIONS="$@"
+    local i THIS_PID THIS_USER THIS_UID THIS_CMD IS_AUTH UNAUTH_MSG
+
+    if [[ -z "$ACTIONS" ]]; then
+        ACTIONS="die"
+    fi
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    if [[ ${#PWDATA_USERS[*]} -eq 0 ]]; then
+        nhc_common_load_passwd
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        THIS_UID="${PS_UID[$THIS_PID]}"
+        THIS_USER="${PWUID_USER[$THIS_UID]:-$THIS_UID}"
+        THIS_CMD="${PS_ARGS[$THIS_PID]/% *}"
+        if [[ ${THIS_UID:-0} -le $MAX_SYS_UID ]]; then
+            continue
+        fi
+        if mcheck "${NHC_AUTH_USERS}" "/(^|[^A-Za-z0-9])$THIS_USER(\$|[^A-Za-z0-9])/" ; then
+            continue
+        fi
+        # Non-system process.  Check lineage.
+        if nhc_ps_pid_lineage $THIS_PID $RM_DAEMON_MATCH ; then
+            continue
+        fi
+        # Not a child of pbs_mom.  Take action.
+        UNAUTH_MSG="$FUNCNAME:  Rogue process $THIS_CMD ($THIS_PID) from user $THIS_USER ($THIS_UID) detected."
+        for ACTION in $ACTIONS ; do
+            case "$ACTION" in
+                log )    log "$UNAUTH_MSG" ;;
+                syslog ) syslog "$UNAUTH_MSG" ;;
+                die )    die 1 "$UNAUTH_MSG" ; return 1 ;;
+                kill )   [[ ${THIS_UID:-0} -gt $MAX_SYS_UID ]] && kill -9 $THIS_PID ;;
+                ignore ) break ;;
+            esac
+        done
+    done
+}
+
+# Check accumulated kswapd cpu time to make sure there's no imbalance among
+# different NUMA nodes, which could be an early symptom of failure.
+# Arguments to function are the total CPU time threshold in seconds ($1),
+# the maximum allowed discrepancy ($2), and actions to take ($3 - ignore,
+# log, syslog, die).
+function check_ps_kswapd() {
+    local THRESHOLD=$1
+    shift
+    local DISCREPANCY=$1
+    shift
+    local ACTIONS="$@"
+    local DAEMON="kswapd"
+    local KSWAPD_IMB=0
+    local i IFS ACTION KSWAPD_MSG MAX MIN
+    local -a TIME KSWAPD_PROC KSWAPD_TIME
+
+    if [[ -z "$ACTIONS" ]]; then
+        ACTIONS="die"
+    fi
+
+    if [[ ${#PS_PROCS[*]} -eq 0 ]]; then
+        nhc_ps_gather_data
+    fi
+
+    for ((i=0; i < ${#PS_PROCS[*]}; i++)); do
+        THIS_PID=${PS_PROCS[$i]}
+        dbg "Checking $THIS_PID:  $DAEMON vs. ${PS_ARGS[$THIS_PID]}"
+        if [[ "${PS_ARGS[$THIS_PID]//$DAEMON}" = "${PS_ARGS[$THIS_PID]}" ]]; then
+            continue
+        fi
+        IFS=':'
+        TIME=( ${PS_TIME[$THIS_PID]} )
+        KSWAPD_PROC[${#KSWAPD_PROC[*]}]=$THIS_PID
+        # Time in seconds.
+        KSWAPD_TIME[$THIS_PID]=$((10#${TIME[0]}*60 + 10#${TIME[1]}))
+        IFS=$' \t\n'
+    done
+
+    # If only one NUMA node detected no checking needed.
+    if [[ ${#KSWAPD_PROC[*]} -eq 1 ]]; then
+        return 0
+    fi
+
+    for ((i=0; i < ${#KSWAPD_PROC[*]}; i++)); do
+        THIS_PID=${KSWAPD_PROC[$i]}
+
+        # If any NUMA node is running above threshold, mark it.
+        if [[ ${KSWAPD_TIME[$THIS_PID]} -gt $THRESHOLD ]]; then
+            KSWAPD_IMB=1
+            break
+        # Otherwise compare the cumulative cpu time to find out min and max.
+        else
+            if [[ $i -eq 0 ]]; then
+                MIN=${KSWAPD_TIME[$THIS_PID]}
+                MAX=${KSWAPD_TIME[$THIS_PID]}
+            fi
+
+            if [[ ${KSWAPD_TIME[$THIS_PID]} -gt $MAX ]]; then
+                MAX=${KSWAPD_TIME[$THIS_PID]}
+            elif [[ ${KSWAPD_TIME[$THIS_PID]} -lt $MIN ]]; then
+                MIN=${KSWAPD_TIME[$THIS_PID]}
+            fi
+        fi
+    done
+
+    if [[ $MIN -eq 0 && $MAX -gt $((THRESHOLD/2)) ]]; then
+        KSWAPD_IMB=1
+    elif [[ $MIN -ne 0 && $((MAX/MIN)) -gt $DISCREPANCY ]]; then
+        KSWAPD_IMB=1
+    fi
+
+    if [[ $KSWAPD_IMB -eq 1 ]]; then
+        # NUMA imbalance detected.  Take action.
+        KSWAPD_MSG="$FUNCNAME:  NUMA imbalance detected among PIDs ${KSWAPD_PROC[*]}."
+        for ACTION in $ACTIONS ; do
+            case "$ACTION" in
+                log )    log "$KSWAPD_MSG" ;;
+                syslog ) syslog "$KSWAPD_MSG" ;;
+                die )    die 1 "$KSWAPD_MSG" ; return 1 ;;
+                ignore ) break ;;
+            esac
+        done
+    fi
+}
+
+# Checks the 1-, 5-, and 15-minute load averages to see if any of them
+# exceeds the specified threshold(s) ($1, $2, and $3, respectively).
+function check_ps_loadavg() {
+    local -a LOADLIMS=( "$@" )
+    local -a INFO=( 1 5 15 )
+    local i
+
+    if [[ "$TOTPROCS" == 0 ]]; then
+        nhc_loadavg_gather_data
+    fi
+
+    for ((i=0; i<${#LOADAVG[*]}; i++)); do
+        if [[ -n "${LOADLIMS[$i]}" && "${LOADAVG[$i]}" -ge "${LOADLIMS[$i]}" ]]; then
+            die 1 "$FUNCNAME:  ${INFO[$i]}-minute load average too high:  ${LOADAVG[$i]} >= ${LOADLIMS[$i]}"
+            return 1
+        fi
+    done
+    return 0
+}
+
+# Alias
+#function check_loadavg() {
+#    check_ps_loadavg "$@"
+#    return $?
+#}
+

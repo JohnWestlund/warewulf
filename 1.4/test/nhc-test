@@ -1,0 +1,216 @@
+#!/bin/bash
+#
+# Warewulf NHC Unit Tests
+#
+# Michael Jennings <mej@lbl.gov>
+# 29 June 2012
+#
+# $Id: nhc-test 1343 2013-04-01 23:27:08Z mej $
+#
+
+# This script is used to perform unit testing on the NHC driver script
+# and its built-in checks.  It should only be used by developers
+# working from the source tree.  To perform the tests, run "make test"
+# from the top-level NHC source tree.
+
+function test_nhc_driver() {
+    local -a LINES FOUND=(0 0 0 0 0 0 0)
+    local LINE i MAXLEN=0
+
+    # Load functions from NHC script.
+    export NHC_LOAD_ONLY=1
+    . $TOP_SRCDIR/nhc
+
+    # Redefine some functions
+    function die() { :; }
+    function dbg() { :; }
+    function log() { :; }
+    function syslog() { :; }
+    function syslog_flush() { :; }
+
+    # Initialize standard environment.
+    nhcmain_init_env
+    plan 6 "nhcmain_init_env" && {
+        is $NHC_PID $$ "Check PID for accuracy"
+        isnt "$HOSTNAME" "" "Non-empty hostname check"
+        is $NAME nhc-test 'Validity of $NAME (1)'
+        isnt $NAME nhc 'Validity of $NAME (2)'
+        unlike "$HOSTNAME_S" "/\./" '$HOSTNAME_S contains no dots'
+        unlike "$NAME" "/\//" '$NAME contains no slashes'
+    } ; unplan
+
+    # Check help output
+    IFS=$'\n'
+    LINES=( $(nhcmain_help) )
+    IFS=$' \t\n'
+    for ((i=0; i<${#LINES[*]}; i++)); do
+        LINE="${LINES[$i]}"
+        if [[ ${#LINE} > $MAXLEN ]]; then
+            MAXLEN=${#LINE}
+        fi
+        if [[ "${LINE/# -D }" != "$LINE" ]]; then
+            FOUND[0]=1
+        elif [[ "${LINE/# -c }" != "$LINE" ]]; then
+            FOUND[1]=1
+        elif [[ "${LINE/# -d }" != "$LINE" ]]; then
+            FOUND[2]=1
+        elif [[ "${LINE/# -h }" != "$LINE" ]]; then
+            FOUND[3]=1
+        elif [[ "${LINE/# -n }" != "$LINE" ]]; then
+            FOUND[4]=1
+        elif [[ "${LINE/# -q }" != "$LINE" ]]; then
+            FOUND[5]=1
+        elif [[ "${LINE/# -t }" != "$LINE" ]]; then
+            FOUND[6]=1
+        fi
+    done
+    plan 8 "nhcmain_help" && {
+        [ $MAXLEN -lt 80 ]
+        is $? 0 'Help screen lines do not exceed 80 columns'
+        is ${FOUND[0]} 1 'Help for option -D is present'
+        is ${FOUND[1]} 1 'Help for option -c is present'
+        is ${FOUND[2]} 1 'Help for option -d is present'
+        is ${FOUND[3]} 1 'Help for option -h is present'
+        is ${FOUND[4]} 1 'Help for option -n is present'
+        is ${FOUND[5]} 1 'Help for option -q is present'
+        is ${FOUND[6]} 1 'Help for option -t is present'
+    } ; unplan
+
+    # Check CLI parsing
+    plan 16 "nhcmain_parse_cmdline" && {
+        nhcmain_parse_cmdline
+        is $? 0 'No options?  No problem.'
+        nhcmain_parse_cmdline -d -t 60
+        is $DEBUG 1 '-d option sets $DEBUG'
+        is $TIMEOUT 60 '-t option sets $TIMEOUT'
+        nhcmain_parse_cmdline -q CONFDIR="/etc/moo"
+        is $SILENT 1 '-q option sets $SILENT'
+        is $CONFDIR "/etc/moo" 'CONFDIR=/etc/moo sets $CONFDIR'
+        nhcmain_parse_cmdline -n nhc -D /etc/nhc -c /etc/nhc/nhc.conf
+        is $NAME "nhc" '-n option sets $NAME'
+        is $CONFDIR "/etc/nhc" '-D option sets $CONFDIR'
+        is $CONFFILE "/etc/nhc/nhc.conf" '-c option sets $CONFFILE'
+        nhcmain_parse_cmdline NAME=nhc-test DEBUG=0 SILENT=0 TIMEOUT='' CONFDIR='' CONFFILE=''
+        is $NAME "nhc-test" 'NAME=nhc-test resets $NAME to nhc-test'
+        is $DEBUG 0 'DEBUG=0 resets $DEBUG to 0'
+        is $SILENT 0 'SILENT=0 resets $SILENT to 0'
+        is "$TIMEOUT" '' 'TIMEOUT="" resets $TIMEOUT to empty'
+        is "$CONFDIR" '' 'CONFDIR="" resets $CONFDIR to empty'
+        is "$CONFFILE" '' 'CONFFILE="" resets $CONFFILE to empty'
+        nhcmain_parse_cmdline -n >/dev/null 2>&1
+        is $? 8 'Missing parameters results in error'
+        nhcmain_parse_cmdline -p >/dev/null 2>&1
+        is $? 9 'Unknown command line option results in error'
+    } ; unplan
+
+    # Reset environment for testing purposes.
+    PATH="$TOP_SRCDIR:$PATH"
+    SYSCONFIGDIR="$TOP_SRCDIR"
+    LIBEXECDIR="$TOP_SRCDIR/helpers"
+    CONFDIR="$TOP_SRCDIR"
+    HELPERDIR="$LIBEXECDIR"
+    LOGFILE=" "
+    NHC_RM="pbs"
+    export PATH SYSCONFIGDIR LIBEXECDIR CONFDIR HELPERDIR LOGFILE NHC_RM
+
+    # Finalize environment.  Make sure we get what we expect.
+    nhcmain_finalize_env
+    plan 14 "nhcmain_finalize_env" && {
+        is $SYSCONFIGDIR $TOP_SRCDIR '$SYSCONFIGDIR unchanged'
+        is $LIBEXECDIR "$TOP_SRCDIR/helpers" '$LIBEXECDIR unchanged'
+        is $HELPERDIR $LIBEXECDIR '$HELPERDIR unchanged'
+        is $CONFDIR $TOP_SRCDIR '$CONFDIR unchanged'
+        is $CONFFILE "$TOP_SRCDIR/$NAME.conf" '$CONFFILE set correctly'
+        is $INCDIR "$CONFDIR/scripts" '$INCDIR default correct'
+        is $ONLINE_NODE "$LIBEXECDIR/node-mark-online" '$ONLINE_NODE set correctly'
+        is $OFFLINE_NODE "$LIBEXECDIR/node-mark-offline" '$OFFLINE_NODE set correctly'
+        unlike $LOGFILE '/[<>|&]/' '$LOGFILE contains no redirection'
+        is $DEBUG 0 'Debugging off by default'
+        is $SILENT 0 'Silent mode off by default'
+        is $MARK_OFFLINE 1 'Nodes marked offline by default'
+        is $TIMEOUT 10 '10 second script timeout by default'
+        cmp_ok $MAX_SYS_UID "-lt" 1000 'Reasonable range for system UIDs'
+    } ; unplan
+
+    plan 1 "nhcmain_check_conffile" && {
+        nhcmain_check_conffile
+        is $? 0 'Config file exists'
+    } ; unplan
+
+    # Load scripts.  Check some sample functions before and after.
+    plan 6 "nhcmain_load_scripts" && {
+        isnt `type -t mcheck 2>&1` 'function' 'mcheck() loaded properly'
+        isnt `type -t nhc_common_load_passwd 2>&1` 'function' 'nhc_common_load_passwd() loaded properly'
+        isnt `type -t nhc_common_get_uid 2>&1` 'function' 'nhc_common_get_uid() loaded properly'
+        nhcmain_load_scripts
+        is `type -t mcheck 2>&1` 'function' 'mcheck() loaded properly'
+        is `type -t nhc_common_load_passwd 2>&1` 'function' 'nhc_common_load_passwd() loaded properly'
+        is `type -t nhc_common_get_uid 2>&1` 'function' 'nhc_common_get_uid() loaded properly'
+    } ; unplan
+
+    # Make sure no watchdog timer is launched.
+    TIMEOUT=0
+    plan 1 "nhcmain_set_watchdog" && {
+        nhcmain_set_watchdog
+        is $WATCHDOG_PID 0 'Watchdog should be disabled'
+    } ; unplan
+
+    # Test watchdog timer.
+    sleep 10 &
+    NHC_PID=$!
+    disown $NHC_PID
+    nhcmain_watchdog_timer 1 $NHC_PID &
+    WATCHDOG_PID=$!
+    plan 3 "nhcmain_watchdog_timer" && {
+        kill -s 0 $NHC_PID >/dev/null 2>&1
+        is $? 0 'Simulated NHC process exists'
+        kill -s 0 $WATCHDOG_PID >/dev/null 2>&1
+        is $? 0 'Watchdog timer is running'
+        sleep 2
+        kill -s 0 $NHC_PID >/dev/null 2>&1
+        isnt $? 0 'Simulated NHC process has been killed'
+    } ; unplan
+
+    # Empty config file should result in no checks.
+    nhcmain_run_checks
+    plan 2 "nhcmain_run_checks" && {
+        is $CNUM 0 'No checks were run'
+        is ${#CHECKS[*]} 0 'No checks were loaded from config'
+    } ; unplan
+}
+
+function test_checks() {
+    local CHECKTEST
+
+    for CHECKTEST in $SRCDIR/test_*.nhc ; do
+        if [[ ! -s "$CHECKTEST" ]]; then
+            continue
+        fi
+        . $CHECKTEST
+        unplan
+    done
+    return 0
+}
+
+echo "Running unit tests for NHC:"
+if [[ $# -eq 2 ]]; then
+    SRCDIR=$1
+    TOP_SRCDIR=$2
+else
+    SRCDIR=$(dirname $0)
+    if [[ -n "$SRCDIR" ]]; then
+        TOP_SRCDIR="$SRCDIR/.."
+    else
+        TOP_SRCDIR="$PWD/.."
+    fi
+fi
+
+# Load the unit test library.
+. $SRCDIR/shut.inc.sh
+
+# Run the testing functions.
+test_nhc_driver || exit -1
+test_checks || exit -1
+
+# If we get this far, we're golden.
+finish
