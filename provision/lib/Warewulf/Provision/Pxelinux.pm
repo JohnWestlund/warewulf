@@ -303,7 +303,7 @@ delete()
     my ($self, @nodeobjs) = @_;
     my $tftproot = Warewulf::Provision::Tftp->new()->tftpdir();
 
-    if (! $tftpboot) {
+    if (! $tftproot) {
         &dprint("Not updating Pxelinux because no TFTP root directory was found!\n");
         return();
     }
@@ -321,8 +321,8 @@ delete()
                 &iprint("Deleting Pxelinux configuration for: $nodename/$hwaddr\n");
                 $hwaddr =~ s/:/-/g;
                 my $config = "01-". $hwaddr;
-                if (-f "$tftproot/pxelinux.cfg/$config") {
-                    unlink("$tftproot/pxelinux.cfg/$config");
+                if (-f "$tftproot/warewulf/pxelinux.cfg/$config") {
+                    unlink("$tftproot/warewulf/pxelinux.cfg/$config");
                 }
             } else {
                 &eprint("Bad characters in hwaddr: $hwaddr\n");
