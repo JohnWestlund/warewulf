@@ -6,8 +6,8 @@ MAINTAINERCLEANFILES = Makefile.in
 
 all: $(SYSLINUXTARGETS)
 
-SYSLINUX_VERSION = 6.02
-SYSLINUX_SOURCE = $(top_srcdir)/3rd_party/GPL/syslinux-$(SYSLINUX_VERSION).tar.bz2
+SYSLINUX_VERSION = 6.03
+SYSLINUX_SOURCE = $(top_srcdir)/3rd_party/GPL/syslinux-$(SYSLINUX_VERSION).tar.gz
 SYSLINUX_DIR = syslinux-$(SYSLINUX_VERSION)
 
 
@@ -15,7 +15,7 @@ syslinuxprepare:
 	@ if [ ! -d "_work/$(SYSLINUX_DIR)" ]; then \
 		echo "Extracting syslinux distribution" ;\
 		mkdir -p _work/ ;\
-		tar xjf $(SYSLINUX_SOURCE) -C _work/ ;\
+		tar xzf $(SYSLINUX_SOURCE) -C _work/ ;\
 	fi
 	touch prepare
 
