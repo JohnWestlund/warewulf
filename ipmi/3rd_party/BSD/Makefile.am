@@ -1,3 +1,3 @@
-EXTRA_DIST = ipmitool-1.8.14.tar.bz2
+EXTRA_DIST = ipmitool-1.8.15.tar.bz2
 
 MAINTAINERCLEANFILES = Makefile.in

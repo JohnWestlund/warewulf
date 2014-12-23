@@ -2,7 +2,7 @@ all: ipmitool
 
 top_srcdir = @top_srcdir@
 
-IPMITOOL_VERSION = 1.8.14
+IPMITOOL_VERSION = 1.8.15
 IPMITOOL_SOURCE = $(top_srcdir)/3rd_party/BSD/ipmitool-$(IPMITOOL_VERSION).tar.bz2
 
 ipmitool:
