@@ -11,5 +11,6 @@ install-sh
 missing
 ACVars.pm
 *.spec
+*~
 
 etc/warewulf-httpd.conf

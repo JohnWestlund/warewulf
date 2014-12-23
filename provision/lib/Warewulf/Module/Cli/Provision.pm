@@ -380,8 +380,8 @@ exec()
                 }
                 push(@changes, sprintf("   UNDEF: %-20s\n", "BOOTLOCAL"));
             } elsif (uc($opt_bootlocal) eq "EXIT" or
- 		uc($opt_bootlocal) eq "NORMAL"
-	    ) {
+                     uc($opt_bootlocal) eq "NORMAL"
+              ) {
                 foreach my $obj ($objSet->get_list()) {
                     my $name = $obj->name() || "UNDEF";
                     $obj->bootlocal(uc($opt_bootlocal));
@@ -390,9 +390,9 @@ exec()
                 }
                 push(@changes, sprintf("     SET: %-20s = %s\n", "BOOTLOCAL", uc($opt_bootlocal)));
             } else {
-		&eprint("Invalid value specified, acceptable values are \"UNDEF\", \"NORMAL\", or \"EXIT\" for bootlocal!\n");
-        	return();	
-	    }
+                &eprint("Invalid value specified, acceptable values are \"UNDEF\", \"NORMAL\", or \"EXIT\" for bootlocal!\n");
+                return();
+            }
         }
 
         if (@opt_master) {
