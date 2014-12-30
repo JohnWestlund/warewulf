@@ -440,6 +440,80 @@ bootlocal()
     return $self->get("bootlocal");
 }
 
+=item bootloader($value)
+
+Set or return bootloader:
+
+$value - The disk to install the bootloader onto. i.e. sda, sdb, etc...
+=cut
+
+sub bootloader()
+{
+    my $self = shift;
+    my @val = @_;
+
+    if ($_[0] eq "UNDEF") {
+        @val = undef;
+    }
+
+    return $self->prop("bootloader", qr/^([a-zA-Z0-9_\/]+)$/, @val);
+}
+
+=item diskformat($value)
+
+Set or return diskformat:
+
+$value = The comma seperated list of partations to format. i.e. sda1,sda2
+=cut
+
+sub diskformat()
+{
+    my $self = shift;
+    my @val = @_
+
+    if ($_[0] eq "UNDEF") {
+        @val = undef;
+    }
+
+    return $self->prop("diskformat", qr/^([a-zA-Z0-9_,]+)$/, @val);
+}
+
+=item diskpartition($value)
+
+Set or return diskpartition:
+
+$value - The disk to partition during bootstrap
+=cut
+
+sub diskpartition()
+{
+    my $self = shift;
+    my @val = @_;
+
+    if ($_[0] eq "UNDEF") {
+        @val = undef;
+    }
+
+    return $self->prop("diskpartition", qr/^([a-zA-Z0-9_]+)$/, @val);
+}
+
+=item filesystems($value)
+
+Set or return FILESYSTEMS for disk provisioning
+=cut
+
+sub filesystems()
+{
+    my ($self, $value) = @_;
+
+    # A better way??
+    if (defined($value)) {
+        $self->set("filesystems", $value);
+    }
+
+    return $self->get("filesystems");
+}
+
 =back
 
 =head1 SEE ALSO

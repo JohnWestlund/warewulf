@@ -131,3 +131,8 @@ Mon Mar 11 16:47:40 2013     Jason Stover(jms) Matias Cabral(macabral)
 
 Implementation of MIC support for Warewulf. 85-michost
 ----------------------------------------------------------------------
+Tue Dec 30 14:07:26-0600 2014                       Jason Stover (jms)
+
+Add in stateful provisioning options to Provision Cli Module. This
+really still needs more testing.
+----------------------------------------------------------------------
