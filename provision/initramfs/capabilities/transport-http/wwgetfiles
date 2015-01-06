@@ -103,10 +103,14 @@ while true; do
                 else
                     echo "ERROR: Could not download $name"
                     rm -f $NEWROOT/$path.ww $NEWROOT/$path.ww$timestamp
+                    # Remove lock file
+                    rm -f ${LOCKF}
                     exit 2
                 fi
             done
             rm -f $TMPFILE
+            # Remove lock file
+            rm -f ${LOCKF}
             exit 0
         fi
         rm -f $TMPFILE
@@ -115,6 +119,4 @@ while true; do
     throttled_sleep
 done
 
-# Remove lock file
-rm -f ${LOCKF}
 
