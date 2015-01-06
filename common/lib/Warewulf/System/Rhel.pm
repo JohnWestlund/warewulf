@@ -68,7 +68,15 @@ service($$$)
 
     &dprint("Running service command: $service, $command\n");
 
-    if (-x "/etc/init.d/$service") {
+    if ( -x "/bin/systemctl" ) {
+        if ( ! system("/bin/systemctl $command $service.service") ) {
+            open(ERROR, "/bin/journalctl -x -u --since 2>&1 |");
+            while(<ERROR>) {
+                $self->{"OUTPUT"} .= $_;
+            }
+            close ERROR;
+        }
+    } elsif (-x "/etc/init.d/$service") {
         $self->{"OUTPUT"} = ();
         open(SERVICE, "/etc/init.d/$service $command 2>&1|");
         while(<SERVICE>) {
@@ -82,15 +90,8 @@ service($$$)
             &dprint("Error running: /etc/init.d/$service $command\n");
         }
     } 
-    elsif (-e "/usr/lib/systemd/system/$service.service") {
-        $self->{"OUTPUT"} = ();
-        open(SERVICE, "/usr/bin/systemctl $command $service 2>&1|");
-        while(<SERVICE>) {
-            $self->{"OUTPUT"} .= $_;
-        }
 	if ($self->{"OUTPUT"}) {
-            chomp($self->{"OUTPUT"});
-        }
+        chomp($self->{"OUTPUT"});
         if (close SERVICE) {
             &dprint("Service command ran successfully\n");
             return(1);
