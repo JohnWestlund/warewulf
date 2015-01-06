@@ -69,13 +69,7 @@ service($$$)
     &dprint("Running service command: $service, $command\n");
 
     if ( -x "/bin/systemctl" ) {
-        if ( ! system("/bin/systemctl $command $service.service") ) {
-            open(ERROR, "/bin/journalctl -x -u --since 2>&1 |");
-            while(<ERROR>) {
-                $self->{"OUTPUT"} .= $_;
-            }
-            close ERROR;
-        }
+        system("/bin/systemctl $command $service.service");
     } elsif (-x "/etc/init.d/$service") {
         $self->{"OUTPUT"} = ();
         open(SERVICE, "/etc/init.d/$service $command 2>&1|");
@@ -103,6 +97,8 @@ service($$$)
 }
 
 
+
+
 =item chkconfig($name, $command)
 
 Enable a service script to be enabled or disabled at boot (e.g.
@@ -115,7 +111,9 @@ chkconfig($$$)
 {
     my ($self, $service, $command) = @_;
 
-    if (-x "/sbin/chkconfig") {
+    if ( -x "/bin/systemctl" ) {
+        system("/bin/systemctl enable $service.service");
+    } elsif (-x "/sbin/chkconfig") {
         open(CHKCONFIG, "/sbin/chkconfig $service $command 2>&1|");
         while(<CHKCONFIG>) {
             $self->{"OUTPUT"} .= $_;
