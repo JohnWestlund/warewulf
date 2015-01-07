@@ -469,7 +469,7 @@ $value = The comma seperated list of partations to format. i.e. sda1,sda2
 sub diskformat()
 {
     my $self = shift;
-    my @val = @_
+    my @val = @_;
 
     if ($_[0] eq "UNDEF") {
         @val = undef;
