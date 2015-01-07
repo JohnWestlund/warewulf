@@ -411,19 +411,20 @@ if (-d $opt_chroot) {
             $count++;
         }
 
-        &nprint("Compiling VNFS\n");
+        &nprint("Building file list\n");
 
         # Building list of files to archive into CPIO
         open($filepipe, "> $tmpfile");
         find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
         close $filepipe;
 
+        &nprint("Compiling and compressing VNFS\n");
         # Changing directory and calling CPIO
         chdir($opt_chroot);
         open($cpio_pipe, "cat $tmpfile | cpio --quiet -o -H newc |");
 
         # Pulling the CPIO output from the above process and running it through
-        # the gzip pipe.
+        # the existing gzip pipe.
         &iprint("Waiting for GZIP to complete...\n");
         while (<$cpio_pipe>) {
             print $gzip_pipe $_;
