@@ -188,3 +188,47 @@ wwreqroot() {
 }
 
 
+package_check() {
+    PACKAGE=$1
+    if [ -x /bin/rpm ]; then
+        wwprint "Checking to see if '$PACKAGE' is installed "
+        if wwtest rpm -q $PACKAGE; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+service_enable() {
+    SERVICE=$1
+    if [ -x "/etc/rc.d/init.d/$SERVICE" ]; then
+        if wwrun chkconfig $SERVICE on; then
+            return 0
+        fi
+    elif [ -x "/bin/systemctl" ]; then
+        if wwrun /bin/systemctl -q enable $SERVICE.service; then
+            return 0
+        fi
+    fi
+
+    wwprint "Could not enable service '$SERVICE'\n" error
+    return 1
+}
+
+
+service_restart() {
+    SERVICE=$1
+    if [ -x "/etc/rc.d/init.d/$SERVICE" ]; then
+        if wwrun /etc/rc.d/init.d/$SERVICE restart >/dev/null; then
+            return 0
+        fi
+    elif [ -x "/bin/systemctl" ]; then
+        if wwrun /bin/systemctl -q restart $SERVICE.service; then
+            return 0
+        fi
+    fi
+
+    wwprint "Could not (re)start service '$SERVICE'\n" error
+    return 1
+}
+
