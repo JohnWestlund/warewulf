@@ -365,7 +365,12 @@ persist()
         if (! $digest1 or $digest1 ne $digest2) {
             &dprint("Restarting DHCPD service\n");
             if (! $system->service("dhcpd", "restart")) {
-                &eprint($system->output() ."\n");
+                my $output = $system->output();
+                if ( $output ) {
+                    &eprint("$output\n");
+                } else {
+                    &eprint("There was an error restarting the DHCPD server\n");
+                }
             }
         } else {
             &dprint("Not restarting DHCPD service\n");
