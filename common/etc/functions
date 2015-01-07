@@ -195,6 +195,9 @@ package_check() {
         if wwtest rpm -q $PACKAGE; then
             return 0
         fi
+    else
+        # WE NEED DEBIAN SUPPORT IN HERE ASAP!!!
+        wwprint "Running on a non-RPM based system, waiting for code!\n"
     fi
     return 1
 }
