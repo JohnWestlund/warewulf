@@ -14,7 +14,7 @@ BuildRoot: %{?_tmppath}/%{name}-%{version}-%{release}-root
 Requires: perl-DBD-MySQL
 
 %if %{rhel} >= 7
-PreReq: mariadb-server
+Requires(pre): mariadb-server
 %else
 PreReq: mysql-server
 %endif
@@ -71,6 +71,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0644, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/database.conf
 %attr(0640, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/database-root.conf
 %attr(0644, root, warewulf) %config(noreplace) %{_sysconfdir}/warewulf/defaults/node.conf
+%{_sysconfdir}/bash_completion.d/*
 %{_bindir}/*
 %{_datadir}/warewulf/
 %{_libexecdir}/warewulf/wwinit
