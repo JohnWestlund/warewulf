@@ -15,6 +15,10 @@ E2FSPROGS_SOURCE = $(top_srcdir)/3rd_party/GPL/e2fsprogs-$(E2FSPROGS_VERSION).ta
 E2FSPROGS_DIR = e2fsprogs-$(E2FSPROGS_VERSION)
 E2FSPROGS_CONFIGARGS = --disable-testio-debug --disable-debugfs --disable-imager --disable-resizer  --disable-defrag --disable-fsck --disable-tls --disable-uuidd --disable-nls --disable-checker --disable-profile
 
+LIBARCHIVE_VERSION = 3.1.2
+LIBARCHIVE_SOURCE = $(top_srcdir)/3rd_party/BSD/libarchive-$(LIBARCHIVE_VERSION).tar.gz
+LIBARCHIVE_DIR = libarchive-$(LIBARCHIVE_VERSION)
+LIBARCHIVE_CONFIGARGS = --enable-bsdtar=static --disable-bsdcpio --enable-xattr --enable-acl --enable-static --disable-shared  --without-zlib --without-bz2lib --without-lzmadec --without-iconv --without-lzma --without-lzo2 --without-nettle --without-openssl --without-xml2 --without-expat
 
 e2fsprogs:
 	@ if [ ! -d "_work/$(E2FSPROGS_DIR)" ]; then \
@@ -48,8 +52,21 @@ busybox:
 		make -C _work/$(BUSYBOX_DIR) install ;\
 	fi
 
+libarchive:
+	@ if [ ! -d "_work/$(LIBARCHIVE_DIR)" ]; then \
+		echo "Preparing to build libarchive" ;\
+		mkdir -p _work/ ;\
+        echo In directory `pwd` ;\
+		tar xzf $(LIBARCHIVE_SOURCE) -C _work/ ;\
+	fi
+	@ if [ ! -f "_work/$(LIBARCHIVE_DIR)/" ]; then \
+		echo "Building libarchive" ;\
+		(cd _work/$(LIBARCHIVE_DIR)/; ./configure $(LIBARCHIVE_CONFIGARGS)) ;\
+		make -C _work/$(LIBARCHIVE_DIR);\
+	fi
 
-rootfs: busybox e2fsprogs
+
+rootfs: busybox e2fsprogs libarchive
 	rm -rf rootfs
 	mkdir rootfs
 	mkdir rootfs/bin
@@ -65,6 +82,7 @@ rootfs: busybox e2fsprogs
 	cp -a _work/$(BUSYBOX_DIR)/_install/* rootfs/
 	cp _work/$(E2FSPROGS_DIR)/misc/mke2fs rootfs/sbin/mkfs.ext4
 	ln -s mkfs.ext4 rootfs/sbin/mkfs.ext3
+	cp -a _work/$(LIBARCHIVE_DIR)/bsdtar rootfs/bin/bsdtar
 	cp -L --parents /lib*/ld-linux* rootfs/
 	find rootfs -type f -perm -o+x  -print | grep -v ld-linux | xargs ldd | grep "=>" | awk '{print $$3}' | grep "^/" | sort | uniq | while read i; do cp -L --parents $$i rootfs/; done
 	find rootfs -type f -perm -o+x -print | xargs strip -g
