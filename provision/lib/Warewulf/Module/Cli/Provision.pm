@@ -627,7 +627,7 @@ exec()
                 if (uc($opt_diskformat) eq "UNDEF") {
                     push(@changes, sprintf("       DEL: %-20s\n", "DISKFORMAT"));
                 } else {
-                    push(@changes, sprintf("       SET: %-20 = %s\n", "DISKFORMAT", $opt_diskformat));
+                    push(@changes, sprintf("       SET: %-20s = %s\n", "DISKFORMAT", $opt_diskformat));
                 }
             } else {
                 &eprint("Invalid option for DISKFORMAT.\n");
