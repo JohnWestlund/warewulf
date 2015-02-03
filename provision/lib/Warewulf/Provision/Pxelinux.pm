@@ -251,7 +251,7 @@ update()
                 print PXELINUX "KERNEL bootstrap/$bootstrapid/kernel\n";
                 print PXELINUX "APPEND ro initrd=bootstrap/$bootstrapid/initfs.gz wwhostname=$hostname ";
                 if ($console) {
-                    print PXELINUX "console=$console ";
+                    print PXELINUX "console=tty0 console=$console ";
                 }
                 if (@kargs) {
                     print PXELINUX join(" ", @kargs) . " ";
