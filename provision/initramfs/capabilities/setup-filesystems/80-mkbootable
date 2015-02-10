@@ -29,8 +29,41 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                 chroot $NEWROOT /sbin/mkinitrd -f $INITRD $KERNELVERSION
                 umount $NEWROOT/sys
             fi
+            if [ -z "${WWKARGS}" ]; then
+                WWKARGS="quiet"
+            fi
+            if [ -n "${WWCONSOLE}" ]; then
+                # Parse the kernel console option for serial settings for grub
+                sed_serial() { echo $1 | sed -nr "s/.*ttyS([0-9]),([0-9]{4,6})([n,o,e])?([5-8])?(r)?.*/\\${2}/p"; }
+                SERIALUNIT=`sed_serial ${WWCONSOLE} 1`
+                SERIALSPEED=`sed_serial ${WWCONSOLE} 2`
+                if [ -z $SERIALSPEED ]; then
+                    SERIALSPEED=115200
+                fi
+                SERIALPARITY=`sed_serial ${WWCONSOLE} 3`
+                if [ -z $SERIALPARITY ] || [ "$SERIALPARITY" = "n" ]; then
+                    SERIALPARITY=no
+                elif [ $SERIALPARITY = "o" ]; then
+                    SERIALPARITY=odd
+                elif [ $SERIALPARITY = "e" ]; then
+                    SERIALPARITY=even
+                fi
+                SERIALWORD=`sed_serial ${WWCONSOLE} 4`
+                if [ -z $SERIALWORD ]; then
+                    SERIALWORD=8
+                fi
+            fi
 
             if [ -x "$NEWROOT/usr/sbin/grub2-install" ]; then
+                if [ -n "${WWCONSOLE}" ]; then
+                    echo "GRUB_CMDLINE_LINUX='${WWKARGS} console=tty0 console=${WWCONSOLE}'" >> $NEWROOT/etc/default/grub
+                    if [ -n SERIALUNIT ]; then
+                        echo "GRUB_TERMINAL='console serial'" >> $NEWROOT/etc/default/grub
+                        echo "GRUB_SERIAL_COMMAND='serial --speed=${SERIALSPEED} --unit=${SERIALUNIT} --word=${SERIALWORD} --parity=${SERIALPARITY}'" >> $NEWROOT/etc/default/grub
+                    fi
+                else
+                    echo "GRUB_CMDLINE_LINUX='${WWKARGS}'" >> $NEWROOT/etc/default/grub
+                fi                    
                 chroot $NEWROOT /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg >/dev/null
 
                 if chroot $NEWROOT /usr/sbin/grub2-install $WWBOOTLOADER >/dev/null; then
@@ -52,14 +85,15 @@ if [ -n "$WWBOOTLOADER" -a -f "/tmp/rootdev" ]; then
                             KERNEL=${KERNEL##boot/}
                         fi
                     fi
-                    if [ -z "${WWKARGS}" ]; then
-                        WWKARGS="quiet"
-                    fi
 
                     echo "# This file was written by Warewulf bootstrap (capability setup-filesystems)" > $NEWROOT/boot/grub/device.map
                     echo "(hd0) $WWBOOTLOADER" >> $NEWROOT/boot/grub/device.map
 
                     echo "# This file was written by Warewulf bootstrap (capability setup-filesystems)" > $NEWROOT/boot/grub/grub.conf
+                    if [ -n $SERIALUNIT ]; then
+                        echo "serial --speed=${SERIALSPEED} --unit=${SERIALUNIT} --word=${SERIALWORD} --parity=${SERIALPARITY}" >> $NEWROOT/boot/grub/grub.conf
+                        echo "terminal_input console serial; terminal_output console serial" >> $NEWROOT/boot/grub/grub.conf
+                    fi
                     echo "default 0" >>$NEWROOT/boot/grub/grub.conf
                     echo "timeout 10" >>$NEWROOT/boot/grub/grub.conf
                     echo "root (hd0,0)" >>$NEWROOT/boot/grub/grub.conf
