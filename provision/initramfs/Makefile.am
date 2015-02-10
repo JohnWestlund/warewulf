@@ -13,7 +13,7 @@ BUSYBOX_PATCHES = $(top_srcdir)/3rd_party/GPL/busybox-1.22.1-wget_progress_defau
 E2FSPROGS_VERSION = 1.42.12
 E2FSPROGS_SOURCE = $(top_srcdir)/3rd_party/GPL/e2fsprogs-$(E2FSPROGS_VERSION).tar.gz
 E2FSPROGS_DIR = e2fsprogs-$(E2FSPROGS_VERSION)
-E2FSPROGS_CONFIGARGS = --disable-testio-debug --disable-debugfs --disable-imager --disable-resizer  --disable-defrag --disable-fsck --disable-tls --disable-uuidd --disable-nls --disable-checker --disable-profile
+E2FSPROGS_CONFIGARGS = --disable-testio-debug --disable-debugfs --disable-imager --disable-resizer  --disable-defrag --disable-fsck --disable-tls --disable-uuidd --disable-nls --disable-profile
 
 LIBARCHIVE_VERSION = 3.1.2
 LIBARCHIVE_SOURCE = $(top_srcdir)/3rd_party/BSD/libarchive-$(LIBARCHIVE_VERSION).tar.gz
