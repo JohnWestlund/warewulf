@@ -20,8 +20,8 @@ fi
 
 wwreqroot
 
-if wwpackage_check tftp-server tftpd tftpd-hpa; then
-    if wwservice_activate tftpd tftp tftpd-hpa; then
+if wwpackage_check dhcp dhcpd dhcp-server dhcpd-server; then
+    if wwservice_activate dhcp dhcpd; then
         exit 0
     fi
 fi
