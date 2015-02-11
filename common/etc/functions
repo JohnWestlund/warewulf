@@ -104,7 +104,7 @@ reply_error() {
 wwprint() {
     MSG=$1
     COLOR=$GRAY
-    COMMAND=`basename $0 | sed -e 's/^[0-9]*\-//' | sed -e 's/\.init$//'`
+    COMMAND=`basename $0 | sed -e 's/^[0-9]*-\?//' | sed -e 's/\.init$//'`
 
     case $2 in
         white|WHITE)            COLOR=$WHITE ;;
@@ -114,7 +114,7 @@ wwprint() {
         blue|BLUE)              COLOR=$BLUE ;;
     esac
 
-    echo -ne "$NORMAL$COMMAND:\\033[14G $COLOR$MSG$NORMAL"
+    echo -ne "$WHITE$COMMAND$NORMAL:\\033[14G $COLOR$MSG$NORMAL"
 }
 
 wwaction() {
@@ -188,76 +188,74 @@ wwreqroot() {
 }
 
 
-package_check() {
-    PACKAGE=$1
-    if [ -x /bin/rpm ]; then
-        wwprint "Checking to see if RPM '$PACKAGE' is installed "
-        if wwtest rpm -q $PACKAGE; then
-            return 0
-        fi
-    elif [ -x /bin/dpkg ]; then
-        wwprint "Checking to see if DEB '$PACKAGE' is installed "
-        if wwtest dpkg -l $PACKAGE; then
-            return 0
-        fi
-    fi
-    return 1
-}
-
-service_findname() {
-    for i in "$@"; do
-        if [ -x "/etc/rc.d/init.d/$i" ]; then
-            echo $i
-            break
-        elif [ -x "/bin/systemctl" ]; then
-            if systemctl list-unit-files --type=service | grep -q "$i.service"; then
-                echo $i
-                break
+wwpackage_check() {
+    for PACKAGE in "$@"; do
+        if [ -x /bin/rpm ]; then
+            wwprint "Checking to see if RPM '$PACKAGE' is installed "
+            if wwtest rpm -q $PACKAGE; then
+                return 0
             fi
-        elif [ -x "/sbin/initctl" ]; then
-            if initctl status $i >/dev/null 2>&1; then
-                echo $i
-                break
+        elif [ -x /bin/dpkg ]; then
+            wwprint "Checking to see if DEB '$PACKAGE' is installed "
+            if wwtest dpkg -l $PACKAGE; then
+                return 0
             fi
         fi
     done
+    return 1
+}
+
+
+# this function will take an argument list of service names, and return
+# on the first match. This is useful for multi-distribution compatibility
+# that have different service names for the same service (e.g. ntp and
+# ntpd).
+wwservice_activate() {
+    if test -x "/bin/initctl" || test -x "/usr/sbin/update-rc.d" ; then
+        # We need to add entries for initctl and update-rc.d below! HELP!
+        wwprint "You will need to manually enable and (re)start: $@\n" warn
+    fi
+    for SERVICE in "$@"; do
+        if [ -e "/etc/xinetd.d/$SERVICE" ]; then
+            wwprint "Activating xinetd service: $1\n"
+            wwrun sed -ie 's@\(disable\s*=\s*\)\S*@\1no@' /etc/xinetd.d/$SERVICE
+            wwservice_activate xinetd
+            return 0
+        elif [ -x "/etc/rc.d/init.d/$SERVICE" ]; then
+            wwprint "Activating system service: $1\n"
+            if [ -x "/sbin/chkconfig" ]; then
+                wwrun chkconfig $SERVICE on
+            fi
+            if wwrun /etc/rc.d/init.d/$SERVICE restart; then
+                return 0
+            fi
+        elif test -x "/bin/systemctl" && systemctl list-unit-files --type=service | egrep -q "^$SERVICE.service"; then
+            wwprint "Activating Systemd service: $1\n"
+            if wwrun /bin/systemctl -q enable $SERVICE.service; then
+                if wwrun /bin/systemctl -q restart $SERVICE.service; then
+                    return 0
+                fi
+            fi
+        fi
+    done
+
+    wwprint "Could not enable service ($1)\n" error
+    return 1
+}
+
+
+service_findname() {
+    wwprint "service_findname() has been depricated" warn
+    return 0
 }
 
 service_enable() {
-    SERVICE=$1
-    if [ -x "/etc/rc.d/init.d/$SERVICE" ]; then
-        if wwrun chkconfig $SERVICE on; then
-            return 0
-        fi
-    elif [ -x "/bin/systemctl" ]; then
-        if wwrun /bin/systemctl -q enable $SERVICE.service; then
-            return 0
-        fi
-    elif [ -x "/bin/initctl" ]; then
-        if wwrun /bin/systemctl -q enable $SERVICE.service; then
-            return 0
-        fi
-        
-    fi
-
-    wwprint "Could not enable service '$SERVICE'\n" error
-    return 1
+    wwprint "service_enable() has been depricated" warn
+    return 0
 }
 
-
 service_restart() {
-    SERVICE=$1
-    if [ -x "/etc/rc.d/init.d/$SERVICE" ]; then
-        if wwrun /etc/rc.d/init.d/$SERVICE restart >/dev/null; then
-            return 0
-        fi
-    elif [ -x "/bin/systemctl" ]; then
-        if wwrun /bin/systemctl -q restart $SERVICE.service; then
-            return 0
-        fi
-    fi
-
-    wwprint "Could not (re)start service '$SERVICE'\n" error
-    return 1
+    wwprint "service_restart() has been depricated" warn
+    return 0
 }
 

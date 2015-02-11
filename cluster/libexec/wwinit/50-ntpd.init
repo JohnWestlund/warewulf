@@ -20,20 +20,11 @@ fi
 
 wwreqroot
 
-if [ -x "/etc/rc.d/init.d/ntpd" ]; then
-    SERVICE_NAME="ntpd"
-elif [ -x "/etc/init.d/ntp" ]; then
-    SERVICE_NAME="ntp"
-elif [ -e "/usr/lib/systemd/system/ntpd.service" ]; then
-    SERVICE_NAME="ntpd"
-else
-    wwprint " ! ERROR: NTP client not found" error;
-    reply_error;
-    exit 255;
+if [ ! -f "/etc/ntp.conf" ]; then
+    wwprint "Is NTP installed? /etc/ntp.conf is not present!\n" error
+    return 1
 fi
 
-
-RETVAL=1
 
 NETWORK=`perl -MWarewulf::Network -MWarewulf::Config -e 'print Warewulf::Network->new()->network(Warewulf::Config->new("provision.conf")->get("network device"));'`
 NETMASK=`perl -MWarewulf::Network -MWarewulf::Config -e 'print Warewulf::Network->new()->netmask(Warewulf::Config->new("provision.conf")->get("network device"));'`
@@ -91,12 +82,8 @@ EOF
 
 wwprint "Configured NTP services\n"
 
-if [[ -z "$( which update-rc.d 2>/dev/null )" ]]; then
-    wwrun chkconfig $SERVICE_NAME on
-else
-    wwrun update-rc.d $SERVICE_NAME defaults 3 ;
-fi
+wwservice_activate ntp ntpd
+RETVAL=$?
 
-wwrun service $SERVICE_NAME restart
 
 exit $RETVAL

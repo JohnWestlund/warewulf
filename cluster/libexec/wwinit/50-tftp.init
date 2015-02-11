@@ -20,23 +20,6 @@ fi
 
 wwreqroot
 
-if [ -x "/etc/init.d/tftpd-hpa" ]; then
-    SERVICE_NAME="tftpd-hpa"
-elif [[ -x "/etc/rc.d/init.d/tftp" || -f "/etc/xinetd.d/tftp" ]]; then
-    SERVICE_NAME="tftp"
-else
-    wwprint " ! ERROR: tftp client not found" error;
-    reply_error;
-    exit 1; 
-fi
-
-if [[ -z "$( which update-rc.d  2>/dev/null)" ]]; then
-    wwrun /sbin/chkconfig xinetd on || exit 1;
-    wwrun /sbin/chkconfig $SERVICE_NAME on || exit 1;
-    wwrun /sbin/service xinetd restart || exit 1;
-else
-    wwrun update-rc.d $SERVICE_NAME defaults 3 ;
-    wwrun service $SERVICE_NAME restart || exit 1
-fi
-
-exit 0
+wwpackage_check tftp-server tftpd tftpd-hpa
+wwservice_activate tftpd tftp tftpd-hpa
+exit $?

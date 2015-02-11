@@ -23,12 +23,10 @@ wwreqroot
 DATASTORE=`egrep "^database driver\s*=" $WAREWULF_SYSCONFDIR/warewulf/database.conf | awk -F = '{print $2}' | sed -e 's/\s*//g'`
 
 if [ "$DATASTORE" = "mysql" ]; then
-    if package_check mysql-server; then
-        service_enable mysqld
-        service_restart mysqld
-    elif package_check mariadb-server; then
-        service_enable mariadb
-        service_restart mariadb
+    if wwpackage_check mysql-server; then
+        wwservice_activate mysqld
+    elif wwpackage_check mariadb-server; then
+        wwservice_activate mariadb
     else
         wwprint "No database package seems to exist for mysql!\n" error
         exit 255
