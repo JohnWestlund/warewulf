@@ -349,7 +349,7 @@ exec()
             my $object_count = $objSet->count();
 
             if (! @ARGV) {
-                &eprint("To make changes, you must provide a list of files to operate on.\n");
+                &eprint("To make deletions, you must provide a list of files to operate on.\n");
                 return undef;
             }
 

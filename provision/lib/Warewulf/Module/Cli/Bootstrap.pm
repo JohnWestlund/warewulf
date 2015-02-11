@@ -278,6 +278,12 @@ exec()
 
             if ($command eq "delete") {
                 my $object_count = $objSet->count();
+
+                if (! @ARGV) {
+                    &eprint("To make deletions, you must provide a list of bootstraps to operate on.\n");
+                    return undef;
+                }
+
                 if ($term->interactive()) {
                     print "Are you sure you want to delete $object_count bootstrap(s):\n\n";
                     foreach my $o ($objSet->get_list()) {
