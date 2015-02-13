@@ -1,0 +1,29 @@
+#DESC: Scientific Linux 7
+
+# The general RHEL include has all of the necessary functions, but requires
+# some basic variables specific to each chroot type to be defined.
+. include-rhel
+
+# Define the location of the YUM repository
+if [ -n "$YUM_MIRROR_BASE" -a -z "$YUM_MIRROR" ]; then
+    YUM_MIRROR="${YUM_MIRROR_BASE}/7x/\$basearch/os/"
+else
+    YUM_MIRROR="${YUM_MIRROR:-http://ftp.scientificlinux.org/linux/scientific/7x/\$basearch/os/}"
+fi
+
+# Install only what is necessary/specific for this distribution
+#PKGLIST="@core lsof nfs-utils pciutils psmisc quota rdate rpcbind rpm \
+#    rsync strace tcp_wrappers wget which"
+
+PKGLIST="basesystem bash biosdevname btrfs-progs bzip2 chkconfig
+    coreutils cpio cpuspeed cpufrequtils cronie crontabs dhclient
+    dmidecode e2fsprogs ethtool filesystem findutils gawk grep gzip
+    initscripts iproute iputils less libsysfs linux-firmware lsof lzo
+    mingetty mktemp module-init-tools net-tools nfs-utils
+    openssh-clients openssh-server pam parted pciutils portmap procps
+    psmisc rdate redhat-release rootfiles rpm rsync rsyslog sed setup
+    shadow-utils strace systemd tar tcp_wrappers tzdata udev
+    util-linux vim-minimal wget which words xfsprogs yum yum-conf-sl7x
+    zlib"
+
+# vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:

@@ -29,7 +29,7 @@ dnl# Try to get SVN revision
 SVNVERSION=`svnversion -c | sed 's/^.*://g' 2>/dev/null || echo 0000`
 if test "$SVNVERSION" = "0000" ; then
     SVNVERSION=`svnversion 2>/dev/null || echo 0000`
-elif test "$SVNVERSION" = "exported" ; then
+elif test "$SVNVERSION" = "exported" -o "$SVNVERSION" = "Unversioned directory" ; then
     SVNVERSION=`git show -s --pretty=format:%h 2>/dev/null`
     if test -n "$SVNVERSION" ; then
         SVNVERSION=`git svn find-rev $SVNVERSION`
