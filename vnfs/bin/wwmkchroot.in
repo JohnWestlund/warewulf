@@ -77,8 +77,8 @@ fi
 if [ -d "$libexecdir/warewulf/wwmkchroot" ]; then
     pushd $libexecdir/warewulf/wwmkchroot >/dev/null
     test -n "$VERBOSE" && echo "Loading general template functions"
-    if [ -f "functions" ]; then
-        . "functions"
+    if [ -f "./functions" ]; then
+        . "./functions"
     else
         echo "$0: Error: Can not find $libexecdir/warewulf/wwmkchroot/functions"
         exit 1;
