@@ -508,15 +508,21 @@ file_import()
         $binstore->put_chunk($statinfo[6]);
         $digest->add($statinfo[6]);
         $import_size += length($statinfo[6]);
+    } elsif (-d _) {
+        my $target = $path;
+
+        $format = "directory";
+        &dprint("Importing directory: $path\n");
+        $binstore->put_chunk($target);
+        $digest->add($target);
+        $import_size += length($target);
     } else {
         &dprintf("Importing %s $path\n",
-                 ((S_ISDIR($statinfo[2]))
-                  ? ("directory")
-                  : ((S_ISFIFO($statinfo[2]))
-                     ? ("FIFO (named pipe)")
-                     : ((S_ISSOCK($statinfo[2]))
-                        ? ("UNIX socket")
-                        : ("<unknown type>")))));
+                 ((S_ISFIFO($statinfo[2]))
+                  ? ("FIFO (named pipe)")
+                  : ((S_ISSOCK($statinfo[2]))
+                     ? ("UNIX socket")
+                     : ("<unknown type>"))));
     }
     $self->mode($statinfo[2]);
     $self->filetype($statinfo[2]);

@@ -80,6 +80,9 @@ while true; do
                         mkdir -m $mode -p "$NEWROOT/$path"
                         chown -h $uid "$NEWROOT/$path"
                         chgrp -h $gid "$NEWROOT/$path"
+                        if [ -f "$NEWROOT/$path.ww$timestamp" ]; then
+                            rm -f "$NEWROOT/$path.ww$timestamp";
+                        fi
                     else
                         if [ "$ftype" = "b" -o "$ftype" = "c" ]; then
                             devno=`cat "$NEWROOT/$path.ww$timestamp"`
