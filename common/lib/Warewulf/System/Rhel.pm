@@ -143,7 +143,7 @@ output($)
 {
     my $self = shift;
 
-    return(defined($self->{"OUTPUT"}) ? $self->{"OUTPUT"} : undef);
+    return(defined($self->{"OUTPUT"}) ? $self->{"OUTPUT"} : "");
 }
 
 

@@ -142,7 +142,7 @@ return the output cache on a command
 sub output($) {
     my $self = shift;
 
-    return(defined($self->{"OUTPUT"}) ? $self->{"OUTPUT"} : undef);
+    return(defined($self->{"OUTPUT"}) ? $self->{"OUTPUT"} : "");
 }
 
 
