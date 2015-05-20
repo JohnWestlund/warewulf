@@ -96,9 +96,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %{_sysconfdir}/warewulf/provision.conf
 %config(noreplace) %{_sysconfdir}/warewulf/livesync.conf
 %config(noreplace) %{_sysconfdir}/warewulf/defaults/provision.conf
-%{_bindir}/*
 %{_localstatedir}/warewulf/*
-%{_datadir}/warewulf/*
 %{perl_vendorlib}/Warewulf/Bootstrap.pm
 %{perl_vendorlib}/Warewulf/Provision.pm
 %{perl_vendorlib}/Warewulf/Vnfs.pm
@@ -115,7 +113,13 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-, root, root)
 %config(noreplace) %{_sysconfdir}/warewulf/dhcpd-template.conf
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/warewulf-httpd.conf
+%{_bindir}/*
 %attr(0750, root, apache) %{_libexecdir}/warewulf/cgi-bin/
+%{_datadir}/warewulf/ldlinux.c32
+%{_datadir}/warewulf/lpxelinux.0
+%{_datadir}/warewulf/pxelinux.0
+%{_datadir}/warewulf/syslinux32.efi
+%{_datadir}/warewulf/syslinux64.efi
 %{perl_vendorlib}/Warewulf/Event/Bootstrap.pm
 %{perl_vendorlib}/Warewulf/Event/Dhcp.pm
 %{perl_vendorlib}/Warewulf/Event/Pxelinux.pm

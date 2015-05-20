@@ -1,6 +1,6 @@
 SUBDIRS = GPL BSD
 
-SYSLINUXTARGETS = lpxelinux.0 pxelinux.0 ldlinux.c32
+SYSLINUXTARGETS = lpxelinux.0 pxelinux.0 ldlinux.c32 syslinux64.efi syslinux32.efi
 
 MAINTAINERCLEANFILES = Makefile.in
 
@@ -27,6 +27,12 @@ ldlinux.c32: syslinuxprepare
 
 pxelinux.0: syslinuxprepare
 	cp _work/$(SYSLINUX_DIR)/bios/core/pxelinux.0 .
+
+syslinux64.efi: syslinuxprepare
+	cp _work/$(SYSLINUX_DIR)/efi64/efi/syslinux.efi syslinux64.efi
+
+syslinux32.efi: syslinuxprepare
+	cp _work/$(SYSLINUX_DIR)/efi32/efi/syslinux.efi syslinux32.efi
 
 install-data-local: $(SYSLINUXTARGETS)
 	mkdir -p $(DESTDIR)/$(datadir)/warewulf/
