@@ -1,6 +1,6 @@
 SUBDIRS = GPL BSD
 
-SYSLINUXTARGETS = lpxelinux.0 pxelinux.0 ldlinux.c32 syslinux64.efi syslinux32.efi
+SYSLINUXTARGETS = lpxelinux.0 pxelinux.0 ldlinux.c32 syslinux64.efi syslinux32.efi ldlinux.e32 ldlinux.e64
 
 MAINTAINERCLEANFILES = Makefile.in
 
@@ -24,6 +24,12 @@ lpxelinux.0: syslinuxprepare
 
 ldlinux.c32: syslinuxprepare
 	cp _work/$(SYSLINUX_DIR)/bios/com32/elflink/ldlinux/ldlinux.c32 .
+
+ldlinux.e32: syslinuxprepare
+	cp _work/$(SYSLINUX_DIR)/efi32/com32/elflink/ldlinux/ldlinux.e32 .
+
+ldlinux.e64: syslinuxprepar
+	cp _work/$(SYSLINUX_DIR)/efi64/com32/elflink/ldlinux/ldlinux.e64 .
 
 pxelinux.0: syslinuxprepare
 	cp _work/$(SYSLINUX_DIR)/bios/core/pxelinux.0 .

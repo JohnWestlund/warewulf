@@ -82,7 +82,7 @@ setup()
     my $self = shift;
     my $datadir = &Warewulf::ACVars::get("datadir");
     my $tftpdir = Warewulf::Provision::Tftp->new()->tftpdir();
-    my @tftpfiles = ("pxelinux.0", "lpxelinux.0", "ldlinux.c32", "syslinux64.efi", "syslinux32.efi");
+    my @tftpfiles = ("pxelinux.0", "lpxelinux.0", "ldlinux.c32", "ldlinux.e32", "ldlinux.e64", "syslinux64.efi", "syslinux32.efi");
 
     if ($tftpdir) {
         foreach my $f (@tftpfiles) {
