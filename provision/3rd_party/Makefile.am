@@ -28,7 +28,7 @@ ldlinux.c32: syslinuxprepare
 ldlinux.e32: syslinuxprepare
 	cp _work/$(SYSLINUX_DIR)/efi32/com32/elflink/ldlinux/ldlinux.e32 .
 
-ldlinux.e64: syslinuxprepar
+ldlinux.e64: syslinuxprepare
 	cp _work/$(SYSLINUX_DIR)/efi64/com32/elflink/ldlinux/ldlinux.e64 .
 
 pxelinux.0: syslinuxprepare

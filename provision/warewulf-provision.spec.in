@@ -116,6 +116,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/*
 %attr(0750, root, apache) %{_libexecdir}/warewulf/cgi-bin/
 %{_datadir}/warewulf/ldlinux.c32
+%{_datadir}/warewulf/ldlinux.e32
+%{_datadir}/warewulf/ldlinux.e64
 %{_datadir}/warewulf/lpxelinux.0
 %{_datadir}/warewulf/pxelinux.0
 %{_datadir}/warewulf/syslinux32.efi
