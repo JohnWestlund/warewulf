@@ -82,7 +82,7 @@ reply_done() {
 }
 
 reply_success() {
-    echo -en "\\033[71G"
+    echo -en "\\033[72G"
     msg_green " SUCCESS\n"
 }
 
