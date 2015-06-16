@@ -33,7 +33,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 #########################
-# $Id: Network.pm 1333 2013-03-25 19:41:48Z mej $
+# $Id$
 #
 
 package Warewulf::Network;
@@ -125,7 +125,9 @@ ipaddr()
             }
             $buf = pack('a256', $device_clean);
             if (ioctl($socket, SIOCGIFADDR(), $buf) && (@address = unpack('x20 C4', $buf))) {
-                return join('.', @address);
+                my $addr = join('.', @address);
+                &dprint("Discovered IP address for $device: $addr\n");
+                return $addr;
             }
         } else {
             &dprint("Illegal characters used in network device name\n");
@@ -149,7 +151,7 @@ netmask()
     my ($self, $device) = @_;
 
     if ($device) {
-        &dprint("Retrieving netmask address for: $device\n");
+        &dprint("Retrieving Netmask address for: $device\n");
         if ($device =~ /^([a-zA-Z0-9\:\.]+)$/) {
             my $device_clean = $1;
             my ($socket, $buf);
@@ -161,7 +163,9 @@ netmask()
             }
             $buf = pack('a256', $device_clean);
             if (ioctl($socket, SIOCGIFNETMASK(), $buf) && (@address = unpack('x20 C4', $buf))) {
-                return join('.', @address);
+                my $addr = join('.', @address);
+                &dprint("Discovered Netmask for $device: $addr\n");
+                return $addr;
             }
         } else {
             &dprint("Illegal characters used in network device name\n");
@@ -185,7 +189,26 @@ network()
 {
     my ($self, $device) = @_;
 
-    return $self->calc_network($self->ipaddr($device), $self->netmask($device));
+    if ($device) {
+        &dprint("Retrieving Network address for: $device\n");
+        if ($device =~ /^([a-zA-Z0-9\:\.]+)$/) {
+            my $device_clean = $1;
+            my $ipaddr = $self->ipaddr($device);
+            my $netmask = $self->netmask($device);
+            if ($ipaddr and $netmask) {
+                my $network = $self->calc_network($ipaddr, $netmask);
+                if ($network) {
+                    &dprint("Discovered Network for $device: $network\n");
+                    return $network;
+                } else {
+                    &eprint("Error calculating network for $device_clean\n");
+                }
+            } else {
+                &eprint("Could not properly identify ipaddr/netmask for $device!\n");
+            }
+        }
+    }
+    return undef;
 }
 
 =item calc_prefix($device)
