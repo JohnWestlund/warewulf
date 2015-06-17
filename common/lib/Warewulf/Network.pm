@@ -128,6 +128,8 @@ ipaddr()
                 my $addr = join('.', @address);
                 &dprint("Discovered IP address for $device: $addr\n");
                 return $addr;
+            } else {
+                &eprint("Could not discover IP address on $device: ioctl call failed!\n");
             }
         } else {
             &dprint("Illegal characters used in network device name\n");
@@ -166,6 +168,8 @@ netmask()
                 my $addr = join('.', @address);
                 &dprint("Discovered Netmask for $device: $addr\n");
                 return $addr;
+            } else {
+                &eprint("Could not discover netmask on $device: ioctl call failed!\n");
             }
         } else {
             &dprint("Illegal characters used in network device name\n");
