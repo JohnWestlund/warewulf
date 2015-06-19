@@ -174,6 +174,7 @@ kargs()
 {
     my ($self, @strings) = @_;
     my $key = "kargs";
+    my $default = "quiet";
 
     if (scalar(@_) > 1) {
         my $name = $self->get("name");
@@ -193,7 +194,7 @@ kargs()
             $self->set($key, @new);
         }
     }
-    return $self->get($key);
+    return ($self->get($key) || $default);
 }
 
 
@@ -411,6 +412,32 @@ selinux()
 
 }
 
+
+=item ifrename($value)
+
+Set or return ifrename
+
+Value is boolean:
+    true:  >= 1
+    false: <= 0
+
+=cut
+
+sub
+ifrename()
+{
+    my ($self, $value) = @_;
+
+    if (defined($value)) {
+        if ($value <= 0) {
+            $self->set("ifrename", 0);
+        } else {
+            $self->set("ifrename", 1);
+        }
+    }
+
+    return $self->get("ifrename") || 0;
+}
 
 =item bootlocal($value)
 

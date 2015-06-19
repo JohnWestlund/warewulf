@@ -97,6 +97,7 @@ help()
     $h .= "         --bootlocal     Boot the node from the local disk (\"exit\" or \"normal\")\n";
     $h .= "         --console       Set a specific console for the kernel command line\n";
     $h .= "         --kargs         Define the kernel arguments (assumes \"quiet\" if UNDEF)\n";
+    $h .= "         --ifrename      Allow kernel to rename ethernet devices (DEFAULT: 0)\n";
     $h .= "         --pxelinux      Define a custom PXELINUX/boot image to use\n";
     $h .= "         --selinux       Boot node with SELinux support? (valid options are: UNDEF,\n";
     $h .= "                         ENABLED, and ENFORCED)\n";
@@ -185,6 +186,7 @@ exec()
     my @opt_fileadd;
     my @opt_filedel;
     my $opt_kargs;
+    my $opt_ifrename;
     my $opt_console;
     my $opt_pxelinux;
     my $opt_selinux;
@@ -209,6 +211,7 @@ exec()
         'fileadd=s'     => \@opt_fileadd,
         'filedel=s'     => \@opt_filedel,
         'kargs=s'       => \$opt_kargs,
+        'ifrename=s'    => \$opt_ifrename,
         'console=s'     => \$opt_console,
         'pxelinux=s'    => \$opt_pxelinux,
         'master=s'      => \@opt_master,
@@ -404,6 +407,31 @@ exec()
             } else {
                 &eprint("Invalid value specified, acceptable values are \"UNDEF\", \"NORMAL\", or \"EXIT\" for bootlocal!\n");
                 return();
+            }
+        }
+
+        if (defined($opt_ifrename)) {
+            if (uc($opt_ifrename) eq "UNDEF" or
+                uc($opt_ifrename) eq "FALSE" or
+                uc($opt_ifrename) eq "NO" or
+                uc($opt_ifrename) eq "N" or
+                $opt_ifrename == 0
+            ) {
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->ifrename(0);
+                    &dprint("Disabling ifrename for node name: $name\n");
+                    $persist_bool = 1;
+                }
+                push(@changes, sprintf("   UNDEF: %-20s\n", "IFRENAME"));
+            } else {
+                foreach my $obj ($objSet->get_list()) {
+                    my $name = $obj->name() || "UNDEF";
+                    $obj->ifrename(1);
+                    &dprint("Enabling ifrename for node name: $name\n");
+                    $persist_bool = 1;
+                }
+                push(@changes, sprintf("     SET: %-20s = %s\n", "IFRENAME", 1));
             }
         }
 
@@ -732,6 +760,7 @@ exec()
             printf("%15s: %-16s = %s\n", $name, "FILES", join(",", @files));
             printf("%15s: %-16s = %s\n", $name, "PRESHELL", $o->preshell() ? "TRUE" : "FALSE");
             printf("%15s: %-16s = %s\n", $name, "POSTSHELL", $o->postshell() ? "TRUE" : "FALSE");
+            printf("%15s: %-16s = %s\n", $name, "IFRENAME", $o->ifrename() ? "TRUE" : "FALSE");
             printf("%15s: %-16s = %s\n", $name, "CONSOLE", $o->console() || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "PXELINUX", $o->pxelinux() || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "SELINUX", $o->selinux() || "UNDEF");

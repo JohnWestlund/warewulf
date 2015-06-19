@@ -147,7 +147,9 @@ update()
         my $bootstrapid = $nodeobj->get("bootstrapid");
         my $db_id = $nodeobj->id();
         my $console = $nodeobj->console();
+        my $ifrename = $nodeobj->ifrename();
         my @kargs = $nodeobj->kargs();
+        my $bootlocal = $nodeobj->bootlocal();
         my @masters = $nodeobj->get("master");
         my $bootstrapname;
 
@@ -223,8 +225,6 @@ update()
                     next;
                 }
 
-		my $bootlocal = $nodeobj->get("bootlocal");
-
                 &dprint("Creating pxelinux config at: $tftproot/warewulf/pxelinux.cfg/$config\n");
                 if (!open(PXELINUX, "> $tftproot/warewulf/pxelinux.cfg/$config")) {
                     &eprint("Could not open PXELinux config: $!\n");
@@ -240,23 +240,22 @@ update()
                 print PXELINUX "LABEL bootlocal\n";
 
 
-		if (defined($bootlocal)) {
-		    &dprint("$hostname: LOCALBOOT set to: $bootlocal\n");
+                if (defined($bootlocal)) {
+                    &dprint("$hostname: LOCALBOOT set to: $bootlocal\n");
                     print PXELINUX "LOCALBOOT $bootlocal\n";
-		} else {
-		    print PXELINUX "LOCALBOOT 0\n";
-		}
+                } else {
+                    print PXELINUX "LOCALBOOT 0\n";
+                }
                 print PXELINUX "LABEL bootstrap\n";
                 print PXELINUX "SAY Now booting $hostname with Warewulf bootstrap ($bootstrapname)\n";
                 print PXELINUX "KERNEL bootstrap/$bootstrapid/kernel\n";
                 print PXELINUX "APPEND ro initrd=bootstrap/$bootstrapid/initfs.gz wwhostname=$hostname ";
+                print PXELINUX join(" ", @kargs) . " ";
                 if ($console) {
                     print PXELINUX "console=tty0 console=$console ";
                 }
-                if (@kargs) {
-                    print PXELINUX join(" ", @kargs) . " ";
-                } else {
-                    print PXELINUX "quiet ";
+                if (! $ifrename) {
+                    print PXELINUX "net.ifnames=0 ";
                 }
                 if (scalar(@masters) > 0) {
                     my $master = join(",", @masters);
