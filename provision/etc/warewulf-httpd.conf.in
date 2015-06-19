@@ -18,6 +18,9 @@ ScriptAlias /WW/vnfs @fulllibexecdir@/warewulf/cgi-bin/vnfs.pl
     PerlResponseHandler ModPerl::Registry
     PerlOptions +ParseHeaders
     Options +ExecCGI
+    <IfVersion >= 2.4>
+        Require all granted
+    </IfVersion>
 </Directory>
 
 <Directory @fulldatadir@/warewulf/www>
