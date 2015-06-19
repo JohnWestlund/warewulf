@@ -375,9 +375,6 @@ persist()
         } else {
             &dprint("Not restarting DHCPD service\n");
         }
-        if (!$system->chkconfig("dhcpd", "on")) {
-            &eprint($system->output() ."\n");
-        }
     } else {
         &iprint("Not updating DHCP configuration: files are current\n");
     }
