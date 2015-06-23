@@ -56,7 +56,6 @@ my @opt_hybridize;
 my $opt_hybridizefile;
 my $opt_includefile;
 my $opt_hybrid;
-my $opt_yes;
 my @exclude_files;
 my @hybridize_files;
 my %exclude_map;
@@ -65,7 +64,6 @@ my %link_map;
 my $wwsh_bin;
 my $create_config;
 my $file_pipe;
-my $cpio_time;
 my $gzip_pipe;
 
 
@@ -89,7 +87,6 @@ GetOptions(
     'hybridizefile=s' => \$opt_hybridizefile,
     'includefile=s' => \$opt_includefile,
     'hybridpath=s'  => \$opt_hybrid,
-    'y|yes'         => \$opt_yes
 );
 
 &set_log_level("NOTICE");
@@ -119,7 +116,6 @@ if ($opt_help) {
     print "                     be hybridized from the VNFS image\n";
     print "       --hybridpath  Path to use within the VNFS where the links will be pointed to in\n";
     print "                     the final image (this needs to be added to the VNFS fstab!)\n";
-    print "   -y, --yes         Skips yes/no prompt if you're importing into an existing VNFS\n";
     print "\nNOTES:\n\n";
     print "   When wwvnfs is run for the first time on a VNFS, it will attempt to create a\n";
     print "   configuration file in the default warewulf config dir ($sysconfdir/warewulf/vnfs/) or in\n";
@@ -383,7 +379,7 @@ if (-d $opt_chroot) {
 
         # Build the hybridization component of the CPIO (not using a temporary
         # directory, writing CPIO format directly)
-        &nprint("Compiling hybridization link tree\n");
+        &nprint(sprintf("%-60s: ", "Compiling hybridization link tree"));
         my $count = 1;
         my $current_time = time();
         foreach my $p ( keys %hybridize_map ) {
@@ -411,21 +407,25 @@ if (-d $opt_chroot) {
             $count++;
         }
 
-        &nprint("Building file list\n");
+
+        &nprint($timer->mark() ." s\n");
+
+        &nprint(sprintf("%-60s: ", "Building file list"));
 
         # Building list of files to archive into CPIO
         open($filepipe, "> $tmpfile");
         find({ wanted => \&vnfs_create_file, no_chdir => 1}, $opt_chroot);
         close $filepipe;
 
-        &nprint("Compiling and compressing VNFS\n");
+        &nprint($timer->mark() ." s\n");
+
+        &nprint(sprintf("%-60s: ", "Compiling and compressing VNFS"));
         # Changing directory and calling CPIO
         chdir($opt_chroot);
         open($cpio_pipe, "cat $tmpfile | cpio --quiet -o -H newc |");
 
         # Pulling the CPIO output from the above process and running it through
         # the existing gzip pipe.
-        &iprint("Waiting for GZIP to complete...\n");
         while (<$cpio_pipe>) {
             print $gzip_pipe $_;
         }
@@ -436,7 +436,7 @@ if (-d $opt_chroot) {
         }
 
         unlink($tmpfile);
-        $cpio_time = $timer->mark();
+        &nprint($timer->mark() ." s\n");
 
         if (-f $gzip_output) {
             if ($opt_output) {
@@ -455,13 +455,11 @@ if (-d $opt_chroot) {
                     &eprint("$!\n");
                 }
             } else {
-                if ($opt_yes) {
-                    system("yes | $wwsh_bin vnfs import $gzip_output --chroot='$opt_chroot' --name='$opt_name'");
-                } else {
-                    system("$wwsh_bin vnfs import $gzip_output --chroot='$opt_chroot' --name='$opt_name'");
-                }
+                &nprint(sprintf("%-60s: ", "Adding image to datastore"));
+                #system("yes | $wwsh_bin vnfs import $gzip_output --chroot='$opt_chroot' --name='$opt_name'");
+                system("$wwsh_bin -yq vnfs import $gzip_output --chroot='$opt_chroot' --name='$opt_name'");
                 unlink($gzip_output);
-                &nprint("Done.\n");
+                &nprint($timer->mark() ." s\n");
             }
         } else {
             &eprint("There was an uncaught error creating the VNFS at $gzip_output!\n");
@@ -475,9 +473,6 @@ if (-d $opt_chroot) {
     &eprint("Path to chroot is not valid ('$opt_chroot')\n");
     exit 1;
 }
-
-&nprint("Time to build VNFS:    $cpio_time s\n");
-&nprint("Total elapsed time:    ". $timer->elapsed() ." s\n");
 
 
 if ($create_config) {
@@ -569,6 +564,12 @@ if ($create_config) {
         &wprint("Could not create a default configuration file!\n");
     }
 }
+
+
+&nprint(sprintf("%-60s: ", "Total elapsed time"));
+&nprint($timer->elapsed() ." s\n");
+
+
 
 # vim:filetype=perl:syntax=perl:expandtab:ts=4:sw=4:
 
