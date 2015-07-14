@@ -460,18 +460,16 @@ exec()
             }
 
         } elsif ($command eq "show") {
-            my $program = $opt_program || "/bin/cat";
-
             foreach my $obj ($objSet->get_list()) {
                 my $rand = &rand_string("16");
                 my $tmpfile = "/tmp/wwsh.$rand";
 
                 $obj->file_export($tmpfile);
 
-                if (system($program, $tmpfile) == 0) {
+                if (system("/bin/cat", $tmpfile) == 0) {
                     unlink($tmpfile);
                 } else {
-                    &eprint("Program failed: $program $tmpfile\n");
+                    &eprint("Unable to cat $tmpfile\n");
                 }
 
             }
