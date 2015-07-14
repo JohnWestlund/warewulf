@@ -160,7 +160,7 @@ filetype()
     #return $self->prop("filetype", $validator, @_);
 
     # The below basically does the same thing as the above, just faster.
-    return $self->prop("filetype", sub { return (keys %{ +{S_IFMT($_[0]),1} })[0] || 0; }, @_);
+    return $self->prop("filetype", sub { return (keys %{ +{S_IFMT($_[0]),1} })[0] || S_IFREG; }, @_);
 }
 
 
@@ -579,6 +579,26 @@ file_export()
         &eprint("Export location must be absolute path.\n");
         return undef;
     }
+}
+
+
+=item canonicalize()
+
+Check and update the object if necessary. Returns the number of changes made.
+
+=cut
+
+sub
+canonicalize()
+{
+    my ($self) = @_;
+    my $changes = 0;
+
+    if (!exists($self->{"filetype"})) {
+        $self->filetype(S_IFREG);
+        $changes++;
+    }
+    return $changes;
 }
 
 
