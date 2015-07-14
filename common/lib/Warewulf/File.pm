@@ -366,15 +366,19 @@ sync()
             my $filetype = $self->filetype();
             my @statinfo = ((S_ISLNK($filetype)) ? (lstat($origin)) : (stat($origin)));
 
-            if (S_ISREG($filetype) && -f _) {
-                if (open(FILE, $origin)) {
-                    &dprint("   Including file to sync: $origin\n");
-                    while (my $line = <FILE>) {
-                        $data .= $line;
+            if (S_ISREG($filetype)) {
+                if (-f _) {
+                    if (open(FILE, $origin)) {
+                        &dprint("   Including file to sync: $origin\n");
+                        while (my $line = <FILE>) {
+                            $data .= $line;
+                        }
+                        close FILE;
+                    } else {
+                        &wprint("Could not open origin path \"$origin\" for file object \"$name\" -- $!\n");
                     }
-                    close FILE;
                 } else {
-                    &wprint("Could not open origin path ($origin) for file object '$name'\n");
+                    &wprint("Origin path \"$origin\" for file object \"$name\" does not exist is not a regular file; skipping.\n");
                 }
             } elsif (S_ISLNK($filetype)) {
                 if (-l _) {
@@ -386,12 +390,10 @@ sync()
                 $data = $statinfo[6];
             } elsif (S_ISCHR($filetype) && -c _) {
                 $data = $statinfo[6];
-            } else {
-                $data = "";
             }
         }
 
-        &dprint("Persisting file object '$name' origin(s)\n");
+        &dprint("Persisting file object \"$name\"\n");
         $total_len = length($data);
         $digest = Digest::MD5->new()->add($data);
 
@@ -407,7 +409,7 @@ sync()
         $self->size($total_len);
         $db->persist($self);
     } else {
-        &dprint("Skipping file object '$name' as it has no origin paths set\n");
+        &dprint("Skipping file object \"$name\" as it has no origin paths set\n");
     }
 
     # Trigger file::$name.sync event for special behaviors
