@@ -54,13 +54,13 @@ msg_blue() {
     echo -ne "$1"
     echo -ne "$NORMAL"
 }
-   
+
 msg_yellow() {
     echo -ne "$YELLOW"
     echo -ne "$1"
     echo -ne "$NORMAL"
 }
-   
+
 reply_ok() {
     echo -en "\\033[77G"
     msg_green " OK\n"
@@ -187,7 +187,6 @@ wwreqroot() {
     fi
 }
 
-
 wwpackage_check() {
     for PACKAGE in "$@"; do
         if [ -x /bin/rpm ]; then
@@ -195,16 +194,18 @@ wwpackage_check() {
             if wwtest rpm -q $PACKAGE; then
                 return 0
             fi
-        elif [ -x /bin/dpkg ]; then
+        elif [ -x /bin/dpkg ] || [ -x /usr/bin/dpkg ]; then
             wwprint "Checking to see if DEB '$PACKAGE' is installed "
-            if wwtest dpkg -l $PACKAGE; then
+            if dpkg -s $PACKAGE 2>&1 | grep Status | grep -v deinstall > /dev/null; then
+                wwtest true
                 return 0
+            else
+                wwtest false
             fi
         fi
     done
     return 1
 }
-
 
 # this function will take an argument list of service names, and return
 # on the first match. This is useful for multi-distribution compatibility
@@ -227,6 +228,11 @@ wwservice_activate() {
                 wwrun chkconfig $SERVICE on
             fi
             if wwrun /etc/rc.d/init.d/$SERVICE restart; then
+                return 0
+            fi
+        elif [ -x "/etc/init.d/$SERVICE" ]; then
+            wwprint "Activating system service: $1\n"
+            if wwrun /etc/init.d/$SERVICE restart; then
                 return 0
             fi
         elif test -x "/bin/systemctl" && systemctl list-unit-files --type=service | egrep -q "^$SERVICE.service"; then

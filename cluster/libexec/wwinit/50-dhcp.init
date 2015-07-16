@@ -20,8 +20,8 @@ fi
 
 wwreqroot
 
-if wwpackage_check dhcp dhcpd dhcp-server dhcpd-server; then
-    if wwservice_activate dhcp dhcpd; then
+if wwpackage_check dhcp dhcpd dhcp-server dhcpd-server isc-dhcp-server; then
+    if wwservice_activate dhcp dhcpd isc-dhcp-server; then
         exit 0
     fi
 fi
