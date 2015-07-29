@@ -35,6 +35,14 @@ my $command = "$0 ". join(" ", @ARGV);
 my $tmpfile = "/tmp/wwvnfs.$randstring";
 my $gzip_output = "$build_directory/$randstring-gzip.vnfs";
 
+# Get our cpio command
+my $cpio_cmd = $config->get("cpio command") || "cpio --quiet -o -H newc";
+my ($cpio_bin, $cpio_opts) = split(/\s+/, $cpio_cmd, 2);
+if (! $cpio_opts) {
+    # Nothing was passed to the command in the config file
+    $cpio_opts = "";
+}
+
 # Get our gzip command
 my $gzip_cmd = $config->get("gzip command") || "gzip -9";
 my ($gzip_bin, $gzip_opts) = split(/\s+/, $gzip_cmd, 2);
@@ -270,6 +278,38 @@ foreach my $dir (split(":", $ENV{"PATH"})) {
 $ENV{"PATH"} = "/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin";
 
 
+# Checking cpio command
+if (-x $cpio_bin) {
+    &dprint("Using given full path to cpio ($cpio_bin)\n");
+} else {
+    &dprint("Looking for cpio program in PATH\n");
+    my $found;
+    foreach my $p (split(":", $ENV{"PATH"})) {
+        &dprint("Looking for cpio at '$p/$cpio_bin'\n");
+        if (-x "$p/$cpio_bin") {
+            &dprint("Found full path to cpio ($cpio_bin)\n");
+            $cpio_bin = "$p/$cpio_bin";
+            $found = 1;
+            last;
+        }
+    }
+    if (! $found) {
+        &eprint("cpio program '$cpio_bin' not found!\n");
+        exit 255;
+    }
+}
+
+if ($cpio_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
+    $cpio_bin = $1;
+} else {
+    &eprint("cpio command contains illegal characters!\n");
+    exit 255;
+}
+
+&iprint("Using cpio command: '$cpio_bin $cpio_opts'\n");
+
+
+
 # Checking gzip command
 if (-x $gzip_bin) {
     &dprint("Using given full path to gzip ($gzip_bin)\n");
@@ -299,6 +339,8 @@ if ($gzip_bin =~ /^([a-zA-Z0-9\-_\/\.]+)$/) {
 }
 
 &iprint("Using gzip command: '$gzip_bin $gzip_opts'\n");
+
+
 
 sub
 vnfs_create_file($)
@@ -422,7 +464,7 @@ if (-d $opt_chroot) {
         &nprint(sprintf("%-60s: ", "Compiling and compressing VNFS"));
         # Changing directory and calling CPIO
         chdir($opt_chroot);
-        open($cpio_pipe, "cat $tmpfile | cpio --quiet -o -H newc |");
+        open($cpio_pipe, "cat $tmpfile | $cpio_bin $cpio_opts |");
 
         # Pulling the CPIO output from the above process and running it through
         # the existing gzip pipe.
@@ -430,8 +472,13 @@ if (-d $opt_chroot) {
             print $gzip_pipe $_;
         }
 
+        if ( ! close $cpio_pipe ) {
+            &eprint("Failed to close CPIO pipe: $!\n");
+            exit 1;
+        }
+
         if ( ! close $gzip_pipe ) {
-            &eprint("$!\n");
+            &eprint("Failed to close GZIP pipe: $!\n");
             exit 1;
         }
 
