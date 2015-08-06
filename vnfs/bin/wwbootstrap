@@ -94,6 +94,15 @@ if ($opt_config) {
 
 }
 
+if ($opt_name) {
+    if ($opt_name =~ /^([a-zA-Z0-9\-_\.]+)$/) {
+        $opt_name = $1;
+    } else {
+        &eprint("Name '$opt_name' contains illegal characters!\n");
+        exit 1;
+    }
+}
+
 $opt_kversion = shift(@ARGV);
 
 
