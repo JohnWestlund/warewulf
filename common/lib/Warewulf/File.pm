@@ -98,7 +98,7 @@ mode()
     #return $self->prop("mode", $validator, @_);
 
     # The below basically does the same thing as the above, just faster.
-    return $self->prop("mode", sub { return (keys %{ +{S_IMODE($_[0]),1} })[0] || 0; }, @_);
+    return $self->prop("mode", sub { return (keys %{ +{S_IMODE($_[0]),1} })[0] || 0; }, @_) || 0640;
 }
 
 
@@ -321,7 +321,7 @@ origin()
         if (defined($strings[0])) {
             my @neworigins;
             foreach my $string (@strings) {
-                if ($string =~ /^(\/.+)$/) {
+                if ($string =~ /^(.+)$/) {
                     &dprint("Object $name set $key += '$1'\n");
                     push(@neworigins, $1);
                 } else {
@@ -367,7 +367,20 @@ sync()
             my @statinfo = ((S_ISLNK($filetype)) ? (lstat($origin)) : (stat($origin)));
 
             if (S_ISREG($filetype)) {
-                if (-f _) {
+
+                if ($origin =~ /^.+\|\s*$/) {
+                    if (open(PIPE, $origin)) {
+                        &dprint("   running code pipe as origin: $origin\n");
+                        while (my $line = <PIPE>) {
+                            $data .= $line;
+                        }
+                        if (! close PIPE) {
+                            &eprint("Error running code pipe for file objct \"$name\"\n");
+                        }
+                    } else {
+                        &wprint("Could not open origin path \"$origin\" for file object \"$name\" -- $!\n");
+                    }
+                } elsif (-f _) {
                     if (open(FILE, $origin)) {
                         &dprint("   Including file to sync: $origin\n");
                         while (my $line = <FILE>) {
@@ -565,7 +578,7 @@ file_export()
             return undef;
         }
         while (my $buffer = $binstore->get_chunk()) {
-            if (!defined(syswrite(FILE, $buffer))) {
+             if (!defined(syswrite(FILE, $buffer))) {
                 &eprint("Error writing data to file $path:  $!\n");
                 close(FILE);
                 return undef;
@@ -575,7 +588,7 @@ file_export()
             &eprint("Error closing file $path after write:  $!\n");
             return undef;
         }
-        chmod((0400 | $self->mode()), $path);
+        chmod((0400 || $self->mode()), $path);
         return 0;
     } else {
         &eprint("Export location must be absolute path.\n");

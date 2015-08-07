@@ -443,7 +443,7 @@ exec()
             $self->set_file_member("gid", qr/^(\d+|UNDEF)$/, $opt_gid, \$persist_count,
                                    \@changes, \@objlist, "must be in numeric format");
             # Origin(s)
-            $self->set_file_member("origin", qr/^(\/[a-zA-Z0-9\-_\.\/,]+|UNDEF)$/,
+            $self->set_file_member("origin", qr/^([a-zA-Z0-9\-_\.\/,\s\|\;]+|UNDEF)$/,
                                    ((scalar(@opt_origin)) ? (join(',', @opt_origin)) : (undef)),
                                    \$persist_count, \@changes, \@objlist);
             if ($opt_name) {
