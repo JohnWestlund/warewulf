@@ -303,7 +303,7 @@ delete()
     my $tftproot = Warewulf::Provision::Tftp->new()->tftpdir();
 
     if (! $tftproot) {
-        &dprint("Not updating Pxelinux because no TFTP root directory was found!\n");
+        &dprint("Not updating PXELinux because no TFTP root directory was found!\n");
         return();
     }
 
@@ -311,15 +311,23 @@ delete()
         my $nodename = $nodeobj->get("name") || "undefined";
         my @hwaddrs = $nodeobj->get("_hwaddr");
 
-        &dprint("Deleting pxelinux entries for node: $nodename\n");
+        &dprint("Deleting PXELinux entries for node: $nodename\n");
 
         foreach my $netdev ($nodeobj->get("netdevs")) {
-            my $hwaddr = $netdev->get("hwaddr");
-            if ($hwaddr =~ /^([0-9a-zA-Z:]+)$/) {
+            my $hwaddr = lc($netdev->get("hwaddr"));
+            
+            if (defined($hwaddr) && !scalar(grep { lc($_) eq $hwaddr } @hwaddrs)) {
+                push @hwaddrs, $hwaddr;
+            }
+        }
+        foreach my $hwaddr (@hwaddrs) {
+            if ($hwaddr =~ /^([:[:xdigit:]]+)$/) {
+                my $config;
+
                 $hwaddr = $1;
-                &iprint("Deleting Pxelinux configuration for: $nodename/$hwaddr\n");
+                &iprint("Deleting PXELinux configuration for $nodename/$hwaddr\n");
                 $hwaddr =~ s/:/-/g;
-                my $config = "01-". $hwaddr;
+                $config = "01-$hwaddr";
                 if (-f "$tftproot/warewulf/pxelinux.cfg/$config") {
                     unlink("$tftproot/warewulf/pxelinux.cfg/$config");
                 }
