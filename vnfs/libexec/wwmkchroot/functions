@@ -2,9 +2,10 @@
 
 eval `wwconfig -as`
 
-MEDIA_MOUNTPATH="/tmp/wwmkchroot.mount"
+MEDIA_MOUNTPATH="$CHROOTDIR/tmp/wwmkchroot.mount"
 
 export FUNCTIONS="sanity_check
+                  distro_check
                   init
                   prechroot
                   buildchroot
@@ -23,6 +24,16 @@ export FUNCTIONS="sanity_check
                   cleanup"
 
 
+set_as_overlay() {
+    FUNCTIONS="sanity_check
+               distro_check
+               init
+               set_overlay
+               buildchroot
+               configure_services
+               finalize
+               cleanup"
+}
 
 sanity_check() {
     if [ ! -x $WAREWULF_PREFIX/bin/cluster-env ]; then
@@ -31,6 +42,14 @@ sanity_check() {
     else
         $WAREWULF_PREFIX/bin/cluster-env;
     fi
+    if [ -z "$PKGLIST" ]; then
+        echo "ERROR: You must define the \$PKGLIST variable in the template!"
+        return 1
+    fi
+    return 0
+}
+
+distro_check() {
     return 0
 }
 
@@ -41,7 +60,6 @@ init() {
             exit 1
         fi
     fi
-
     if [ -n "$INSTALL_ISO" ]; then
         count=0
         for i in `echo $INSTALL_ISO | sed -e 's/,/ /'`; do
@@ -62,7 +80,10 @@ init() {
             fi
         done
     fi
+    return 0
+}
 
+set_overlay() {
     return 0
 }
 
@@ -71,8 +92,13 @@ prechroot() {
 }
 
 buildchroot() {
-    echo "The template you are using, doesn't have buildchroot() defined!"
-    return 1
+    $PKGR_CMD
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to install packages"
+        cleanup
+        return 1
+    fi
+    return 0   
 }
 
 postchroot() {
@@ -173,6 +199,7 @@ configure_runlevel() {
     if [ -f "$CHROOTDIR/etc/inittab" ]; then
         sed -i -e 's@id:.:initdefault:@id:3:initdefault:@' $CHROOTDIR/etc/inittab
     fi
+    return 0
 }
 
 configure_timezone() {
@@ -182,6 +209,7 @@ configure_timezone() {
     if [ -f "/etc/adjtime" ]; then
         cp -a /etc/adjtime $CHROOTDIR/etc/adjtime
     fi
+    return 0
 }
 
 configure_ntp() {
@@ -200,10 +228,9 @@ configure_ntp() {
 
             echo "server $IPADDR prefer" >> $CHROOTDIR/etc/ntp.conf
             echo "restrict $IPADDR mask 255.255.255.255 nomodify notrap noquery" >> $CHROOTDIR/etc/ntp.conf
-
         fi
     fi
-
+    return 0
 }
 
 configure_services() {
@@ -220,20 +247,12 @@ cleanup() {
             fi
         done
     fi
-
     return 0
 }
 
 finalize() {
     return 0
 }
-
-
-# Default print_help function incase the module does not offer one
-print_help() {
-    echo "This module does not contain any additional help information"
-}
-
 
 
 # vim:filetype=sh:syntax=sh:expandtab:ts=4:sw=4:
