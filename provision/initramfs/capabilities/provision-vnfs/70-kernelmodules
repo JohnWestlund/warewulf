@@ -8,8 +8,21 @@
 #
 
 
-cp -r /lib/modules/* $NEWROOT/lib/modules/
-cp -r /lib/firmware/* $NEWROOT/lib/firmware/
+KVERSION=`uname -r`
+
+if [ -d "/lib/modules/$KVERSION" ]; then
+    if [ ! -d "$NEWROOT/lib/modules/$KVERSION" ]; then
+        mkdir -p $NEWROOT/lib/modules/$KVERSION
+    fi
+    cp -r /lib/modules/$KVERSION $NEWROOT/lib/modules/$KVERSION
+fi
+
+if [ -d "/lib/firmware/$KVERSION" ]; then
+    if [ ! -d "$NEWROOT/lib/firmware/$KVERSION" ]; then
+        mkdir -p $NEWROOT/lib/firmware/$KVERSION
+    fi
+    cp -r /lib/firmware/$KVERSION $NEWROOT/lib/firmware/$KVERSION
+fi
 
 if [ -x "$NEWROOT/sbin/depmod" ]; then
     chroot $NEWROOT /sbin/depmod -a
