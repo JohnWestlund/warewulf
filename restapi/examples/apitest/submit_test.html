@@ -1,0 +1,39 @@
+<html>
+<head>
+  <title>WWAPI Submit Test</title>
+  <script type="text/javascript" src="js/wwapi.js"></script>
+</head>
+<body>
+  <h1>WWAPI Submit Test</h1>
+  <div id="warning"><span id="warntxt"></span></div>
+  <div id="lookupForm">
+    <form name="getForm" action="" onsubmit="return false;">
+      <input id="nlookup" type="text" />
+      <input type="Submit" onclick="getNode(); false;" value="Submit" />
+    </form>
+  </div>
+
+  <div id="submitForm">
+    <form name="editForm" action="/cgi-bin/geturl.pl" method="post"> <!-- onsubmit="return false;"> -->
+      <label for='nName'>Nodename: </label>
+        <input type='text' id='nName' name='nName' value='' class='ro' readonly='readonly' />
+      <label for='nHwaddr'>MAC Address: </label>
+        <input type='text' id='nHwaddr' name='nHwaddr' value='' class='ro' readonly='readonly' />
+      <br/>
+      <span id="nVnfs_sp"></span>
+      <span id="nBS_sp"></span>
+      <hr/>
+      <label for='nNetDev_sp' id="nNetDev_head">Network Device(s):</label>
+      <span id='nNetDev_sp'></span>
+      <hr/>
+      <label for='nFile_sp'>Files: </label><br/>
+      <div style="border: black solid 1px"> 
+        <span id="nFile_sp"> 
+        </span>
+      </div>
+      <input type="submit" name="submit" value="Submit" />
+      <br/>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<html>
+<head>
+  <title>WWAPI Test</title>
+  <script>
+function parseit()
+{
+  var nid = document.getElementById("nlookup").value;
+  document.getElementById("debug").innerHTML="<p>Value passed: "+nid+"<br/></p>"
+  showNode(nid);
+}
+
+function buildForm(nid)
+{
+  var formStr = '<form action="" onsubmit="return false;">';
+  formStr += "\n<label for='nName'>Nodename: </label>\n";
+  formStr += "<input type='text' id='nName' name='nName' value='" + nid.nodename + "' class='ro' readonly='readonly' />\n";
+  formStr += "</form>\n";
+
+  document.getElementById("nodeEdit").innerHTML = formStr;
+}
+
+function showNode(nid)
+{
+  if (nid.length == 0) {
+    document.getElementById("nodeInfo").innerHTML="";
+    return;
+  }
+
+  if (window.XMLHttpRequest) {
+    // Should be: Chrome, Firefox, Safari, IE7+, etc...
+    xmlhttp = new XMLHttpRequest();
+  } else {
+    // IE 5 / IE 6
+    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+  }
+
+  xmlhttp.onreadystatechange=function()
+  {
+    console.log("test logging");
+    console.debug(xmlhttp.readyState);
+    if (xmlhttp.readyState==4) {
+        console.debug("Enter state 4");
+        console.debug(xmlhttp.status);
+        console.debug(xmlhttp.statusText);
+        if (xmlhttp.status==200) {
+            console.debug("status 200");
+            var serverResponse = JSON.parse(xmlhttp.responseText);
+            //console.debug(serverResponse);
+            //document.getElementById("nodeInfo").innerHTML = "<pre>"+xmlhttp.responseText+"</pre>";
+
+            var nid = document.getElementById("nlookup").value;
+            document.getElementById("nodeInfo").innerHTML += "<p>Passed: <strong>"+nid+"</strong></p>";
+            // Why?? Why?? *sigh*
+            var nodeObj = eval ( 'serverResponse.node.' + nid) ;
+            document.getElementById("nodeInfo").innerHTML += "<p>Name (nodeObj): " + nodeObj.nodename + "</p>";
+
+            buildForm(nodeObj);
+            //document.getElementById("nodeInfo").innerHTML += "<p>Name (nodetest): " + nodetest.node.sb0167.nodename + "</p>";
+            //document.getElementById("nodeInfo").innerHTML += "<p>Array Len: " + serverResponse.length + "</p>";
+        }
+    }
+  }
+
+    xmlhttp.onload = function() {
+        console.debug("Onload Success");
+    }
+    xmlhttp.onerror = function() {
+        console.debug("onload error");
+        console.debug(xmlhttp.status);
+        console.debug(xmlhttp.statusText);
+    }
+    var rUrl = "http://" + document.domain + "/apitest/wwapi/node/" + nid;
+    xmlhttp.open("GET", rUrl, true);
+//  // Not supported by Chrome ... Gonna need to do a hack.
+//  //  http://mathiasbynens.be/notes/xhr-responsetype-json#browser-support
+//  //xmlhttp.responseType = "json"; 
+    xmlhttp.send(null);
+}
+  </script>
+  <style>
+.ro {
+  background: #ccc;
+  border: none;
+}
+  </style>
+</head>
+
+<body>
+<div id="nodeForm" style="border-bottom: 1px solid black">
+  <form action="" onsubmit="return false;">
+    <input type="text" id="nlookup" />
+    <input type="Submit" value="Submit" onclick="parseit(); false;" />
+  </form>
+</div>
+
+<div id="debug"></div>
+
+<div id="nodeInfo" style="border: 1px dotted red"></div>
+
+<div id="nodeEdit"></div>
+
+</body>
+
+</html>
+

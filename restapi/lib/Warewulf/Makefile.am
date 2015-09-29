@@ -1,0 +1,3 @@
+SUBDIRS = Modules
+MAINTAINERCLEANFILES = Makefile.in
+

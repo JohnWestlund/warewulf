@@ -1,0 +1,18 @@
+Warewulf::Module::REST
+
+Adam DeConinck @ R-HPC, 2011
+
+A basic REST interface to the Warewulf provisioning system, based 
+on Perl Dancer.  Carries out provisioning actions and returns 
+data in JSON format.
+
+To run in the standalone test server, cd into Warewulf-Module-REST and run 
+    perl bin/app.pl
+
+To run in a "real" webserver, see
+    http://search.cpan.org/~xsawyerx/Dancer-1.3080/lib/Dancer/Deployment.pod
+
+Jason Stover @ R-HPC, 2014
+
+Fixed for Warewulf > 3.1. All GET requests should work (2014-10-02).
+
