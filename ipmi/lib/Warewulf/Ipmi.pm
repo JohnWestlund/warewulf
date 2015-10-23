@@ -242,7 +242,7 @@ ipmi_command()
         } elsif ( $action eq "ident" ) {
             $ret .= "chassis identify force";
         } elsif ( $action eq "noident" ) {
-            $ret .= "chassis identify off";
+            $ret .= "chassis identify 0";
         } elsif ( $action eq "printsel" ) {
             $ret .= "sel elist";
         } elsif ( $action eq "clearsel" ) {
