@@ -610,6 +610,7 @@ exec()
             &nprintf("#### %s %s#\n", $name, "#" x (72 - length($name)));
             printf("%15s: %-16s = %s\n", $name, "IPMI_IPADDR", $o->get("ipmi_ipaddr") || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "IPMI_NETMASK", $o->get("ipmi_netmask") || "UNDEF");
+            printf("%15s: %-16s = %s\n", $name, "IPMI_UID", $o->get("ipmi_uid") || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "IPMI_USERNAME", $o->get("ipmi_username") || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "IPMI_PASSWORD", $o->get("ipmi_password") || "UNDEF");
             printf("%15s: %-16s = %s\n", $name, "IPMI_AUTOCONFIG", $o->get("ipmi_autoconfig") || "UNDEF");
